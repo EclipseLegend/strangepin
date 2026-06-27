@@ -1,0 +1,41 @@
+{
+  "name": "StrangePin — Pin the Unexplained",
+  "short_name": "StrangePin",
+  "description": "Discover mysterious locations near you. Haunted places, UFO sightings, energy spots, and unexplained phenomena worldwide.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07070e",
+  "theme_color": "#07070e",
+  "orientation": "portrait-primary",
+  "categories": ["travel", "lifestyle", "entertainment"],
+  "icons": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nearby Mysteries",
+      "short_name": "Nearby",
+      "description": "Find strange places near you",
+      "url": "/#nearby",
+      "icons": [{ "src": "/og-image.png", "sizes": "1200x630" }]
+    },
+    {
+      "name": "Explore Map",
+      "short_name": "Map",
+      "description": "Explore the world mystery map",
+      "url": "/#map",
+      "icons": [{ "src": "/og-image.png", "sizes": "1200x630" }]
+    },
+    {
+      "name": "Pin a Location",
+      "short_name": "Pin It",
+      "description": "Submit a mysterious location",
+      "url": "/#submit",
+      "icons": [{ "src": "/og-image.png", "sizes": "1200x630" }]
+    }
+  ]
+}

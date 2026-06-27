@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Pin the unexplained. Discover strange places, haunted locations, UFO sightings, energy spots, and hidden legends worldwide." />
+  <title>StrangePin — Pin the Unexplained</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <!-- Firebase compat (non-module, non-blocking) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --bg: #08080d; --surface: #0f0f16; --card: #13131c; --border: #1c1c2a; --muted: #252535;
+      --orange: #e8621a; --orange-light: #f28c4a; --orange-glow: #ffb07a;
+      --purple: #6d28d9; --purple-glow: #a78bfa;
+      --teal: #22d3ee; --amber: #fbbf24;
+      --text: #eeeef5; --text-muted: #8888aa; --text-dim: #44445a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+    ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: var(--bg); } ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 3px; }
+    ::selection { background: rgba(232,98,26,0.3); }
+    .font-display { font-family: 'Syne', system-ui, sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Layout */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 1.25rem; }
+    .page { animation: fadeUp 0.35s ease forwards; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+    /* Navbar */
+    nav { position: fixed; top:0; left:0; right:0; z-index:50; transition: all 0.3s; height:64px; }
+    nav.scrolled { background: rgba(8,8,13,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); }
+    .nav-inner { display:flex; align-items:center; justify-content:space-between; height:64px; }
+    .logo { display:flex; align-items:center; gap:10px; text-decoration:none; cursor:pointer; }
+    .logo-icon { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,var(--orange),var(--purple)); display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow:0 4px 16px rgba(232,98,26,0.3); }
+    .logo-text { font-family:'Syne',sans-serif; font-weight:700; font-size:1.15rem; color:var(--text); }
+    .logo-text span { background:linear-gradient(135deg,var(--orange-glow),var(--purple-glow)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .nav-links { display:flex; align-items:center; gap:4px; }
+    .nav-link { padding:8px 14px; border-radius:8px; font-size:0.875rem; font-weight:500; color:var(--text-muted); text-decoration:none; cursor:pointer; border:none; background:none; transition:all 0.2s; }
+    .nav-link:hover, .nav-link.active { color:var(--orange-glow); background:rgba(232,98,26,0.1); }
+    .nav-btn { background:var(--orange); color:white; border:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:0.875rem; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:6px; }
+    .nav-btn:hover { background:#d4551a; box-shadow:0 4px 16px rgba(232,98,26,0.4); }
+    .nav-spacer { height:64px; }
+
+    /* Lang switcher */
+    .lang-btn { display:flex; align-items:center; gap:6px; padding:8px 12px; border-radius:8px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.875rem; transition:all 0.2s; position:relative; }
+    .lang-btn:hover { color:var(--text); background:var(--muted); }
+    .lang-dropdown { position:absolute; top:calc(100% + 8px); right:0; width:180px; background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; box-shadow:0 20px 40px rgba(0,0,0,0.5); display:none; z-index:100; }
+    .lang-dropdown.open { display:block; }
+    .lang-option { display:flex; align-items:center; gap:10px; padding:9px 12px; font-size:0.875rem; color:var(--text-muted); cursor:pointer; border:none; background:none; width:100%; text-align:left; transition:all 0.15s; }
+    .lang-option:hover { background:var(--muted); color:var(--text); }
+    .lang-option.selected { background:rgba(232,98,26,0.2); color:var(--orange-glow); }
+
+    /* Mobile menu */
+    .hamburger { display:none; background:none; border:none; color:var(--text-muted); cursor:pointer; padding:8px; border-radius:8px; }
+    .hamburger:hover { background:var(--muted); color:var(--text); }
+    .mobile-menu { display:none; background:var(--surface); border-top:1px solid var(--border); padding:12px 0; }
+    .mobile-menu.open { display:block; }
+    .mobile-nav-link { display:block; padding:12px 20px; font-size:0.9rem; color:var(--text-muted); cursor:pointer; border:none; background:none; width:100%; text-align:left; border-radius:8px; margin:0 8px; width:calc(100% - 16px); transition:all 0.15s; }
+    .mobile-nav-link:hover, .mobile-nav-link.active { color:var(--orange-glow); background:rgba(232,98,26,0.1); }
+    .mobile-lang { padding:12px 16px; border-top:1px solid var(--border); margin-top:8px; }
+    .mobile-lang-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
+    .mobile-lang-opt { display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; font-size:0.85rem; color:var(--text-muted); cursor:pointer; border:none; background:none; transition:all 0.15s; }
+    .mobile-lang-opt:hover { background:var(--muted); color:var(--text); }
+    .mobile-lang-opt.selected { background:rgba(232,98,26,0.2); color:var(--orange-glow); }
+    @media(max-width:768px) { .nav-links,.nav-btn,.lang-btn { display:none; } .hamburger { display:block; } }
+
+    /* Buttons */
+    .btn-primary { background:var(--orange); color:white; border:none; padding:12px 28px; border-radius:10px; font-weight:600; font-size:1rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s; text-decoration:none; }
+    .btn-primary:hover { background:#d4551a; box-shadow:0 8px 24px rgba(232,98,26,0.4); transform:translateY(-1px); }
+    .btn-secondary { background:transparent; color:var(--text); border:1px solid var(--border); padding:12px 28px; border-radius:10px; font-weight:500; font-size:1rem; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s; text-decoration:none; }
+    .btn-secondary:hover { border-color:var(--orange); color:var(--orange-glow); }
+    .btn-sm { padding:8px 16px; font-size:0.875rem; border-radius:8px; }
+
+    /* Cards */
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:all 0.25s; }
+    .card:hover { border-color:rgba(232,98,26,0.35); box-shadow:0 8px 24px rgba(232,98,26,0.1); }
+    .card-top-bar { height:3px; }
+
+    /* Badges */
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:999px; font-size:0.72rem; font-weight:500; }
+    .badge-purple { background:rgba(109,40,217,0.25); color:#c4b5fd; border:1px solid rgba(109,40,217,0.35); }
+    .badge-teal { background:rgba(8,145,178,0.2); color:#67e8f9; border:1px solid rgba(8,145,178,0.3); }
+    .badge-amber { background:rgba(180,83,9,0.2); color:#fcd34d; border:1px solid rgba(180,83,9,0.3); }
+    .badge-green { background:rgba(6,78,59,0.3); color:#6ee7b7; border:1px solid rgba(6,78,59,0.4); }
+    .badge-muted { background:var(--muted); color:var(--text-muted); border:1px solid var(--border); }
+
+    /* Inputs */
+    input, textarea, select { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; transition:all 0.2s; }
+    input:focus, textarea:focus, select:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(232,98,26,0.15); }
+    input::placeholder, textarea::placeholder { color:var(--text-dim); }
+    label { display:block; font-size:0.875rem; font-weight:500; color:var(--text-muted); margin-bottom:6px; }
+    .form-group { margin-bottom:20px; }
+
+    /* Dot grid bg */
+    .dot-grid { background-image:radial-gradient(circle,rgba(232,98,26,0.12) 1px,transparent 1px); background-size:32px 32px; }
+
+    /* Gradient text */
+    .text-gradient { background:linear-gradient(135deg,var(--orange-glow),var(--purple-glow)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+
+    /* Orb animations */
+    @keyframes orbFloat { 0%,100%{transform:translate(0,0) scale(1);} 33%{transform:translate(18px,-14px) scale(1.04);} 66%{transform:translate(-12px,10px) scale(0.96);} }
+    .orb { position:absolute; border-radius:50%; pointer-events:none; filter:blur(80px); }
+    .orb1 { width:500px; height:500px; background:rgba(232,98,26,0.07); top:15%; left:10%; animation:orbFloat 14s ease-in-out infinite; }
+    .orb2 { width:400px; height:400px; background:rgba(109,40,217,0.08); bottom:20%; right:10%; animation:orbFloat 18s ease-in-out infinite reverse; }
+
+    /* Score ring */
+    .score-ring { position:relative; flex-shrink:0; }
+    .score-ring svg { display:block; }
+    .score-ring-label { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+
+    /* Location card */
+    .loc-card { cursor:pointer; }
+    .loc-card-inner { padding:20px; }
+    .loc-title { font-family:'Syne',sans-serif; font-weight:700; font-size:1.05rem; color:var(--text); line-height:1.3; margin:6px 0 4px; transition:color 0.2s; }
+    .loc-card:hover .loc-title { color:var(--orange-glow); }
+    .loc-meta { display:flex; align-items:center; gap:6px; font-size:0.75rem; color:var(--text-dim); margin-bottom:10px; }
+    .loc-preview { font-size:0.875rem; color:var(--text-muted); line-height:1.6; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:16px; }
+    .loc-footer { display:flex; align-items:center; justify-content:space-between; padding-top:12px; border-top:1px solid var(--border); font-size:0.75rem; }
+    .loc-footer-link { color:var(--orange-glow); font-weight:500; }
+    .loc-card:hover .loc-footer-link { text-decoration:underline; }
+
+    /* Map placeholder */
+    .map-placeholder { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; position:relative; }
+    .map-grid { position:absolute; inset:0; background-image:linear-gradient(rgba(232,98,26,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(232,98,26,0.05) 1px,transparent 1px); background-size:60px 60px; }
+    .map-pin { position:absolute; transform:translate(-50%,-50%); cursor:pointer; z-index:10; }
+    .map-pin-dot { width:18px; height:18px; border-radius:50%; border:2px solid; display:flex; align-items:center; justify-content:center; transition:transform 0.2s; }
+    .map-pin:hover .map-pin-dot { transform:scale(1.4); }
+    .map-pin-pulse { position:absolute; inset:-4px; border-radius:50%; animation:mapPulse 2.5s ease-in-out infinite; opacity:0.4; }
+    @keyframes mapPulse { 0%,100%{transform:scale(1);opacity:0.4;} 50%{transform:scale(1.6);opacity:0;} }
+    .map-tooltip { position:absolute; bottom:calc(100% + 8px); left:50%; transform:translateX(-50%); background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 14px; font-size:0.78rem; white-space:nowrap; display:none; box-shadow:0 8px 24px rgba(0,0,0,0.5); z-index:20; }
+    .map-pin:hover .map-tooltip { display:block; }
+    .map-notice { position:absolute; bottom:0; left:0; right:0; padding:10px; text-align:center; font-size:0.72rem; color:var(--text-dim); font-family:'JetBrains Mono',monospace; background:linear-gradient(to top,rgba(8,8,13,0.8),transparent); }
+
+    /* Pages */
+    #app { min-height:100vh; display:flex; flex-direction:column; }
+    .main { flex:1; }
+    .hidden { display:none !important; }
+
+    /* Hero */
+    .hero { min-height:90vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+    .hero-content { position:relative; z-index:10; text-align:center; max-width:900px; padding:0 20px; }
+    .hero-eyebrow { display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:999px; background:rgba(232,98,26,0.1); border:1px solid rgba(232,98,26,0.25); color:var(--orange-glow); font-size:0.85rem; font-family:'JetBrains Mono',monospace; margin-bottom:32px; }
+    .hero-title { font-family:'Syne',sans-serif; font-size:clamp(3rem,8vw,5.5rem); font-weight:800; line-height:0.95; letter-spacing:-0.02em; color:var(--text); margin-bottom:24px; }
+    .hero-desc { font-size:1.1rem; color:var(--text-muted); max-width:520px; margin:0 auto 40px; line-height:1.7; }
+    .hero-btns { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; margin-bottom:48px; }
+    .hero-pills { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
+    .hero-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-size:0.78rem; border:1px solid; }
+
+    /* Stats */
+    .stats-bar { border-top:1px solid var(--border); border-bottom:1px solid var(--border); background:var(--surface); padding:40px 0; }
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:24px; }
+    .stat-item { text-align:center; }
+    .stat-value { font-family:'JetBrains Mono',monospace; font-size:1.8rem; font-weight:700; }
+    .stat-label { font-size:0.85rem; color:var(--text-dim); margin-top:4px; }
+    @media(max-width:640px) { .stats-grid { grid-template-columns:repeat(2,1fr); } }
+
+    /* Grid layouts */
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+    .grid-2 { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+    .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+    @media(max-width:1024px) { .grid-3 { grid-template-columns:repeat(2,1fr); } .grid-4 { grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:640px) { .grid-3,.grid-2,.grid-4 { grid-template-columns:1fr; } }
+
+    /* Section */
+    .section { padding:80px 0; }
+    .section-sm { padding:48px 0; }
+    .section-title { font-family:'Syne',sans-serif; font-weight:700; font-size:1.85rem; color:var(--text); margin-bottom:8px; }
+    .section-sub { color:var(--text-muted); font-size:0.95rem; }
+    .section-header { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:32px; }
+
+    /* Map + list layout */
+    .map-layout { display:grid; grid-template-columns:3fr 2fr; gap:20px; align-items:start; }
+    @media(max-width:1024px) { .map-layout { grid-template-columns:1fr; } }
+    .map-frame { height:500px; position:sticky; top:84px; }
+    @media(min-width:1024px) { .map-frame { height:600px; } }
+    .list-scroll { max-height:580px; overflow-y:auto; padding-right:4px; }
+
+    /* How steps */
+    .how-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; position:relative; }
+    @media(max-width:900px) { .how-grid { grid-template-columns:repeat(2,1fr); } }
+    @media(max-width:480px) { .how-grid { grid-template-columns:1fr; } }
+    .how-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
+    .how-icon { width:48px; height:48px; background:var(--muted); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; margin-bottom:16px; }
+    .how-num { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--orange); margin-bottom:4px; }
+    .how-title { font-family:'Syne',sans-serif; font-weight:700; font-size:0.95rem; color:var(--text); margin-bottom:6px; }
+    .how-desc { font-size:0.85rem; color:var(--text-muted); line-height:1.6; }
+
+    /* Detail page */
+    .detail-header { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:24px; }
+    .detail-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding-top:20px; margin-top:20px; border-top:1px solid var(--border); }
+    .detail-stat-val { font-family:'JetBrains Mono',monospace; font-size:1.6rem; font-weight:700; text-align:center; }
+    .detail-stat-lbl { font-size:0.75rem; color:var(--text-dim); text-align:center; margin-top:2px; }
+    .story-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:12px; }
+    .translation-box { background:var(--surface); border:1px solid rgba(34,211,238,0.2); border-radius:8px; padding:12px; margin-top:10px; font-size:0.82rem; font-style:italic; color:var(--text-muted); line-height:1.6; }
+
+    /* Leaderboard */
+    .lb-table { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+    .lb-header { display:grid; grid-template-columns:48px 1fr auto auto auto; gap:12px; padding:12px 20px; background:var(--surface); border-bottom:1px solid var(--border); font-size:0.72rem; color:var(--text-dim); font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:0.05em; }
+    .lb-row { display:grid; grid-template-columns:48px 1fr auto auto auto; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); align-items:center; transition:background 0.15s; }
+    .lb-row:last-child { border-bottom:none; }
+    .lb-row:hover { background:rgba(255,255,255,0.02); }
+    .lb-avatar { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--purple),var(--orange)); display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700; color:white; flex-shrink:0; }
+    @media(max-width:640px) { .lb-header,.lb-row { grid-template-columns:36px 1fr auto; } .lb-header :nth-child(n+4),.lb-row :nth-child(n+4) { display:none; } }
+
+    /* Submit */
+    .submit-wrap { max-width:680px; margin:0 auto; padding:48px 20px; }
+    .category-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    @media(max-width:480px) { .category-grid { grid-template-columns:repeat(2,1fr); } }
+    .cat-btn { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-muted); font-size:0.875rem; cursor:pointer; transition:all 0.2s; text-align:left; }
+    .cat-btn:hover { border-color:rgba(232,98,26,0.4); }
+    .cat-btn.selected { border-color:var(--orange); background:rgba(232,98,26,0.12); color:var(--orange-glow); }
+    .intensity-row { display:flex; align-items:center; gap:16px; }
+    .intensity-row input[type=range] { flex:1; accent-color:var(--purple); }
+    .intensity-val { font-family:'JetBrains Mono',monospace; font-size:1.2rem; font-weight:700; color:var(--orange-glow); min-width:24px; text-align:right; }
+    .success-wrap { text-align:center; padding:80px 20px; max-width:440px; margin:0 auto; }
+    .success-icon { width:72px; height:72px; border-radius:50%; background:rgba(6,78,59,0.3); border:1px solid rgba(6,78,59,0.5); display:flex; align-items:center; justify-content:center; font-size:2rem; margin:0 auto 24px; }
+    .error-text { color:#f87171; font-size:0.8rem; margin-top:4px; }
+
+    /* Leaflet popup custom style */
+    .sp-popup .leaflet-popup-content-wrapper { background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.2); border:none; padding:0; }
+    .sp-popup .leaflet-popup-content { margin:14px 16px; }
+    .sp-popup .leaflet-popup-tip { background:#fff; }
+    .sp-popup .leaflet-popup-close-button { color:#888; font-size:16px; padding:8px; }
+    .leaflet-control-attribution { font-size:10px !important; }
+    .leaflet-control-zoom a { background:var(--card) !important; color:var(--text) !important; border-color:var(--border) !important; }
+    .leaflet-control-zoom a:hover { background:var(--muted) !important; }
+
+    /* CTA section */
+    .cta-section { border-radius:20px; border:1px solid var(--border); background:linear-gradient(135deg,var(--surface),var(--card)); padding:64px 32px; text-align:center; position:relative; overflow:hidden; }
+
+    /* Footer */
+    footer { border-top:1px solid var(--border); background:var(--surface); margin-top:96px; padding:48px 0; }
+    .footer-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:32px; margin-bottom:40px; }
+    @media(max-width:768px) { .footer-grid { grid-template-columns:1fr; gap:24px; } }
+    .footer-label { font-size:0.72rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; font-family:'JetBrains Mono',monospace; margin-bottom:12px; }
+    .footer-link { display:block; font-size:0.875rem; color:var(--text-muted); cursor:pointer; border:none; background:none; text-align:left; padding:4px 0; transition:color 0.15s; }
+    .footer-link:hover { color:var(--text); }
+    .social-btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
+    .social-btn { display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; background:var(--muted); color:var(--text-muted); font-size:0.8rem; cursor:pointer; border:none; transition:all 0.15s; text-decoration:none; }
+    .social-btn:hover { background:var(--border); color:var(--text); }
+    .disclaimer { background:rgba(180,83,9,0.08); border:1px solid rgba(180,83,9,0.2); border-radius:10px; padding:16px; font-size:0.8rem; color:var(--text-dim); line-height:1.6; margin-bottom:20px; }
+    .footer-copy { font-size:0.78rem; color:var(--text-dim); }
+    @media(max-width:640px) { .hero-title { font-size:2.8rem; } }
+  </style>
+</head>
+<body>
+<div id="app">
+  <nav id="navbar">
+    <div class="container">
+      <div class="nav-inner">
+        <div class="logo" onclick="showPage('home')">
+          <div class="logo-icon">📍</div>
+          <div class="logo-text">Strange<span>Pin</span></div>
+        </div>
+        <div class="nav-links">
+          <button class="nav-link active" data-page="home" onclick="showPage('home')">Home</button>
+          <button class="nav-link" data-page="map" onclick="showPage('map')">Explore</button>
+          <button class="nav-link" data-page="submit" onclick="showPage('submit')">Pin It</button>
+          <button class="nav-link" data-page="leaderboard" onclick="showPage('leaderboard')">Pinners</button>
+          <button class="nav-link" data-page="about" onclick="showPage('about')">About</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div id="authInfo" style="display:flex;align-items:center;gap:6px;"></div>
+          <button id="authBtn" onclick="window.fbSignIn && window.fbSignIn()"
+            style="background:var(--orange);color:white;border:none;padding:7px 14px;border-radius:8px;font-weight:600;font-size:0.8rem;cursor:pointer;transition:all 0.2s;">
+            🔑 Sign In
+          </button>
+          <div style="position:relative;">
+            <button class="lang-btn" onclick="toggleLang()" id="langBtn">
+              <span id="langFlag">🇺🇸</span>
+              <span id="langName">English</span>
+              <span>▾</span>
+            </button>
+            <div class="lang-dropdown" id="langDropdown">
+              <button class="lang-option selected" onclick="setLang('en','🇺🇸','English')">🇺🇸 English</button>
+              <button class="lang-option" onclick="setLang('zh_TW','🇹🇼','繁體中文')">🇹🇼 繁體中文</button>
+              <button class="lang-option" onclick="setLang('zh_CN','🇨🇳','简体中文')">🇨🇳 简体中文</button>
+              <button class="lang-option" onclick="setLang('ja','🇯🇵','日本語')">🇯🇵 日本語</button>
+              <button class="lang-option" onclick="setLang('ko','🇰🇷','한국어')">🇰🇷 한국어</button>
+              <button class="lang-option" onclick="setLang('es','🇪🇸','Español')">🇪🇸 Español</button>
+            </div>
+          </div>
+          <button class="nav-btn" onclick="showPage('submit')">📍 <span data-t="nav.submit">Pin It</span></button>
+          <button class="hamburger" onclick="toggleMobile()" id="hamburger">☰</button>
+        </div>
+      </div>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+      <button class="mobile-nav-link active" data-page="home" onclick="showPage('home');closeMobile()">Home</button>
+      <button class="mobile-nav-link" data-page="map" onclick="showPage('map');closeMobile()">Explore</button>
+      <button class="mobile-nav-link" data-page="submit" onclick="showPage('submit');closeMobile()">Pin It</button>
+      <button class="mobile-nav-link" data-page="leaderboard" onclick="showPage('leaderboard');closeMobile()">Pinners</button>
+      <button class="mobile-nav-link" data-page="about" onclick="showPage('about');closeMobile()">About</button>
+      <div class="mobile-lang">
+        <div class="footer-label">Language</div>
+        <div class="mobile-lang-grid">
+          <button class="mobile-lang-opt selected" onclick="setLang('en','🇺🇸','English');closeMobile()">🇺🇸 English</button>
+          <button class="mobile-lang-opt" onclick="setLang('zh_TW','🇹🇼','繁體中文');closeMobile()">🇹🇼 繁體中文</button>
+          <button class="mobile-lang-opt" onclick="setLang('zh_CN','🇨🇳','简体中文');closeMobile()">🇨🇳 简体中文</button>
+          <button class="mobile-lang-opt" onclick="setLang('ja','🇯🇵','日本語');closeMobile()">🇯🇵 日本語</button>
+          <button class="mobile-lang-opt" onclick="setLang('ko','🇰🇷','한국어');closeMobile()">🇰🇷 한국어</button>
+          <button class="mobile-lang-opt" onclick="setLang('es','🇪🇸','Español');closeMobile()">🇪🇸 Español</button>
+        </div>
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid var(--border);">
+        <button class="btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="showPage('submit');closeMobile()">📍 Pin It</button>
+      </div>
+    </div>
+  </nav>
+  <div class="nav-spacer"></div>
+  <main class="main" id="mainContent"></main>
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;font-size:13px;">📍</div>
+            <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;">Strange<span class="text-gradient">Pin</span></span>
+          </div>
+          <p style="font-size:0.85rem;color:var(--text-muted);font-style:italic;margin-bottom:12px;">"Pin the unexplained."</p>
+          <div class="social-btns">
+            <a href="https://tiktok.com/@strangepins" target="_blank" class="social-btn">🎵 TikTok</a>
+            <a href="https://instagram.com/strange.pins" target="_blank" class="social-btn">📸 Instagram</a>
+            <a href="https://x.com/strangepin" target="_blank" class="social-btn">𝕏 X</a>
+            <a href="https://youtube.com/@StrangePin" target="_blank" class="social-btn">▶️ YouTube</a>
+          </div>
+        </div>
+        <div>
+          <div class="footer-label">Navigate</div>
+          <button class="footer-link" onclick="showPage('map')">Explore Map</button>
+          <button class="footer-link" onclick="showPage('submit')">Pin a Location</button>
+          <button class="footer-link" onclick="showPage('leaderboard')">Pinner Rankings</button>
+          <button class="footer-link" onclick="showPage('about')">About StrangePin</button>
+        </div>
+        <div>
+          <div class="footer-label">🌍 Global Community</div>
+          <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.6;">Stories pinned in any language are preserved in their original form. StrangePin welcomes pins from every country and culture.</p>
+        </div>
+      </div>
+      <div class="disclaimer">
+        <strong style="color:var(--text-muted);">Disclaimer: </strong>StrangePin does not claim that any supernatural or paranormal event is proven. All pins are community-submitted personal experiences, folklore, or local stories. They are presented as cultural and personal narratives, not verified facts.
+      </div>
+      <div class="footer-copy">© 2025 StrangePin. All rights reserved. · strangepin.com</div>
+    </div>
+  </footer>
+</div>
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────────────
+const LOCATIONS = [
+  { id:"1", name:"青木ヶ原 — 富士の樹海", nameEn:"Aokigahara — Sea of Trees", slug:"aokigahara", country:"Japan", countryCode:"JP", city:"Fujikawaguchiko", category:"Haunted", categoryColor:"purple", reports:318, mysteryScore:9.6, intensityAvg:8.9, verified:true, featured:true, coordinates:{lat:35.4722,lng:138.6317},
+    shortPreview:"At the base of Mt. Fuji lies a forest so dense that compasses fail and GPS loses signal. Visitors describe voices heard from no visible source, and a pull toward darkness that is very difficult to describe rationally.",
+    fullStory:"Aokigahara stretches across 35 square kilometers of hardened lava at the northwest base of Mt. Fuji. The forest grew atop a 864 CE lava flow — the ground beneath is hollow in places, riddled with caves and lava tubes, giving the forest an otherworldly silence. There is almost no wind. Few birds.\n\nThe iron-rich volcanic rock beneath the soil disrupts compasses and GPS devices consistently throughout the forest. Hikers who stray from the marked trails can lose all sense of direction within minutes.\n\nIn Japanese mythology, the forest has long been associated with yūrei — the spirits of those who died with intense emotion.\n\nModern visitors report the same experiences across cultures: a sudden, inexplicable heaviness of feeling, voices heard at the edge of hearing, and a described 'pull' toward the deeper forest.",
+    stories:[
+      { user:"fujisan_hiker", badge:"Strange Keeper", date:"2024-10-15", intensity:10, lang:"ja", langLabel:"Japanese", text:"樹海の中で道に迷いました。GPSが完全に機能せず、コンパスが回転し続けました。3時間歩いた後、なぜか入り口から200メートルのところにいました。", translationNote:"AI translation: I got lost in the forest. GPS completely stopped working and the compass kept spinning. After 3 hours, I found myself 200 meters from the entrance." },
+      { user:"tokyo_paranormal", badge:"Seeker", date:"2024-08-03", intensity:8, lang:"en", langLabel:"English", text:"Went with three researchers. We all heard whispering simultaneously — different direction for each of us. Nothing on the audio recording. But we all heard it." }
+    ], pinPos:{left:"82%",top:"33%"} },
+  { id:"2", name:"Zona del Silencio", nameEn:"Zone of Silence", slug:"zona-silencio", country:"Mexico", countryCode:"MX", city:"Ceballos, Durango", category:"UFO", categoryColor:"teal", reports:187, mysteryScore:9.1, intensityAvg:8.2, verified:true, featured:true, coordinates:{lat:27.3167,lng:-103.9167},
+    shortPreview:"A patch of desert where radio waves cannot be transmitted, compasses behave erratically, and meteorites fall at an impossible frequency. Locals describe tall blonde strangers who appear and vanish without vehicles.",
+    fullStory:"The Mapimí Silent Zone occupies a triangular area in the Chihuahuan Desert. The zone sits near the 27th parallel — the same latitude as the Egyptian pyramids and the Bermuda Triangle.\n\nThe anomalies are documented: radio signals are absorbed or reflected, satellite signals disrupted, compasses deviate. The soil is extraordinarily rich in magnetite and uranium.\n\nMeteorites fall here at a rate statisticians find difficult to explain. In 1970, a US Air Force rocket went off course and crashed here.\n\nVillagers consistently describe the same figures: very tall, fair-skinned people who ask for water and then cannot be found again. No vehicles are ever seen arriving or departing.",
+    stories:[
+      { user:"desierto_viajero", badge:"Strange Keeper", date:"2024-09-08", intensity:9, lang:"es", langLabel:"Spanish", text:"Fui con un equipo de investigación en agosto. Llevamos tres radios diferentes — ninguna funcionó dentro de la zona. Nuestro GPS tardó 40 minutos en recuperar señal.", translationNote:"AI translation: I went with a research team in August. We brought three radios — none worked inside the zone. Our GPS took 40 minutes to regain signal after leaving." },
+      { user:"chihuahua_testigo", badge:"Witness", date:"2024-04-17", intensity:8, lang:"es", langLabel:"Spanish", text:"Mi abuelo vivió cerca de la zona toda su vida. Decía que los 'güeros' — hombres altos y rubios — aparecían cada ciertos años. Siempre pedían agua. Siempre desaparecían.", translationNote:"AI translation: My grandfather lived near the zone his whole life. He said the tall, fair-haired men appeared every few years. They always asked for water. They always disappeared." }
+    ], pinPos:{left:"16%",top:"42%"} },
+  { id:"3", name:"平遙古城地下密室", nameEn:"Pingyao — The Underground Chambers", slug:"pingyao-chambers", country:"China", countryCode:"CN", city:"Pingyao, Shanxi", category:"Strange Experience", categoryColor:"purple", reports:94, mysteryScore:8.3, intensityAvg:7.6, verified:true, featured:false, coordinates:{lat:37.1897,lng:112.1763},
+    shortPreview:"Beneath Pingyao's UNESCO-listed Ming Dynasty walls, a network of passages has been partially excavated. Visitors report hearing rhythmic sounds from sealed sections, and some experience unexplained weeping upon entry.",
+    fullStory:"Pingyao is one of the best-preserved ancient walled cities in China, its Ming Dynasty walls dating to 1370 CE.\n\nBeneath the walls runs a network of sub-wall passages and chambers that have been partially excavated since the 1980s. Significant portions remain sealed or unexcavated.\n\nVisitors to the South Gate area report a rhythmic sound — 'like someone walking in a very long corridor' — audible through the wall foundations but not traceable. Several have reported involuntary weeping that stops immediately upon stepping away.\n\nLocal historians note that Pingyao's walls were built using a labor system that some records suggest was not entirely voluntary.",
+    stories:[
+      { user:"shanxi_lüke", badge:"Witness", date:"2024-11-02", intensity:8, lang:"zh_CN", langLabel:"Simplified Chinese", text:"我去年秋天带着朋友参观平遥。在南门附近，我朋友突然开始哭泣，说不清楚原因。离开那段城墙大约五十米后，她立刻停止了哭泣。", translationNote:"AI translation: I visited Pingyao with a friend last autumn. Near the South Gate, my friend suddenly started crying for no reason. About 50 meters after leaving that section of wall, she stopped immediately." }
+    ], pinPos:{left:"76%",top:"35%"} },
+  { id:"4", name:"Hoia-Baciu Forest", nameEn:"Hoia-Baciu — The Bermuda Triangle of Romania", slug:"hoia-baciu", country:"Romania", countryCode:"RO", city:"Cluj-Napoca", category:"Energy Spot", categoryColor:"teal", reports:241, mysteryScore:9.4, intensityAvg:8.7, verified:true, featured:true, coordinates:{lat:46.7712,lng:23.5219},
+    shortPreview:"In Transylvania, a forest where trees grow in impossible spiraling shapes, a circular clearing where nothing grows, and visitors develop rashes, burns, and amnesia upon entry.",
+    fullStory:"Hoia-Baciu Forest sits on the edge of Cluj-Napoca in Transylvania. It has been studied by biologists, physicists, and parapsychologists since the 1960s.\n\nThe trees of Hoia-Baciu do not grow straight. They twist, spiral, and bend at right angles in shapes that botanists cannot explain.\n\nAt the forest's center is a perfectly circular clearing — the Poiana Rotundă — approximately 250 meters in diameter where no vegetation grows. Soil samples from the clearing show markedly different composition from just outside it.\n\nVisitor reports are remarkably consistent: skin rashes that fade on exit, amnesia of 30-90 minutes, malfunctioning electronics, and photographs showing unexplained lights in daylight.",
+    stories:[
+      { user:"cluj_cercetator", badge:"Strange Keeper", date:"2024-09-28", intensity:9, lang:"en", langLabel:"English", text:"I've visited 11 times. The rash is real — I've photographed it on three occasions, always on my forearms, always fading within 4 hours of leaving. My phone camera crashes in the clearing. Every single time." },
+      { user:"transylvania_explorer", badge:"Seeker", date:"2024-06-14", intensity:8, lang:"en", langLabel:"English", text:"I lost 45 minutes. I remember entering the Round Meadow with my partner. Then I was at the treeline. She says I stood in the clearing for 45 minutes and did not respond to my name. I have no memory of this." }
+    ], pinPos:{left:"56%",top:"28%"} },
+  { id:"5", name:"제주 설문대할망 동굴", nameEn:"Jeju — Cave of Grandmother Seolmundae", slug:"jeju-cave", country:"South Korea", countryCode:"KR", city:"Jeju City", category:"Urban Legend", categoryColor:"amber", reports:112, mysteryScore:8.1, intensityAvg:7.4, verified:true, featured:false, coordinates:{lat:33.5279,lng:126.7717},
+    shortPreview:"Beneath Jeju Island runs the world's longest lava tube system. Local legend holds that Grandmother Seolmundae sleeps in an unmapped chamber. Visitors report a rhythmic vibration with no geological source.",
+    fullStory:"Jeju Island is a UNESCO World Heritage site formed by volcanic activity. Beneath its surface runs the Geomunoreum Lava Tube System — one of the world's most extensive.\n\nBeyond the public sections, the system continues into unmapped passages. Local government has restricted access to deeper sections.\n\nJeju's mythology centers on Seolmundae Halmang — a creator giant who formed the island. In some versions, she rests beneath the island and her breathing is felt as geological activity.\n\nVisitors report a rhythmic vibration approximately every 40-60 seconds — felt in the feet and chest. Geologists have investigated and cannot attribute it to known sources. Several visitors report an overwhelming sense of an enormous presence.",
+    stories:[
+      { user:"jeju_탐험가", badge:"Seeker", date:"2024-10-22", intensity:8, lang:"ko", langLabel:"Korean", text:"만장굴 공개구간 너머에 갈 기회가 있었습니다. 깊은 구간에서 약 40초마다 발바닥으로 진동을 느꼈습니다. 지진 활동이나 해양 파도와 일치하지 않았습니다.", translationNote:"AI translation: I had an opportunity to go beyond the public section of Manjanggul. In the deep section, I felt a vibration through the soles of my feet approximately every 40 seconds. It didn't correspond to seismic activity or ocean waves." }
+    ], pinPos:{left:"80%",top:"34%"} }
+];
+
+const LEADERBOARD = [
+  { rank:1,  username:"cluj_cercetator",       pins:47, points:892, badge:"Strange Keeper", country:"Romania",      emoji:"🥇" },
+  { rank:2,  username:"fujisan_hiker",          pins:38, points:741, badge:"Strange Keeper", country:"Japan",        emoji:"🥈" },
+  { rank:3,  username:"desierto_viajero",       pins:29, points:554, badge:"Seeker",         country:"Mexico",       emoji:"🥉" },
+  { rank:4,  username:"folklore_researcher_kr", pins:24, points:487, badge:"Seeker",         country:"South Korea",  emoji:null },
+  { rank:5,  username:"transylvania_explorer",  pins:19, points:362, badge:"Witness",        country:"Romania",      emoji:null },
+  { rank:6,  username:"archaeology_notes",      pins:14, points:271, badge:"Witness",        country:"UK",           emoji:null },
+  { rank:7,  username:"jeju_탐험가",             pins:11, points:208, badge:"Curious",        country:"South Korea",  emoji:null },
+  { rank:8,  username:"chihuahua_testigo",      pins:8,  points:153, badge:"Curious",        country:"Mexico",       emoji:null },
+  { rank:9,  username:"shanxi_lüke",            pins:6,  points:114, badge:"Curious",        country:"China",        emoji:null },
+  { rank:10, username:"tokyo_paranormal",       pins:4,  points:76,  badge:"Curious",        country:"Japan",        emoji:null },
+];
+
+const BADGE_STYLE = {
+  "Strange Keeper": "badge badge-purple",
+  "Seeker":         "badge badge-teal",
+  "Witness":        "badge badge-amber",
+  "Curious":        "badge badge-muted",
+};
+
+const CAT_BADGE = {
+  "Haunted":           "badge badge-purple",
+  "UFO":               "badge badge-teal",
+  "Energy Spot":       "badge badge-teal",
+  "Urban Legend":      "badge badge-amber",
+  "Abandoned Place":   "badge badge-amber",
+  "Strange Experience":"badge badge-purple",
+  "Other":             "badge badge-muted",
+};
+
+const CAT_BAR = {
+  "purple": "background:linear-gradient(to right,#7c3aed,transparent)",
+  "teal":   "background:linear-gradient(to right,#0891b2,transparent)",
+  "amber":  "background:linear-gradient(to right,#b45309,transparent)",
+};
+
+const CAT_SCORE_COLOR = { purple:"#a78bfa", teal:"#22d3ee", amber:"#fbbf24" };
+
+const CATEGORIES = [
+  {id:"Haunted",icon:"👻"},{id:"UFO",icon:"🛸"},{id:"Energy Spot",icon:"⚡"},
+  {id:"Urban Legend",icon:"📖"},{id:"Abandoned Place",icon:"🏚️"},{id:"Strange Experience",icon:"🌀"},{id:"Other",icon:"❓"}
+];
+
+const LANGS = {
+  en:    { nav:{ home:"Home", map:"Explore", submit:"Pin It", leaderboard:"Pinners", about:"About" }, hero:"The world is stranger than you think.", submit_btn:"Drop the Pin", success:"Pin Dropped!", submit_title:"Pin a Location" },
+  zh_TW: { nav:{ home:"首頁", map:"探索", submit:"釘上去", leaderboard:"探索者", about:"關於" }, hero:"這個世界比你想像的更奇異。", submit_btn:"釘上去", success:"圖釘已釘上！", submit_title:"釘一個地點" },
+  zh_CN: { nav:{ home:"首页", map:"探索", submit:"钉上去", leaderboard:"探索者", about:"关于" }, hero:"这个世界比你想象的更奇异。", submit_btn:"钉上去", success:"图钉已钉上！", submit_title:"钉一个地点" },
+  ja:    { nav:{ home:"ホーム", map:"探索", submit:"ピンする", leaderboard:"ピナー", about:"概要" }, hero:"世界は、あなたが思うより奇妙だ。", submit_btn:"ピンを落とす", success:"ピン完了！", submit_title:"場所をピンする" },
+  ko:    { nav:{ home:"홈", map:"탐험", submit:"핀하기", leaderboard:"피너", about:"소개" }, hero:"세상은 당신이 생각하는 것보다 더 이상합니다.", submit_btn:"핀 꽂기", success:"핀 완료!", submit_title:"장소 핀하기" },
+  es:    { nav:{ home:"Inicio", map:"Explorar", submit:"Pinear", leaderboard:"Pinners", about:"Acerca de" }, hero:"El mundo es más extraño de lo que crees.", submit_btn:"Clavar el Pin", success:"¡Pin Clavado!", submit_title:"Pinear un Lugar" },
+};
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let currentPage = 'home';
+let currentLang = localStorage.getItem('sp_lang') || 'en';
+let currentDetail = null;
+let mapFilter = 'all';
+let mapSearch = '';
+let submitCategory = '';
+let submitIntensity = 5;
+let submitted = false;
+let showTranslations = {};
+let lbUnsubscribe = null;
+
+// ── LANG ──────────────────────────────────────────────────────────────────────
+function setLang(code, flag, name) {
+  currentLang = code;
+  localStorage.setItem('sp_lang', code);
+  document.getElementById('langFlag').textContent = flag;
+  document.getElementById('langName').textContent = name;
+  document.querySelectorAll('.lang-option').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll('.mobile-lang-opt').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll('.lang-option, .mobile-lang-opt').forEach(el => {
+    if (el.textContent.trim().includes(name)) el.classList.add('selected');
+  });
+  document.getElementById('langDropdown').classList.remove('open');
+  renderPage();
+}
+function toggleLang() { document.getElementById('langDropdown').classList.toggle('open'); }
+document.addEventListener('click', e => { if (!e.target.closest('#langBtn') && !e.target.closest('#langDropdown')) document.getElementById('langDropdown').classList.remove('open'); });
+function t(key) { return (LANGS[currentLang] || LANGS.en)[key] || key; }
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function showPage(page, data) {
+  currentPage = page;
+  if (data) currentDetail = data;
+  document.querySelectorAll('.nav-link, .mobile-nav-link').forEach(el => { el.classList.toggle('active', el.dataset.page === page); });
+  renderPage();
+  window.scrollTo(0, 0);
+}
+function toggleMobile() { document.getElementById('mobileMenu').classList.toggle('open'); document.getElementById('hamburger').textContent = document.getElementById('mobileMenu').classList.contains('open') ? '✕' : '☰'; }
+function closeMobile() { document.getElementById('mobileMenu').classList.remove('open'); document.getElementById('hamburger').textContent = '☰'; }
+window.addEventListener('scroll', () => { document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 20); });
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function scoreRing(score, color, size=56) {
+  const r = size/2 - 5; const c = 2*Math.PI*r; const fill = (score/10)*c;
+  return `<div class="score-ring" style="width:${size}px;height:${size}px;">
+    <svg viewBox="0 0 ${size} ${size}" style="width:100%;height:100%;transform:rotate(-90deg)">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#1c1c2a" stroke-width="4"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-dasharray="${fill} ${c}" stroke-linecap="round"/>
+    </svg>
+    <div class="score-ring-label"><span class="font-mono" style="font-size:${size>70?'1.1rem':'0.85rem'};font-weight:700;color:var(--text)">${score}</span></div>
+  </div>`;
+}
+
+function locationCard(loc, compact=false) {
+  const color = CAT_SCORE_COLOR[loc.categoryColor] || '#fbbf24';
+  const bar = CAT_BAR[loc.categoryColor] || CAT_BAR.amber;
+  return `<div class="card loc-card" onclick="showPage('detail',LOCATIONS.find(l=>l.id==='${loc.id}'))">
+    <div class="card-top-bar" style="${bar}"></div>
+    <div class="loc-card-inner">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+            <span class="${CAT_BADGE[loc.category]||'badge badge-muted'}">${loc.category}</span>
+            <span class="${loc.verified?'badge badge-green':'badge badge-muted'}">${loc.verified?'✓ Verified':'Unverified'}</span>
+          </div>
+          <div class="loc-title">${loc.nameEn||loc.name}</div>
+          ${loc.name !== (loc.nameEn||loc.name) ? `<div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:2px;">${loc.name}</div>` : ''}
+        </div>
+        ${scoreRing(loc.mysteryScore, color)}
+      </div>
+      <div class="loc-meta">📍 ${[loc.city,loc.country].filter(Boolean).join(', ')}</div>
+      ${!compact ? `<div class="loc-preview">${loc.shortPreview}</div>` : ''}
+      <div class="loc-footer">
+        <span style="color:var(--text-dim);">📋 ${loc.reports} reports</span>
+        <span class="loc-footer-link">View Pin →</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderPage() {
+  const lang = LANGS[currentLang] || LANGS.en;
+  const el = document.getElementById('mainContent');
+  el.className = 'main page';
+  // Stop live leaderboard when leaving
+  if (currentPage !== 'leaderboard' && lbUnsubscribe) { lbUnsubscribe(); lbUnsubscribe = null; }
+  // Destroy maps when leaving their pages
+  if (currentPage !== 'map'    && leafletMap)  { leafletMap.remove();  leafletMap  = null; }
+  if (currentPage !== 'submit' && submitMap)   { submitMap.remove();   submitMap   = null; }
+  if (currentPage === 'home')        el.innerHTML = renderHome(lang);
+  else if (currentPage === 'map')    el.innerHTML = renderMap(lang);
+  else if (currentPage === 'submit') el.innerHTML = renderSubmit(lang);
+  else if (currentPage === 'detail') el.innerHTML = renderDetail(lang);
+  else if (currentPage === 'leaderboard') el.innerHTML = renderLeaderboard(lang);
+  else if (currentPage === 'about')  el.innerHTML = renderAbout(lang);
+  if (currentPage === 'map')         setTimeout(initLeafletMap, 300);
+  if (currentPage === 'submit')      setTimeout(initSubmitMap,  300);
+  if (currentPage === 'leaderboard') setTimeout(startLiveLeaderboard, 100);
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function renderHome(lang) {
+  const featured = LOCATIONS.filter(l => l.featured);
+  const pills = [
+    {icon:'👻',label:'Haunted',cls:'badge-purple'},
+    {icon:'🛸',label:'UFO',cls:'badge-teal'},
+    {icon:'⚡',label:'Energy Spot',cls:'badge-teal'},
+    {icon:'📖',label:'Urban Legend',cls:'badge-amber'},
+    {icon:'🏚️',label:'Abandoned',cls:'badge-amber'},
+    {icon:'🌀',label:'Strange',cls:'badge-purple'},
+  ];
+  return `
+  <section class="hero">
+    <div class="dot-grid" style="position:absolute;inset:0;"></div>
+    <div class="orb orb1"></div><div class="orb orb2"></div>
+    <div class="hero-content">
+      <div class="hero-eyebrow">🌍 Worldwide · ${LOCATIONS.length} pins active</div>
+      <h1 class="hero-title font-display">${lang.hero || 'The world is stranger than you think.'}</h1>
+      <p class="hero-desc">Discover and pin mysterious locations, haunted places, UFO sightings, energy spots, urban legends, and unexplained experiences — reported by explorers worldwide.</p>
+      <div class="hero-btns">
+        <button class="btn-primary" onclick="showPage('map')">📍 Explore the Map</button>
+        <button class="btn-secondary" onclick="showPage('submit')">Pin a Location →</button>
+      </div>
+      <div class="hero-pills">
+        ${pills.map(p=>`<span class="hero-pill badge ${p.cls}">${p.icon} ${p.label}</span>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <section class="stats-bar">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-item"><div class="stat-value" style="color:var(--orange-glow)">1,284</div><div class="stat-label">Pins</div></div>
+        <div class="stat-item"><div class="stat-value" style="color:var(--teal)">8,741</div><div class="stat-label">Reports</div></div>
+        <div class="stat-item"><div class="stat-value" style="color:var(--purple-glow)">47</div><div class="stat-label">Countries</div></div>
+        <div class="stat-item"><div class="stat-value" style="color:var(--orange-glow)">3,102</div><div class="stat-label">Pinners</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-header">
+        <div><h2 class="section-title font-display">Strange Pins</h2><p class="section-sub">Community-pinned locations from around the world</p></div>
+        <button class="btn-secondary btn-sm" onclick="showPage('map')">View All →</button>
+      </div>
+      <div class="grid-3">${featured.map(l=>locationCard(l)).join('')}</div>
+    </div>
+  </section>
+
+  <section style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+    <div class="container section-sm">
+      <h2 class="section-title font-display" style="text-align:center;margin-bottom:40px;">How StrangePin Works</h2>
+      <div class="how-grid">
+        ${[['🚶','01','Go There','Visit a strange place — or recall one you\'ve been to.'],
+           ['📍','02','Pin It','Submit your experience with location, category, and story.'],
+           ['🤖','03','AI Organizes','Our AI synthesizes community reports into a location archive.'],
+           ['🏆','04','Earn Rewards','Build your Pinner rank as your contributions are verified.']
+          ].map(([icon,num,title,desc])=>`
+          <div class="how-card">
+            <div class="how-icon">${icon}</div>
+            <div class="how-num font-mono">${num}</div>
+            <div class="how-title font-display">${title}</div>
+            <div class="how-desc">${desc}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="cta-section">
+        <div class="dot-grid" style="position:absolute;inset:0;opacity:0.4;"></div>
+        <div style="position:relative;z-index:1;">
+          <div style="font-size:3rem;margin-bottom:16px;">📍</div>
+          <h2 class="font-display" style="font-size:2rem;font-weight:800;margin-bottom:12px;">Pin the unexplained.</h2>
+          <p style="color:var(--text-muted);max-width:440px;margin:0 auto 32px;line-height:1.7;">Something strange happened. Don't let it disappear. Drop a pin and tell your story.</p>
+          <button class="btn-primary" style="font-size:1rem;padding:14px 32px;" onclick="showPage('submit')">📍 Pin a Location</button>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────────────
+let leafletMap = null;
+let leafletMarkers = [];
+let submitMap = null;
+let submitMarker = null;
+let submitLat = null;
+let submitLng = null;
+
+function renderMap(lang) {
+  const filtered = LOCATIONS.filter(l => {
+    const q = mapSearch.toLowerCase();
+    const matchCat = mapFilter === 'all' || l.category === mapFilter;
+    const matchQ = !q || (l.nameEn||l.name).toLowerCase().includes(q) || l.country.toLowerCase().includes(q) || l.city.toLowerCase().includes(q) || l.category.toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+
+  const catBtns = [{ id:'all', label:'All', icon:'🗺️' }, ...CATEGORIES].map(c =>
+    `<button onclick="mapFilter='${c.id}';refreshMapPins()" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;border:1px solid ${mapFilter===c.id?'var(--orange)':'var(--border)'};background:${mapFilter===c.id?'rgba(232,98,26,0.15)':'transparent'};color:${mapFilter===c.id?'var(--orange-glow)':'var(--text-muted)'};font-size:0.78rem;cursor:pointer;transition:all 0.15s;">
+      ${c.icon||''}${c.label||c.id}</button>`).join('');
+
+  const html = `<div class="container" style="padding-top:32px;padding-bottom:64px;">
+    <div style="margin-bottom:24px;">
+      <h1 class="font-display" style="font-size:1.8rem;font-weight:700;margin-bottom:4px;">Strange Map</h1>
+      <p style="color:var(--text-muted);">Explore community-pinned locations worldwide</p>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:20px;">
+      <div style="position:relative;flex:1;min-width:220px;max-width:360px;">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);">🔍</span>
+        <input id="mapSearchInput" value="${mapSearch}" oninput="mapSearch=this.value;refreshMapPins()" placeholder="Search strange places..." style="padding-left:36px;" />
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">${catBtns}</div>
+    </div>
+    <div class="map-layout">
+        <div class="map-frame">
+          <div id="leafletMap" style="height:100%;width:100%;border-radius:12px;overflow:hidden;"></div>
+        </div>
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span class="font-mono" id="pinCount" style="font-size:0.78rem;color:var(--text-dim);">${filtered.length} pin${filtered.length!==1?'s':''} found</span>
+        </div>
+        <div class="list-scroll" id="mapList">
+          ${filtered.length===0
+            ? `<div style="text-align:center;padding:48px 20px;color:var(--text-muted);"><div style="font-size:2.5rem;margin-bottom:12px;">🔍</div>No pins match your filters.</div>`
+            : filtered.map(l=>locationCard(l,true)).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // Destroy old map instance before re-rendering
+  if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+
+  return html;
+}
+
+function initLeafletMap() {
+  const el = document.getElementById('leafletMap');
+  if (!el || leafletMap) return;
+
+  // Dark tile layer from CartoDB
+  leafletMap = L.map('leafletMap', { zoomControl: true, scrollWheelZoom: true }).setView([25, 10], 2);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(leafletMap);
+
+  // Force Leaflet to recalculate container size (fixes grey/white areas)
+  setTimeout(() => { leafletMap.invalidateSize(); }, 100);
+
+  addMarkersToMap(LOCATIONS);
+}
+
+function addMarkersToMap(locations) {
+  if (!leafletMap) return;
+
+  // Clear old markers
+  leafletMarkers.forEach(m => leafletMap.removeLayer(m));
+  leafletMarkers = [];
+
+  const CAT_COLORS_MAP = {
+    purple: '#a78bfa', teal: '#22d3ee', amber: '#fbbf24', muted: '#8888aa'
+  };
+
+  locations.forEach(loc => {
+    if (!loc.coordinates) return;
+    const color = CAT_COLORS_MAP[loc.categoryColor] || '#fbbf24';
+    const icon = {Haunted:'👻',UFO:'🛸','Energy Spot':'⚡','Urban Legend':'📖','Abandoned Place':'🏚️','Strange Experience':'🌀',Other:'❓'}[loc.category] || '📍';
+
+    // Custom SVG marker
+    const svgIcon = L.divIcon({
+      className: '',
+      html: `<div style="position:relative;width:24px;height:30px;cursor:pointer;">
+        <svg viewBox="0 0 36 44" width="24" height="30" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 0C8.059 0 0 8.059 0 18c0 12 18 26 18 26s18-14 18-26C36 8.059 27.941 0 18 0z" fill="${color}" opacity="0.95"/>
+          <circle cx="18" cy="18" r="10" fill="rgba(0,0,0,0.25)"/>
+        </svg>
+        <div style="position:absolute;top:5px;left:50%;transform:translateX(-50%);font-size:10px;line-height:1;">${icon}</div>
+      </div>`,
+      iconSize: [24, 30],
+      iconAnchor: [12, 30],
+      popupAnchor: [0, -32],
+    });
+
+    const marker = L.marker([loc.coordinates.lat, loc.coordinates.lng], { icon: svgIcon });
+
+    // Popup content
+    const popup = L.popup({
+      maxWidth: 260,
+      className: 'sp-popup',
+    }).setContent(`
+      <div style="font-family:'DM Sans',sans-serif;padding:4px;">
+        <div style="font-size:0.72rem;color:${color};font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">${loc.category}</div>
+        <div style="font-size:0.95rem;font-weight:700;color:#111;margin-bottom:4px;line-height:1.3;">${loc.nameEn||loc.name}</div>
+        <div style="font-size:0.78rem;color:#666;margin-bottom:8px;">📍 ${[loc.city,loc.country].filter(Boolean).join(', ')}</div>
+        <div style="font-size:0.78rem;color:#444;line-height:1.5;margin-bottom:10px;">${loc.shortPreview.substring(0,100)}…</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:0.72rem;color:#888;">📋 ${loc.reports} reports · ⚡ ${loc.mysteryScore}/10</span>
+          <button onclick="showPage('detail',LOCATIONS.find(l=>l.id==='${loc.id}'))" 
+            style="background:#e8621a;color:white;border:none;padding:5px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-weight:600;">
+            View →
+          </button>
+        </div>
+      </div>
+    `);
+
+    marker.bindPopup(popup);
+    marker.addTo(leafletMap);
+    leafletMarkers.push(marker);
+  });
+}
+
+// Refresh pins without full re-render (preserves map state)
+function refreshMapPins() {
+  const filtered = LOCATIONS.filter(l => {
+    const q = mapSearch.toLowerCase();
+    const matchCat = mapFilter === 'all' || l.category === mapFilter;
+    const matchQ = !q || (l.nameEn||l.name).toLowerCase().includes(q) || l.country.toLowerCase().includes(q) || l.city.toLowerCase().includes(q) || l.category.toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+
+  // Update filter button styles
+  document.querySelectorAll('[onclick*="refreshMapPins"]').forEach(btn => {
+    const id = btn.getAttribute('onclick').match(/'([^']+)'/)?.[1];
+    if (!id) return;
+    const active = id === mapFilter;
+    btn.style.borderColor = active ? 'var(--orange)' : 'var(--border)';
+    btn.style.background   = active ? 'rgba(232,98,26,0.15)' : 'transparent';
+    btn.style.color        = active ? 'var(--orange-glow)' : 'var(--text-muted)';
+  });
+
+  // Update count
+  const countEl = document.getElementById('pinCount');
+  if (countEl) countEl.textContent = `${filtered.length} pin${filtered.length!==1?'s':''} found`;
+
+  // Update list
+  const listEl = document.getElementById('mapList');
+  if (listEl) listEl.innerHTML = filtered.length === 0
+    ? `<div style="text-align:center;padding:48px 20px;color:var(--text-muted);"><div style="font-size:2.5rem;margin-bottom:12px;">🔍</div>No pins match your filters.</div>`
+    : filtered.map(l => locationCard(l, true)).join('');
+
+  // Update map markers
+  addMarkersToMap(filtered);
+}
+
+// ── SUBMIT ────────────────────────────────────────────────────────────────────
+function renderSubmit(lang) {
+  if (submitted) return `<div class="success-wrap">
+    <div class="success-icon">📍</div>
+    <h2 class="font-display" style="font-size:2rem;font-weight:800;margin-bottom:12px;">${lang.success||'Pin Dropped!'}</h2>
+    <p style="color:var(--text-muted);margin-bottom:32px;">Thank you for contributing to StrangePin. Your report will be reviewed and added to the map.</p>
+    <button class="btn-primary" onclick="submitted=false;submitCategory='';submitIntensity=5;submitLat=null;submitLng=null;renderPage()">Pin Another</button>
+  </div>`;
+
+  const catBtns = CATEGORIES.map(c => `
+    <button class="cat-btn ${submitCategory===c.id?'selected':''}" id="cat_${c.id}" onclick="selectCategory('${c.id}')">
+      <span>${c.icon}</span><span>${c.id}</span>
+    </button>`).join('');
+
+  const storyLangs = [['en','English'],['zh_TW','繁體中文'],['zh_CN','简体中文'],['ja','日本語'],['ko','한국어'],['es','Español'],['fr','Français'],['de','Deutsch'],['pt','Português'],['ar','العربية'],['other','Other']];
+
+  return `<div class="submit-wrap">
+    <div style="margin-bottom:32px;">
+      <h1 class="font-display" style="font-size:2rem;font-weight:800;margin-bottom:6px;">${lang.submit_title||'Pin a Location'}</h1>
+      <p style="color:var(--text-muted);">Drop a pin on something the world needs to know about</p>
+    </div>
+    <div>
+
+      <!-- ① MAP PIN PICKER -->
+      <div class="form-group">
+        <label>📍 Pin the Location on the Map <span style="color:#f87171;">*</span></label>
+        <div style="background:rgba(232,98,26,0.06);border:1px solid rgba(232,98,26,0.2);border-radius:10px;padding:12px 16px;margin-bottom:10px;font-size:0.85rem;color:var(--orange-glow);">
+          👆 Click anywhere on the map to drop your pin. Coordinates will fill in automatically.
+        </div>
+        <div id="submitMapContainer" style="height:300px;border-radius:12px;overflow:hidden;border:2px solid var(--border);position:relative;">
+          <div id="submitMap" style="height:100%;width:100%;"></div>
+          <div id="submitMapOverlay" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(8,8,13,0.5);pointer-events:none;transition:opacity 0.3s;">
+            <div style="text-align:center;color:white;">
+              <div style="font-size:2.5rem;margin-bottom:8px;">🗺️</div>
+              <p style="font-size:0.9rem;font-weight:600;">Click the map to drop your pin</p>
+            </div>
+          </div>
+        </div>
+        <!-- Coordinates display -->
+        <div id="coordsDisplay" style="display:${submitLat?'flex':'none'};align-items:center;gap:10px;margin-top:8px;padding:10px 14px;background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.2);border-radius:8px;">
+          <span style="font-size:1rem;">✅</span>
+          <div>
+            <p style="font-size:0.78rem;color:var(--teal);font-weight:600;margin-bottom:1px;">Pin placed!</p>
+            <p id="coordsText" class="font-mono" style="font-size:0.78rem;color:var(--text-muted);">${submitLat ? submitLat.toFixed(6)+', '+submitLng.toFixed(6) : ''}</p>
+          </div>
+          <button onclick="clearSubmitPin()" style="margin-left:auto;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:0.78rem;padding:4px 8px;border-radius:6px;transition:all 0.15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-dim)'">✕ Clear</button>
+        </div>
+      </div>
+
+      <!-- ② LOCATION DETAILS (auto-filled from reverse geocode) -->
+      <div class="form-group"><label>Location Name <span style="color:#f87171;">*</span></label><input id="f_name" placeholder="e.g. The Whispering Bridge of Kyoto" /></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="form-group">
+        <div><label>Country <span style="color:#f87171;">*</span></label><input id="f_country" placeholder="Auto-filled from pin" /></div>
+        <div><label>City / Region</label><input id="f_city" placeholder="Auto-filled from pin" /></div>
+      </div>
+      <div class="form-group"><label>Address or Landmark</label><input id="f_address" placeholder="Street address, landmark, or description" /></div>
+
+      <!-- ③ CATEGORY -->
+      <div class="form-group"><label>Category <span style="color:#f87171;">*</span></label><div class="category-grid">${catBtns}</div></div>
+
+      <!-- ④ STORY -->
+      <div class="form-group">
+        <label>Your Story <span style="color:#f87171;">*</span></label>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:0.8rem;color:var(--text-dim);">🌐 Story language:</span>
+          <select id="f_lang" style="width:auto;padding:4px 8px;font-size:0.8rem;">
+            ${storyLangs.map(([code,name])=>`<option value="${code}" ${code===currentLang?'selected':''}>${name}</option>`).join('')}
+          </select>
+        </div>
+        <textarea id="f_story" rows="6" placeholder="What happened here? What did you feel, see, or hear? Write in your own language — we preserve the original." style="resize:none;line-height:1.6;"></textarea>
+        <p style="font-size:0.75rem;color:var(--text-dim);margin-top:6px;">⚠️ Your story is stored in its original language. AI translation coming soon.</p>
+      </div>
+
+      <!-- ⑤ DATE + INTENSITY -->
+      <div class="form-group"><label>Date / Time of Experience</label><input id="f_date" type="datetime-local" /></div>
+      <div class="form-group">
+        <label>Strangeness Score — <span id="intensityLabel">5 — Clearly unusual</span></label>
+        <div class="intensity-row">
+          <input type="range" min="1" max="10" value="${submitIntensity}" oninput="submitIntensity=+this.value;updateIntensity(this.value)" />
+          <span class="intensity-val" id="intensityVal">${submitIntensity}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-dim);margin-top:4px;"><span>1</span><span>5</span><span>10</span></div>
+      </div>
+
+      <!-- ⑥ PHOTO -->
+      <div class="form-group">
+        <label>Photo (optional)</label>
+        <div id="imageUploadArea" style="border:2px dashed var(--border);border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.2s;position:relative;"
+             onmouseover="this.style.borderColor='rgba(232,98,26,0.4)'"
+             onmouseout="this.style.borderColor='var(--border)'"
+             onclick="document.getElementById('f_image').click()">
+          <input type="file" id="f_image" accept="image/*" style="display:none;" onchange="previewImage(this)" />
+          <div id="imagePreview" style="display:none;margin-bottom:12px;">
+            <img id="previewImg" style="max-width:100%;max-height:200px;border-radius:6px;object-fit:cover;" />
+          </div>
+          <div id="uploadPrompt">
+            <div style="font-size:2rem;margin-bottom:8px;">📷</div>
+            <p style="font-size:0.875rem;color:var(--text-muted);font-weight:500;">Click to upload a photo</p>
+            <p style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;">JPG, PNG, WEBP · Max 10MB</p>
+          </div>
+        </div>
+        <p style="font-size:0.72rem;color:var(--text-dim);margin-top:6px;">📎 Photo will be included in the submission notification.</p>
+      </div>
+
+      <!-- ⑦ USERNAME -->
+      <div class="form-group"><label>Your Username <span style="color:#f87171;">*</span></label><input id="f_username" placeholder="Your Pinner name" /></div>
+
+      <button id="submitBtn" class="btn-primary" style="width:100%;justify-content:center;font-size:1rem;padding:14px;" onclick="handleSubmit()">
+        📍 Drop the Pin
+      </button>
+      <div id="submitErrors" style="margin-top:12px;"></div>
+    </div>
+  </div>`;
+}
+
+function updateIntensity(val) {
+  const labels = {1:'1 — Mild unease',2:'2 — Slightly strange',3:'3 — Noticeable',4:'4 — Unsettling',5:'5 — Clearly unusual',6:'6 — Difficult to explain',7:'7 — Intensely felt',8:'8 — Overwhelming',9:'9 — Life-changing',10:'10 — Indescribable'};
+  submitIntensity = +val;
+  const el = document.getElementById('intensityLabel');
+  const valEl = document.getElementById('intensityVal');
+  if (el) el.textContent = labels[val]||val;
+  if (valEl) valEl.textContent = val;
+}
+
+function initSubmitMap() {
+  const el = document.getElementById('submitMap');
+  if (!el || submitMap) return;
+
+  submitMap = L.map('submitMap', { zoomControl: true, scrollWheelZoom: true }).setView([25, 10], 2);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors © CARTO',
+    subdomains: 'abcd', maxZoom: 19
+  }).addTo(submitMap);
+
+  // Fix grey areas
+  setTimeout(() => { submitMap.invalidateSize(); }, 100);
+
+  // Click to place pin
+  submitMap.on('click', function(e) {
+    submitLat = e.latlng.lat;
+    submitLng = e.latlng.lng;
+
+    // Remove old marker
+    if (submitMarker) submitMap.removeLayer(submitMarker);
+
+    // Add glowing orange marker
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="position:relative;width:36px;height:44px;">
+        <svg viewBox="0 0 36 44" width="36" height="44" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 0C8.059 0 0 8.059 0 18c0 12 18 26 18 26s18-14 18-26C36 8.059 27.941 0 18 0z" fill="#e8621a"/>
+          <circle cx="18" cy="18" r="9" fill="rgba(255,255,255,0.25)"/>
+        </svg>
+        <div style="position:absolute;top:9px;left:50%;transform:translateX(-50%);font-size:13px;">📍</div>
+      </div>`,
+      iconSize: [36, 44], iconAnchor: [18, 44],
+    });
+
+    submitMarker = L.marker([submitLat, submitLng], { icon }).addTo(submitMap);
+
+    // Hide overlay
+    const overlay = document.getElementById('submitMapOverlay');
+    if (overlay) overlay.style.opacity = '0';
+
+    // Show coords
+    const coordsDisplay = document.getElementById('coordsDisplay');
+    const coordsText    = document.getElementById('coordsText');
+    if (coordsDisplay) coordsDisplay.style.display = 'flex';
+    if (coordsText)    coordsText.textContent = submitLat.toFixed(6) + ', ' + submitLng.toFixed(6);
+
+    // Reverse geocode using OpenStreetMap Nominatim (free)
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${submitLat}&lon=${submitLng}&zoom=14&addressdetails=1`)
+      .then(r => r.json())
+      .then(data => {
+        const addr = data.address || {};
+        // Auto-fill country
+        const country = addr.country || '';
+        const city    = addr.city || addr.town || addr.village || addr.county || addr.state || '';
+        const road    = addr.road || addr.suburb || '';
+        const countryEl = document.getElementById('f_country');
+        const cityEl    = document.getElementById('f_city');
+        const addrEl    = document.getElementById('f_address');
+        if (countryEl && !countryEl.value) countryEl.value = country;
+        if (cityEl    && !cityEl.value)    cityEl.value    = city;
+        if (addrEl    && !addrEl.value)    addrEl.value    = road;
+      })
+      .catch(() => {}); // Silently fail if no internet
+  });
+
+  // If pin was already placed (coming back to form), restore it
+  if (submitLat && submitLng) {
+    submitMap.setView([submitLat, submitLng], 10);
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="width:36px;height:44px;"><svg viewBox="0 0 36 44" width="36" height="44"><path d="M18 0C8.059 0 0 8.059 0 18c0 12 18 26 18 26s18-14 18-26C36 8.059 27.941 0 18 0z" fill="#e8621a"/></svg><div style="position:absolute;top:9px;left:50%;transform:translateX(-50%);font-size:13px;">📍</div></div>`,
+      iconSize: [36,44], iconAnchor: [18,44],
+    });
+    submitMarker = L.marker([submitLat, submitLng], { icon }).addTo(submitMap);
+    const overlay = document.getElementById('submitMapOverlay');
+    if (overlay) overlay.style.opacity = '0';
+  }
+}
+
+function clearSubmitPin() {
+  submitLat = null; submitLng = null;
+  if (submitMarker && submitMap) { submitMap.removeLayer(submitMarker); submitMarker = null; }
+  const coordsDisplay = document.getElementById('coordsDisplay');
+  const overlay       = document.getElementById('submitMapOverlay');
+  if (coordsDisplay) coordsDisplay.style.display = 'none';
+  if (overlay)       overlay.style.opacity = '1';
+}
+
+// Fix: select category WITHOUT re-rendering the whole form
+// This only toggles CSS classes on the buttons, preserving all input values
+function selectCategory(id) {
+  submitCategory = id;
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.id === 'cat_' + id);
+  });
+  const errEl = document.getElementById('submitErrors');
+  if (errEl) {
+    const html = errEl.innerHTML;
+    if (html.includes('category')) errEl.innerHTML = '';
+  }
+}
+
+function previewImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const preview = document.getElementById('imagePreview');
+    const img     = document.getElementById('previewImg');
+    const prompt  = document.getElementById('uploadPrompt');
+    if (img)     img.src = e.target.result;
+    if (preview) preview.style.display = 'block';
+    if (prompt)  prompt.innerHTML = `<p style="font-size:0.8rem;color:var(--orange-glow);">✅ ${file.name}</p><p style="font-size:0.72rem;color:var(--text-dim);margin-top:2px;">Click to change</p>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handleSubmit() {
+  const name     = document.getElementById('f_name')?.value?.trim();
+  const country  = document.getElementById('f_country')?.value?.trim();
+  const city     = document.getElementById('f_city')?.value?.trim();
+  const address  = document.getElementById('f_address')?.value?.trim();
+  const coords = submitLat ? `${submitLat.toFixed(6)}, ${submitLng.toFixed(6)}` : '';
+  const story    = document.getElementById('f_story')?.value?.trim();
+  const storyLang= document.getElementById('f_lang')?.value;
+  const date     = document.getElementById('f_date')?.value;
+  const username = document.getElementById('f_username')?.value?.trim();
+  const errEl    = document.getElementById('submitErrors');
+
+  // Validate
+  const errs = [];
+  if (!submitLat)      errs.push('Please click the map to place your pin');
+  if (!name)           errs.push('Location Name is required');
+  if (!country)        errs.push('Country is required');
+  if (!submitCategory) errs.push('Please select a Category');
+  if (!story)          errs.push('Your Story is required');
+  if (!username)       errs.push('Username is required');
+  if (errs.length > 0) {
+    if (errEl) errEl.innerHTML = errs.map(e=>`<p class="error-text">⚠️ ${e}</p>`).join('');
+    return;
+  }
+
+  // Show loading state
+  const btn = document.getElementById('submitBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Sending...'; }
+  if (errEl) errEl.innerHTML = '';
+
+  // Handle image upload to Cloudinary if a file was selected
+  let imageUrl = '—';
+  const fileInput = document.getElementById('f_image');
+  if (fileInput && fileInput.files && fileInput.files[0]) {
+    try {
+      const file = fileInput.files[0];
+      // ── CLOUDINARY: replace YOUR_CLOUD_NAME with your Cloudinary cloud name ──
+      // Free signup at cloudinary.com → Dashboard → Cloud Name
+      // Also create an unsigned upload preset: Settings → Upload → Add upload preset → Unsigned
+      const CLOUD_NAME    = 'dz9p5t4sj';
+      const UPLOAD_PRESET = 'ao9q18f9';
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', UPLOAD_PRESET);
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+        method: 'POST', body: formData
+      });
+      const uploadData = await uploadRes.json();
+      imageUrl = uploadData.secure_url || '—';
+    } catch(e) {
+      imageUrl = '(upload failed)';
+    }
+  }
+
+  // ── EMAILJS ──────────────────────────────────────────────────────────────
+  const EMAILJS_SERVICE_ID  = 'service_spyyqld';
+  const EMAILJS_TEMPLATE_ID = 'template_6luvilv';
+  const EMAILJS_PUBLIC_KEY  = 'Ux77rlmJMXmPUmxjC';
+
+  const templateParams = {
+    location_name: name,
+    country:       country,
+    city:          city || '—',
+    address:       address || '—',
+    coords:        coords || '—',
+    category:      submitCategory,
+    story:         story,
+    story_lang:    storyLang,
+    date:          date || '—',
+    intensity:     String(submitIntensity),
+    username:      username,
+    image_url:     imageUrl,
+    to_email:      'thestrangepin@gmail.com',
+  };
+
+  try {
+    // Init EmailJS with public key before sending
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+
+    const res = await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      EMAILJS_TEMPLATE_ID,
+      templateParams
+    );
+    if (res.status === 200) {
+      // Award points if logged in
+      if (window.currentUser && window.fbAddPoints) {
+        await window.fbAddPoints(window.currentUser.uid, 'pin');
+        if (imageUrl && imageUrl !== '—' && imageUrl !== '(upload failed)') {
+          await window.fbAddPoints(window.currentUser.uid, 'photo');
+        }
+      }
+      submitted = true;
+      submitCategory = '';
+      submitIntensity = 5;
+      submitLat = null; submitLng = null;
+      renderPage();
+    } else {
+      throw new Error('Status: ' + res.status + ' — ' + res.text);
+    }
+  } catch(err) {
+    console.error('EmailJS error:', err);
+    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ Send failed: ${err.text || err.message || err}. Please try again.</p>`;
+    if (btn) { btn.disabled = false; btn.innerHTML = '📍 Drop the Pin'; }
+  }
+}
+
+// ── DETAIL ────────────────────────────────────────────────────────────────────
+function renderDetail(lang) {
+  const loc = currentDetail;
+  if (!loc) return `<div style="text-align:center;padding:80px 20px;"><p style="color:var(--text-muted);">Location not found.</p><button class="btn-secondary" style="margin-top:16px;" onclick="showPage('map')">← Back to Map</button></div>`;
+  const color = CAT_SCORE_COLOR[loc.categoryColor] || '#fbbf24';
+  const bar = CAT_BAR[loc.categoryColor] || CAT_BAR.amber;
+
+  const storiesHtml = loc.stories.map((s,i) => {
+    const showTr = showTranslations[loc.id+'_'+i];
+    return `<div class="story-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-weight:600;color:var(--text);font-size:0.9rem;">@${s.user}</span>
+          <span class="${BADGE_STYLE[s.badge]||'badge badge-muted'}">${s.badge}</span>
+          ${s.lang && s.lang!=='en' ? `<span class="badge badge-muted">🌐 ${s.langLabel||s.lang}</span>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+          <span style="font-size:0.75rem;color:var(--text-dim);">${s.date}</span>
+          <span class="font-mono" style="font-size:0.75rem;background:rgba(180,83,9,0.2);color:var(--amber);padding:2px 8px;border-radius:6px;">${s.intensity}/10</span>
+        </div>
+      </div>
+      <p style="font-size:0.875rem;color:var(--text-muted);line-height:1.7;">${s.text}</p>
+      ${s.translationNote ? `
+        <button onclick="showTranslations['${loc.id}_${i}']=${showTr?'false':'true'};renderPage()" style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--teal);background:none;border:none;cursor:pointer;padding:6px 0 0;margin-top:4px;">
+          🌐 ${showTr?'Hide':'Show'} AI translation
+        </button>
+        ${showTr ? `<div class="translation-box">${s.translationNote}<p style="font-size:0.7rem;color:var(--text-dim);margin-top:8px;">🤖 AI-generated · may not be perfect</p></div>` : ''}
+      ` : ''}
+    </div>`;
+  }).join('');
+
+  const paragraphs = loc.fullStory.split('\n\n');
+
+  return `<div class="container" style="padding-top:32px;padding-bottom:64px;max-width:860px;">
+    <button onclick="showPage('map')" style="display:inline-flex;align-items:center;gap:6px;color:var(--text-muted);background:none;border:none;cursor:pointer;font-size:0.875rem;margin-bottom:24px;padding:0;transition:color 0.15s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-muted)'">
+      ← Back to Map
+    </button>
+    <div class="detail-header">
+      <div style="height:3px;${bar}"></div>
+      <div style="padding:24px 28px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;">
+          <div style="flex:1;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+              <span class="${CAT_BADGE[loc.category]||'badge badge-muted'}">${loc.category}</span>
+              <span class="${loc.verified?'badge badge-green':'badge badge-muted'}">${loc.verified?'✓ Verified':'Unverified'}</span>
+            </div>
+            <h1 class="font-display" style="font-size:1.8rem;font-weight:800;line-height:1.2;margin-bottom:6px;">${loc.nameEn||loc.name}</h1>
+            ${loc.name !== (loc.nameEn||loc.name) ? `<p style="font-size:1.1rem;color:var(--text-muted);margin-bottom:6px;">${loc.name}</p>` : ''}
+            <p style="font-size:0.875rem;color:var(--text-dim);">📍 ${[loc.address,loc.city,loc.country].filter(Boolean).join(', ')}</p>
+          </div>
+          ${scoreRing(loc.mysteryScore, color, 80)}
+        </div>
+        <div class="detail-stats">
+          <div><div class="detail-stat-val" style="color:var(--text)">${loc.reports}</div><div class="detail-stat-lbl">Reports</div></div>
+          <div><div class="detail-stat-val" style="color:var(--amber)">${loc.intensityAvg}/10</div><div class="detail-stat-lbl">Avg. Strangeness</div></div>
+          <div><div class="detail-stat-val" style="color:${color}">${loc.mysteryScore}</div><div class="detail-stat-lbl">Strange Score</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px 28px;margin-bottom:24px;">
+      <h2 class="font-display" style="font-size:1.2rem;font-weight:700;margin-bottom:16px;">About This Place</h2>
+      ${paragraphs.map(p=>`<p style="color:var(--text-muted);line-height:1.8;margin-bottom:14px;">${p}</p>`).join('')}
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <h2 class="font-display" style="font-size:1.2rem;font-weight:700;margin-bottom:16px;">Community Reports <span style="font-size:0.85rem;font-weight:400;color:var(--text-dim);font-family:'DM Sans',sans-serif;">(${loc.stories.length})</span></h2>
+      ${storiesHtml}
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <button onclick="this.style.background='rgba(236,72,153,0.2)';this.style.borderColor='rgba(236,72,153,0.4)';this.style.color='#f472b6';" class="btn-secondary" style="flex:1;justify-content:center;min-width:200px;">
+        ❤️ I've Been Here Too
+      </button>
+      <button class="btn-primary" style="flex:1;justify-content:center;min-width:200px;" onclick="showPage('submit')">
+        📋 Add Your Report
+      </button>
+    </div>
+  </div>`;
+}
+
+// ── LEADERBOARD ───────────────────────────────────────────────────────────────
+function renderLeaderboard(lang) {
+  // My profile section
+  const user = window.currentUser;
+  const myProfile = user ? (() => {
+    const data  = user.spData || {};
+    const pts   = data.points || 0;
+    const level = window.getLevelInfo ? window.getLevelInfo(pts) : { name:'Curious', icon:'🔍', color:'#8888aa', progress:0, next:{ name:'Witness', min:50 } };
+    const nextMin = level.next ? level.next.min : pts;
+    const needed  = level.next ? nextMin - pts : 0;
+    return `
+    <div style="background:linear-gradient(135deg,rgba(232,98,26,0.1),rgba(109,40,217,0.1));border:1px solid rgba(232,98,26,0.25);border-radius:14px;padding:20px 24px;margin-bottom:28px;">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <img src="${user.photoURL||''}" style="width:48px;height:48px;border-radius:50%;border:2px solid var(--orange);" onerror="this.style.display='none'" />
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:1rem;color:var(--text);">${user.displayName}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);">${data.pins||0} pins · ${pts} pts</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:1.5rem;">${level.icon}</div>
+          <div style="font-size:0.8rem;font-weight:700;color:${level.color};">${level.name}</div>
+        </div>
+      </div>
+      <!-- Progress bar -->
+      <div style="margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-dim);margin-bottom:6px;">
+          <span>${level.name}</span>
+          ${level.next ? `<span>${needed} pts to ${level.next.name} ${window.SP_LEVELS[window.SP_LEVELS.indexOf(level)+1]?.icon||''}</span>` : '<span>🏆 Max level!</span>'}
+        </div>
+        <div style="height:6px;background:var(--muted);border-radius:3px;overflow:hidden;">
+          <div style="height:100%;width:${level.progress}%;background:linear-gradient(90deg,var(--orange),var(--purple-glow));border-radius:3px;transition:width 0.5s ease;"></div>
+        </div>
+      </div>
+    </div>`;
+  })() : `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:28px;text-align:center;">
+      <p style="color:var(--text-muted);margin-bottom:12px;">Sign in to track your points and appear on the leaderboard</p>
+      <button onclick="window.fbSignIn&&window.fbSignIn()" class="btn-primary btn-sm">🔑 Sign In with Google</button>
+    </div>`;
+
+  return `<div class="container" style="padding-top:32px;padding-bottom:64px;max-width:860px;">
+    <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:24px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;">🏆</div>
+      <div>
+        <h1 class="font-display" style="font-size:1.8rem;font-weight:800;">Pinner Rankings</h1>
+        <p style="color:var(--text-muted);">The explorers mapping the world's strangeness</p>
+      </div>
+    </div>
+
+    ${myProfile}
+
+    <!-- Points guide -->
+    <div class="grid-4" style="margin-bottom:28px;">
+      ${[['📍','Pin a location','+10'],['📸','Add a photo','+5'],['🎥','Add a video','+20'],['✅','Get verified','+5']]
+        .map(([icon,label,pts])=>`
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
+          <div style="font-size:1.4rem;margin-bottom:6px;">${icon}</div>
+          <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:4px;">${label}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--orange-glow);font-size:0.9rem;">${pts}</div>
+        </div>`).join('')}
+    </div>
+
+    <!-- Level guide -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:24px;">
+      <p style="font-size:0.78rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px;">Level System</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${(window.SP_LEVELS||[]).map(l=>`
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;background:var(--muted);font-size:0.8rem;">
+            <span>${l.icon}</span>
+            <span style="color:${l.color};font-weight:600;">${l.name}</span>
+            <span style="color:var(--text-dim);">${l.min}+ pts</span>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Live leaderboard table -->
+    <div class="lb-table">
+      <div class="lb-header">
+        <span>Rank</span><span>Pinner</span><span>Level</span><span>Pins</span><span>Points</span>
+      </div>
+      <div id="lbRows">
+        <div style="padding:32px;text-align:center;color:var(--text-dim);">
+          <div style="font-size:1.5rem;margin-bottom:8px;">⏳</div>
+          Loading live rankings...
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function startLiveLeaderboard() {
+  if (lbUnsubscribe) { lbUnsubscribe(); lbUnsubscribe = null; }
+  if (!window.fbListenLeaderboard) return;
+  lbUnsubscribe = window.fbListenLeaderboard(users => {
+    const el = document.getElementById('lbRows');
+    if (!el) { if (lbUnsubscribe) { lbUnsubscribe(); lbUnsubscribe = null; } return; }
+    if (users.length === 0) {
+      el.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text-dim);">No pinners yet — be the first! 🌍</div>`;
+      return;
+    }
+    const getLvl = window.getLevelInfo || (pts => ({ name:'Curious', icon:'🔍', color:'#8888aa' }));
+    el.innerHTML = users.map((u, i) => {
+      const pts   = u.points || 0;
+      const level = getLvl(pts);
+      const rank  = i + 1;
+      const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':null;
+      return `<div class="lb-row">
+        <div style="text-align:center;">${medal ? `<span style="font-size:1.2rem;">${medal}</span>` : `<span class="font-mono" style="font-size:0.85rem;color:var(--text-dim);">#${rank}</span>`}</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <img src="${u.photoURL||''}" style="width:34px;height:34px;border-radius:50%;background:var(--muted);object-fit:cover;" onerror="this.src='';this.style.background='linear-gradient(135deg,#e8621a,#6d28d9)';this.innerHTML='${(u.displayName||'?')[0].toUpperCase()}'" />
+          <div>
+            <div style="font-size:0.9rem;font-weight:500;color:var(--text);">${u.displayName||'Anonymous'}</div>
+            <div style="font-size:0.72rem;color:var(--text-dim);">${u.pins||0} pins</div>
+          </div>
+        </div>
+        <span style="font-size:0.9rem;">${level.icon} <span style="font-size:0.75rem;color:${level.color};font-weight:600;">${level.name}</span></span>
+        <span class="font-mono" style="font-size:0.875rem;color:var(--text);text-align:right;">${u.pins||0}</span>
+        <span class="font-mono" style="font-size:0.875rem;font-weight:700;color:var(--orange-glow);text-align:right;">${pts.toLocaleString()}</span>
+      </div>`;
+    }).join('');
+  });
+}
+
+// ── ABOUT ─────────────────────────────────────────────────────────────────────
+function renderAbout(lang) {
+  return `<div class="about-wrap">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:40px;">
+      <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;box-shadow:0 8px 24px rgba(232,98,26,0.3);">📍</div>
+      <div>
+        <h1 class="font-display" style="font-size:2rem;font-weight:800;">About StrangePin</h1>
+        <p style="color:var(--text-muted);font-style:italic;">"Pin the unexplained."</p>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px 28px;margin-bottom:20px;">
+      <h2 class="font-display" style="font-size:1.2rem;font-weight:700;margin-bottom:12px;">Our Mission</h2>
+      <p style="color:var(--text-muted);line-height:1.8;">StrangePin is a global community platform for mapping the unexplained. Strange experiences, haunted histories, energy spots, UFO encounters, and local legends — from every country, in every language. We believe every culture has places that resist easy explanation, and those places deserve to be on the map.</p>
+    </div>
+
+    <div class="card" style="padding:24px 28px;margin-bottom:20px;">
+      <h2 class="font-display" style="font-size:1.2rem;font-weight:700;margin-bottom:16px;">How It Works</h2>
+      ${['Go to a strange place — or recall one you\'ve visited','Pin it with your story, in your own language','AI organizes community reports into a location archive','Earn Pinner rank as your contributions are verified'].map((s,i)=>`
+        <div style="display:flex;gap:12px;margin-bottom:12px;">
+          <div style="width:24px;height:24px;border-radius:50%;background:rgba(232,98,26,0.2);border:1px solid rgba(232,98,26,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+            <span style="font-size:0.72rem;font-weight:700;color:var(--orange-glow);">${i+1}</span>
+          </div>
+          <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.6;">${s}</p>
+        </div>`).join('')}
+    </div>
+
+    <div class="card" style="padding:24px 28px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+        <span style="color:var(--teal);font-size:1rem;">🌐</span>
+        <h2 class="font-display" style="font-size:1.2rem;font-weight:700;">Multilingual Community</h2>
+      </div>
+      <p style="color:var(--text-muted);font-size:0.875rem;line-height:1.7;margin-bottom:16px;">StrangePin is built for the entire world. The interface is available in 6 languages, and stories can be pinned in any language. Original submissions are always preserved — AI translation is coming soon.</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+        ${[['🇺🇸','English'],['🇹🇼','繁體中文'],['🇨🇳','简体中文'],['🇯🇵','日本語'],['🇰🇷','한국어'],['🇪🇸','Español']].map(([f,n])=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:var(--muted);font-size:0.85rem;">
+            <span>${f}</span><span style="color:var(--text-muted);">${n}</span><span style="margin-left:auto;color:#6ee7b7;font-size:0.7rem;">✓</span>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px 28px;margin-bottom:20px;">
+      <h2 class="font-display" style="font-size:1.2rem;font-weight:700;margin-bottom:16px;">Follow StrangePin</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        ${[['🎵','TikTok','https://tiktok.com/@strangepins','@strangepins'],
+           ['📸','Instagram','https://instagram.com/strange.pins','@strange.pins'],
+           ['𝕏','X / Twitter','https://x.com/strangepin','@strangepin'],
+           ['▶️','YouTube','https://youtube.com/@StrangePin','@StrangePin']].map(([icon,label,href,handle])=>`
+          <a href="${href}" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:10px;background:var(--muted);text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--muted)'">
+            <span style="font-size:1.2rem;">${icon}</span>
+            <div><p style="font-size:0.85rem;font-weight:600;color:var(--text);margin:0;">${label}</p><p style="font-size:0.75rem;color:var(--text-dim);margin:0;">${handle}</p></div>
+          </a>`).join('')}
+      </div>
+    </div>
+
+    <div style="border-radius:12px;border:1px solid rgba(180,83,9,0.25);background:rgba(180,83,9,0.08);padding:20px 24px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="font-size:1.1rem;">⚠️</span>
+        <span style="font-size:0.75rem;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.06em;color:#fcd34d;font-weight:600;">Disclaimer</span>
+      </div>
+      <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.7;">StrangePin does not claim that any supernatural or paranormal event is proven. All pins are community-submitted personal experiences, folklore, or local stories. They are presented as cultural and personal narratives, not verified facts.</p>
+    </div>
+  </div>`;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.initApp = function() {
+  const savedLang = localStorage.getItem('sp_lang');
+  if (savedLang && LANGS[savedLang]) {
+    const langMeta = {en:['🇺🇸','English'],zh_TW:['🇹🇼','繁體中文'],zh_CN:['🇨🇳','简体中文'],ja:['🇯🇵','日本語'],ko:['🇰🇷','한국어'],es:['🇪🇸','Español']};
+    if (langMeta[savedLang]) {
+      currentLang = savedLang;
+      const flagEl = document.getElementById('langFlag');
+      const nameEl = document.getElementById('langName');
+      if (flagEl) flagEl.textContent = langMeta[savedLang][0];
+      if (nameEl) nameEl.textContent = langMeta[savedLang][1];
+      document.querySelectorAll('.lang-option,.mobile-lang-opt').forEach(el => {
+        el.classList.toggle('selected', el.textContent.includes(langMeta[savedLang][1]));
+      });
+    }
+  }
+  renderPage();
+};
+
+// Render immediately — no waiting
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', window.initApp);
+} else {
+  window.initApp();
+}
+</script>
+
+<!-- Firebase compat — runs AFTER page renders, non-blocking -->
+<script>
+(function initFirebase() {
+  const firebaseConfig = {
+    apiKey: "AIzaSyBn5qHhpLgNwsHXcIegKJF-ZzybomjVTuI",
+    authDomain: "strangepin-4e538.firebaseapp.com",
+    projectId: "strangepin-4e538",
+    storageBucket: "strangepin-4e538.firebasestorage.app",
+    messagingSenderId: "254898349595",
+    appId: "1:254898349595:web:1a20cc9c8d4ced1796fabe"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
+  const provider = new firebase.auth.GoogleAuthProvider();
+
+  window.SP_LEVELS = [
+    { min:0,   name:'Curious',        icon:'🔍', color:'#8888aa' },
+    { min:50,  name:'Witness',        icon:'👁️', color:'#fbbf24' },
+    { min:150, name:'Seeker',         icon:'🌀', color:'#22d3ee' },
+    { min:350, name:'Strange Keeper', icon:'📍', color:'#a78bfa' },
+    { min:700, name:'Echo Master',    icon:'⚡', color:'#ff6b35' },
+  ];
+  window.SP_POINTS = { pin:10, photo:5, video:20, verify:5 };
+
+  window.getLevelInfo = function(pts) {
+    const lvls = window.SP_LEVELS;
+    let lv = lvls[0];
+    for (const l of lvls) { if (pts >= l.min) lv = l; else break; }
+    const idx  = lvls.indexOf(lv);
+    const next = lvls[idx+1];
+    return { ...lv, next, idx, progress: next ? Math.round(((pts-lv.min)/(next.min-lv.min))*100) : 100 };
+  };
+
+  window.fbSignIn = async function() {
+    try {
+      const r = await auth.signInWithPopup(provider);
+      const ref = db.collection('users').doc(r.user.uid);
+      if (!(await ref.get()).exists) {
+        await ref.set({ uid:r.user.uid, displayName:r.user.displayName, email:r.user.email,
+          photoURL:r.user.photoURL, points:0, pins:0,
+          joinedAt:firebase.firestore.FieldValue.serverTimestamp() });
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  window.fbSignOut = () => auth.signOut();
+
+  window.fbAddPoints = async function(uid, type) {
+    const pts = window.SP_POINTS[type]||0;
+    if (!pts||!uid) return;
+    const ref = db.collection('users').doc(uid);
+    const up  = { points: firebase.firestore.FieldValue.increment(pts) };
+    if (type==='pin') up.pins = firebase.firestore.FieldValue.increment(1);
+    await ref.update(up);
+    if (window.currentUser) {
+      window.currentUser.spData = (await ref.get()).data();
+      window.updateNavAuth();
+      const el = document.createElement('div');
+      el.textContent = '+'+pts+' pts!';
+      el.style.cssText='position:fixed;bottom:24px;right:24px;background:#e8621a;color:#fff;padding:10px 20px;border-radius:10px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(232,98,26,.5)';
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(),3000);
+    }
+  };
+
+  window.updateNavAuth = function() {
+    const u   = window.currentUser;
+    const btn = document.getElementById('authBtn');
+    const inf = document.getElementById('authInfo');
+    if (!btn) return;
+    if (u) {
+      const pts = (u.spData||{}).points||0;
+      const lv  = window.getLevelInfo(pts);
+      btn.textContent = 'Sign Out';
+      btn.onclick = window.fbSignOut;
+      btn.style.cssText = 'background:transparent;border:1px solid #1c1c2a;color:#8888aa;padding:7px 14px;border-radius:8px;font-size:.8rem;cursor:pointer;';
+      if (inf) inf.innerHTML = lv.icon+' <span style="color:'+lv.color+';font-weight:700;font-size:.8rem;">'+pts+' pts</span>';
+    } else {
+      btn.innerHTML = '🔑 Sign In';
+      btn.onclick = window.fbSignIn;
+      btn.style.cssText = 'background:#e8621a;color:#fff;border:none;padding:7px 14px;border-radius:8px;font-weight:600;font-size:.8rem;cursor:pointer;';
+      if (inf) inf.innerHTML = '';
+    }
+  };
+
+  window.fbListenLeaderboard = function(cb) {
+    return db.collection('users').orderBy('points','desc').limit(20)
+      .onSnapshot(s => cb(s.docs.map(d=>d.data())));
+  };
+
+  auth.onAuthStateChanged(async u => {
+    window.currentUser = u ? { ...u, spData:(await db.collection('users').doc(u.uid).get()).data()||{} } : null;
+    window.updateNavAuth();
+    if (window.currentPage==='leaderboard') window.renderPage();
+  });
+})();
+</script>
+</body>
+</html>
