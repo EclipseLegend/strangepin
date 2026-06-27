@@ -1,0 +1,34 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Backups created during editing
+*.bak
+*.backup
+index.html.bak
+
+# Local dev notes
+notes.txt
+TODO.txt
+scratch.*
+
+# Environment / secrets (never commit these)
+.env
+.env.local
+secrets.txt
+
+# Build artifacts (not applicable but just in case)
+dist/
+build/
+node_modules/
+
+# Logs
+*.log
