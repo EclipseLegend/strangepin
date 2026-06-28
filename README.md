@@ -1,143 +1,101 @@
-# StrangePin 📍
+# StrangePin — Pin the Unexplained
 
-**The world's first global mystery story map.**
+A cinematic exploration platform for mysterious, haunted, and unexplained locations worldwide.
 
-> Every mystery has a place. Every Pin tells a story.
-
-🌐 Live site: [strangepin.com](https://strangepin.com)
-
----
-
-## What is StrangePin?
-
-StrangePin is a community-powered mystery story map where every pin is a real location with a verified story. Users can explore haunted places, UFO sightings, ancient mysteries, energy spots, and unexplained phenomena from every country — and submit their own.
+**Live site:** [strangepin.com](https://strangepin.com)
 
 ---
 
 ## Architecture
 
-This is a **single-file HTML application**. No build step required.
+StrangePin is a single-file vanilla JavaScript SPA. No build system. No framework. No bundler.
 
-```
-strangepin/
-├── index.html        ← Entire app (HTML + CSS + JavaScript)
-├── manifest.json     ← PWA manifest
-├── og-image.png      ← Social share preview image (1200×630)
-├── README.md         ← This file
-└── .gitignore        ← Git ignore rules
-```
+| File | Purpose |
+|---|---|
+| `index.html` | Entire application — HTML, CSS, routing, render functions, Firebase integration |
+| `locations.js` | Extracted reference copy of the `LOCATIONS[]` pin data array (SP-001 schema) |
+| `manifest.json` | PWA manifest — standalone display, shortcuts, theme colour |
+| `og-image.html` | Open Graph image source — rendered to `og-image.png` externally |
 
-### Why single-file?
-
-- Zero dependencies — no npm, no build tools, no Node.js
-- Deploy anywhere that serves static files
-- Edit one file, deploy one file
-- Works offline as a PWA
-
----
-
-## Tech Stack
+### Technology Stack
 
 | Layer | Technology |
 |---|---|
-| UI Framework | Vanilla JavaScript (SPA with hash routing) |
-| Maps | Leaflet.js v1.9.4 + CartoDB dark tiles |
-| Auth | Firebase Authentication (Google Sign-In) |
-| Database | Firebase Firestore |
-| Image Upload | Cloudinary (unsigned upload) |
-| Email | EmailJS |
-| Translation | Google Translate widget |
+| Frontend | Vanilla JavaScript SPA (no framework) |
+| Map | Leaflet 1.9.4 (CDN) |
+| Auth | Firebase Authentication (Google sign-in) |
+| Database | Firebase Firestore (community submissions) |
+| Image uploads | Cloudinary (unsigned upload) |
+| Pin submissions | EmailJS |
+| Translation | Google Translate widget (hidden, custom UI) |
 | Hosting | Netlify (auto-deploy from GitHub) |
-| PWA | Web App Manifest + geolocation |
+| PWA | Web App Manifest + theme-color |
 
 ---
 
-## index.html Structure
+## Product Specifications
 
-The file is organized into clearly labelled sections:
+All implementation decisions follow the documents in `/specs/`:
 
-```
-Line 1–122      HTML <head> — meta tags, SEO, PWA, external CDN scripts
-Line 122–600    <style> — all CSS (~475 lines)
-Line 700–2400   LOCATIONS data — 99 mystery pins (JSON-like JS objects)
-Line 2400–2454  Supporting data (LEADERBOARD, BADGE_STYLE, CAT_BADGE, CATEGORIES, LANGS)
-Line 2454–2480  App state variables
-Line 2480–2582  Google Translate integration
-Line 2582–2664  Navigation (showPage, history API, popstate)
-Line 2664–2743  Firebase stats (live pin/pinner counts)
-Line 2743–2952  Reactions, Comments, Save/Favourite, Score helpers
-Line 2952–3195  Nearby page (GPS geolocation)
-Line 3195–3386  Profile page, Helpers, CAT_COVER
-Line 3386–3414  renderPage() router
-Line 3414–3648  renderHome()
-Line 3648–3826  renderMap() + Leaflet map init
-Line 3826–4175  renderSubmit() + EmailJS form
-Line 4175–4405  renderDetail() — story page (The Story / What We Know / The Mystery)
-Line 4405–4545  renderLeaderboard()
-Line 4545–4838  renderAbout() + initApp()
-```
+| Document | Status | Purpose |
+|---|---|---|
+| `SP-001` — Pin Knowledge Model | ✅ Draft 1.0 | Data schema for every Pin |
+| `SP-002` — Pin Experience PRD | 🟡 Draft 1.0 | Pin Detail page sections 1–9 |
+| `Doc 011` — Design System | 🟡 Draft 1.0 | Visual language and component rules |
 
 ---
 
-## Deployment
+## Sprint History
 
-Hosted on **Netlify** with automatic deployment from this GitHub repository.
+### Sprint 0 — Architecture Review
+Full audit of the existing codebase. Identified technical debt, data schema gaps, and phased migration plan.
 
-- **Branch:** `main`
-- **Build command:** *(none)*
-- **Publish directory:** *(root)*
+### Sprint 1A — Pin Hero Foundation
+- Fixed production syntax bug (Pin #099 embedded in `REACTION_TYPES`)
+- Extracted SP Component Library: `SP_Badge`, `SP_Button`, `SP_SectionTitle`, `SP_QuickFacts`, `SP_PinHero`
+- Redesigned Pin Detail hero per SP-002 §1 and Doc 011
+- Applied CSS design tokens throughout new components
 
-Every commit to `main` triggers an automatic deploy to [strangepin.com](https://strangepin.com).
+### Sprint 1 — Schema + Typography
+- Extended all 10 Featured/Full Report pins with complete SP-001 fields: `difficulty`, `tags`, `era`, `timeline[]`, `sources[]`, `connections{}`, `media{}`
+- Added empty stubs to all 99 Short Pins for schema-forward compatibility
+- Improved Story section typography: 68ch reading width, increased line-height and padding
+- Replaced emoji section labels with minimal monospace text labels per Doc 011
+- Extended `SP_QuickFacts` with Era, Depth, Read, and Open Maps chips
 
----
-
-## Content Model
-
-Each location in the `LOCATIONS` array has:
-
-```javascript
-{
-  id: "001",
-  name: "Area 51",
-  slug: "area-51",
-  pinSeries: "Strange Pin #001",
-  status: "Featured Story",        // Featured Story | Full Report | Short Pin | Community Submitted
-  hook: "One-line attention hook",
-  theStory: "Narrative summary",
-  whatWeKnow: "Verified facts only",
-  theMystery: "What remains unexplained",
-  contentFlags: ["Sensitive", "Restricted Area"],
-  safetyNote: "Public safety warning if needed",
-  category: "UFO",
-  coordinates: { lat: 37.235, lng: -115.811 },
-  mysteryScore: 9.5,
-}
-```
+### Performance Fix 1 — Script Defer
+- Added `defer` to 5 external script tags (Leaflet, EmailJS, Firebase ×3)
+- Eliminates render-blocking on all six external scripts
+- Firebase load order preserved; Google Translate untouched (next sprint)
 
 ---
 
-## Firebase Config
+## Engineering Principles
 
-Firebase credentials are embedded in `index.html`. The project uses:
-- **Project ID:** `strangepin-4e538`
-- **Auth:** Google Sign-In
-- **Firestore:** users, points, badges collections
-- **Authorized domains:** strangepin.com, strangepin.netlify.app
+- Refactor before rewrite
+- Small, safe, incremental improvements
+- Never sacrifice stability for speed
+- Keep code maintainable for long-term development
 
 ---
 
-## Social
+## Roadmap
 
-| Platform | Handle |
+| Sprint | Scope |
 |---|---|
-| TikTok | [@strangepins](https://tiktok.com/@strangepins) |
-| Instagram | [@strange.pins](https://instagram.com/strange.pins) |
-| X / Twitter | [@strangepin](https://x.com/strangepin) |
-| YouTube | [@StrangePin](https://youtube.com/@StrangePin) |
-| Email | thestrangepin@gmail.com |
+| Performance Fix 2 | Google Translate moved to `</body>` + `fonts.gstatic.com` preconnect |
+| Sprint 2 | Discovery Engine (SP-002 §7) — 6 reason-tagged related pins |
+| Sprint 3 | Timeline section (SP-002 §4) + Sources section (SP-002 §8) |
+| Sprint 4 | Interactive Map on Pin Detail page (SP-002 §6) |
+| Sprint 5 | Data infrastructure — unify `LOCATIONS[]` and Firestore |
 
 ---
 
-## License
+## Known Technical Debt
 
-© 2026 StrangePin. All rights reserved.
+- Credentials (Firebase, Cloudinary, EmailJS) are hardcoded in `index.html` — rotate before scaling
+- `LOCATIONS[]` and Firestore community pins are separate, never-reconciled data sources
+- `pinPos` field on every location is vestigial (leftover from a pre-Leaflet map implementation)
+- `city` field on many Featured pins is set to the country name rather than an actual city
+- Homepage activity feed and Active Pinners section are hardcoded placeholder data
+- Google Translate integration uses DOM-hacking patterns that are fragile under CSP

@@ -1,13 +1,17 @@
-// StrangePin — Location Data
-// ─────────────────────────────────────────────────────────────────────────────
-// This file contains all mystery pin locations for the StrangePin map.
+// ── StrangePin — Pin Data ──────────────────────────────────────────────────────
+// locations.js
 //
-// To add a location: copy an existing entry, update all fields, increment id.
-// To edit a story: find the entry by id, edit theStory/whatWeKnow/theMystery.
+// Source of truth for all curated Pin data.
+// Schema defined in SP-001 (Pin Knowledge Model).
 //
-// Status values: "Featured Story" | "Full Report" | "Short Pin" | 
-//                "Community Submitted" | "Coming Soon"
-// ─────────────────────────────────────────────────────────────────────────────
+// Sprint history:
+//   Sprint 0  — Initial 99-pin dataset
+//   Sprint 1  — Schema extended: difficulty, tags, era, timeline, sources,
+//               connections, media added to all 10 Featured/Full Report pins.
+//               Empty stubs added to all Short Pins.
+//
+// Next: Sprint 2 will use connections.relatedPinIds for the Discovery Engine.
+// ──────────────────────────────────────────────────────────────────────────────
 
 const LOCATIONS = [
   {
@@ -25,7 +29,20 @@ const LOCATIONS = [
     whatWeKnow:"Area 51 is a classified U.S. Air Force installation at Groom Lake, Nevada. Established in 1955 to test the U-2 spy plane. In 2013, the CIA officially acknowledged its existence.",
     theMystery:"What is tested there today remains classified. Decades of UFO sightings near the base have never been officially explained.",
     safetyNote:"Active military installation. Trespassing is illegal and strictly enforced.",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Deep",
+    tags:["government","classified","military","UFO","Nevada","Cold War"],
+    era:"1955 – present",
+    timeline:[{date:"1955",event:"Base established to test the U-2 spy plane."},{date:"1989",event:"Bob Lazar publicly claims to have worked on alien craft reverse-engineering."},{date:"2013",event:"CIA officially acknowledges the base's existence."},{date:"2019",event:"'Storm Area 51' event draws global attention."}],
+    sources:[{type:"Government Document",title:"CIA Declassified History of the U-2 Programme",url:"https://www.cia.gov/readingroom/document/0000619941"},{type:"Book",title:"The Road to Area 51 — Annie Jacobsen (2011)",url:""}],
+    connections:{relatedPinIds:["008","017","003"],relatedTopics:["Cold War secrecy","UFO phenomena","Black budget programmes"],relatedPeople:["Bob Lazar","Annie Jacobsen"],relatedEvents:["Roswell Incident (1947)","CIA Declassification (2013)"]},
+    media:{heroImageUrl:"", gallery:[]},
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"002", name:"Aokigahara — Sea of Trees", nameEn:"Aokigahara — Sea of Trees", slug:"aokigahara-sea-of-trees",
@@ -42,7 +59,20 @@ const LOCATIONS = [
     whatWeKnow:"Aokigahara covers 35 square kilometres at the base of Mt. Fuji. Compass anomalies are caused by iron-rich magnetic volcanic rock beneath the soil.",
     theMystery:"Despite scientific explanations, visitors consistently report an overwhelming sense of unease. Local tradition maintains the forest is inhabited by spirits.",
     safetyNote:"Stay on marked trails.",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Moderate",
+    tags:["haunted","Japan","forest","folklore","magnetic anomaly","Mt Fuji"],
+    era:"Ancient – present",
+    timeline:[{date:"Pre-14th century",event:"Aokigahara features in Japanese folklore as a dwelling place of demons."},{date:"1960",event:"Seicho Matsumoto's novel popularises the forest."},{date:"1968",event:"Biologist Alexandru Sift photographs unexplained lights near the forest."}],
+    sources:[{type:"Book",title:"Nami no To — Seicho Matsumoto (1960)",url:""},{type:"News Article",title:"Inside Aokigahara (Vice)",url:""}],
+    connections:{relatedPinIds:["007","009","016"],relatedTopics:["Japanese folklore","Magnetic anomalies","Forest mysteries"],relatedPeople:["Seicho Matsumoto"],relatedEvents:["Publication of Nami no To (1960)"]},
+    media:{heroImageUrl:"", gallery:[]},
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"003", name:"Bermuda Triangle", nameEn:"Bermuda Triangle", slug:"bermuda-triangle",
@@ -59,7 +89,20 @@ const LOCATIONS = [
     whatWeKnow:"The U.S. Navy and Coast Guard do not recognise the Bermuda Triangle as particularly dangerous. Many disappearances have conventional explanations.",
     theMystery:"Flight 19 in 1945: five Navy torpedo bombers vanished during a routine training exercise. No wreckage was ever recovered.",
     safetyNote:"Some claims are based on disputed accounts.",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Moderate",
+    tags:["ocean","disappearances","aviation","maritime","disputed","Atlantic"],
+    era:"1918 – present",
+    timeline:[{date:"1918",event:"USS Cyclops disappears with 309 crew."},{date:"1945",event:"Flight 19: five Navy torpedo bombers vanish on a training exercise."},{date:"1964",event:"Vincent Gaddis coins the term 'Bermuda Triangle'."},{date:"1975",event:"Lloyd's of London states it does not charge higher premiums in this area."}],
+    sources:[{type:"Book",title:"The Bermuda Triangle Mystery — Solved. Lawrence David Kusche (1975)",url:""}],
+    connections:{relatedPinIds:["001","005","008"],relatedTopics:["Maritime disappearances","Aviation mysteries","Disputed phenomena"],relatedPeople:["Vincent Gaddis","Charles Taylor"],relatedEvents:["Loss of USS Cyclops (1918)","Flight 19 Disappearance (1945)"]},
+    media:{heroImageUrl:"", gallery:[]},
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"004", name:"Stonehenge", nameEn:"Stonehenge", slug:"stonehenge",
@@ -76,7 +119,20 @@ const LOCATIONS = [
     whatWeKnow:"Stonehenge was built between 3000 and 1500 BCE. The bluestones came from Wales, 250km away. The monument is precisely aligned with the solstices.",
     theMystery:"The exact purpose remains debated. No single theory has been universally accepted.",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Moderate",
+    tags:["prehistoric","megalith","archaeology","solstice","England","Neolithic","Bronze Age"],
+    era:"3000 – 1500 BCE",
+    timeline:[{date:"3000 BCE",event:"Construction begins. Early circular earthwork and timber structures."},{date:"2500 BCE",event:"Bluestones transported 250 km from Wales."},{date:"2000 BCE",event:"Sarsen stones erected."},{date:"1986",event:"Designated a UNESCO World Heritage Site."}],
+    sources:[{type:"Academic Paper",title:"Stonehenge: A New Understanding — Mike Parker Pearson (2012)",url:""},{type:"Government Document",title:"English Heritage — Stonehenge",url:"https://www.english-heritage.org.uk/visit/places/stonehenge/"}],
+    connections:{relatedPinIds:["005","006","010"],relatedTopics:["Megalithic architecture","Archaeoastronomy","Ancient engineering"],relatedPeople:["Mike Parker Pearson"],relatedEvents:["Bronze Age Britain","UNESCO designation (1986)"]},
+    media:{heroImageUrl:"", gallery:[]},
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"005", name:"Nazca Lines", nameEn:"Nazca Lines", slug:"nazca-lines",
@@ -93,7 +149,20 @@ const LOCATIONS = [
     whatWeKnow:"Created by the Nazca culture between 500 BCE and 500 CE. The dry, windless climate preserved them for over 2,000 years. UNESCO World Heritage Site.",
     theMystery:"Why figures were created at a scale only visible from the air — centuries before flight — remains unanswered.",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Moderate",
+    tags:["geoglyphs","Peru","ancient","desert","archaeology","pre-Columbian","UNESCO"],
+    era:"500 BCE – 500 CE",
+    timeline:[{date:"500 BCE",event:"Earliest Nazca geoglyphs begin to appear."},{date:"500 CE",event:"Geoglyph creation ceases with decline of the Nazca culture."},{date:"1939",event:"Paul Kosok identifies the lines from the air."},{date:"1994",event:"Nazca Lines designated a UNESCO World Heritage Site."}],
+    sources:[{type:"Academic Paper",title:"Nazca: Eighth Wonder of the World — Silverman & Proulx (2002)",url:""},{type:"Government Document",title:"UNESCO World Heritage — Nazca",url:"https://whc.unesco.org/en/list/700/"}],
+    connections:{relatedPinIds:["004","006","010"],relatedTopics:["Ancient geoglyphs","Pre-Columbian cultures","Archaeoastronomy"],relatedPeople:["Paul Kosok","Maria Reiche"],relatedEvents:["UNESCO designation (1994)"]},
+    media:{heroImageUrl:"", gallery:[]},
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"006", name:"Easter Island", nameEn:"Easter Island", slug:"easter-island",
@@ -110,7 +179,20 @@ const LOCATIONS = [
     whatWeKnow:"The moai were carved from volcanic tuff at Rano Raraku quarry. The civilisation\'s decline is linked to environmental degradation, disease, and European slave raids.",
     theMystery:"Why the moai were built and what they represented is still not fully understood. Hundreds remain unfinished in the quarry.",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Moderate",
+    tags:["moai","Chile","Pacific","ancient","collapse","Rapa Nui","UNESCO"],
+    era:"1100 – 1600 CE",
+    timeline:[{date:"700 CE",event:"Polynesian settlers arrive on Easter Island."},{date:"1100 CE",event:"Moai carving begins at Rano Raraku quarry."},{date:"1722",event:"Dutch navigator Jacob Roggeveen is the first European to land."},{date:"1995",event:"Easter Island designated a UNESCO World Heritage Site."}],
+    sources:[{type:"Book",title:"Collapse — Jared Diamond (2005)",url:""},{type:"Government Document",title:"UNESCO World Heritage — Rapa Nui",url:"https://whc.unesco.org/en/list/715/"}],
+    connections:{relatedPinIds:["004","005","010"],relatedTopics:["Civilisation collapse","Megalithic sculpture","Pacific prehistory"],relatedPeople:["Jacob Roggeveen","Jared Diamond"],relatedEvents:["First European contact (1722)","UNESCO designation (1995)"]},
+    media:{heroImageUrl:"", gallery:[]},
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"007", name:"Hoia-Baciu Forest", nameEn:"Hoia-Baciu Forest", slug:"hoia-baciu-forest",
@@ -127,7 +209,20 @@ const LOCATIONS = [
     whatWeKnow:"The forest covers 295 hectares. Unusual tree growth patterns are documented. Named after shepherd Ghita Oarza who allegedly disappeared there — that story is local legend.",
     theMystery:"Why electronic devices consistently fail in certain areas has not been explained. The pattern of reported experiences is concentrated in a circular clearing.",
     safetyNote:"Some claims are based on folklore and unverified reports.",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Easy",
+    tags:["haunted","Romania","forest","electronics","Transylvania","paranormal"],
+    era:"1960s – present",
+    timeline:[{date:"1968",event:"Biologist Alexandru Sift photographs unexplained luminous objects above the forest."},{date:"1970s",event:"Military and civilian investigators study electronic anomalies in the clearing."},{date:"2019",event:"Romanian tourism authorities include the forest as a heritage attraction."}],
+    sources:[{type:"News Article",title:"Inside Romania's Haunted Forest (BBC Travel)",url:""}],
+    connections:{relatedPinIds:["002","009","016"],relatedTopics:["Haunted forests","Electronic anomalies","Eastern European folklore"],relatedPeople:["Alexandru Sift"],relatedEvents:["Sift photograph (1968)"]},
+    media:{heroImageUrl:"", gallery:[]},
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"008", name:"Zona del Silencio", nameEn:"Zona del Silencio", slug:"zona-del-silencio",
@@ -144,7 +239,20 @@ const LOCATIONS = [
     whatWeKnow:"High magnetite concentrations likely cause radio interference. The area has yielded meteorite fragments. Designated a biosphere reserve in 1979.",
     theMystery:"Whether magnetic anomalies explain all communication failures has not been conclusively determined.",
     safetyNote:"Remote desert. Extreme temperatures.",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Easy",
+    tags:["Mexico","desert","radio silence","magnetic","meteorites","Chihuahua"],
+    era:"1930s – present",
+    timeline:[{date:"1930s",event:"First reports from pilots that radio communications fail over the region."},{date:"1970",event:"An Athena test rocket crashes here. Recovery teams note radio failure."},{date:"1979",event:"Designated a protected biosphere reserve."}],
+    sources:[{type:"News Article",title:"Mexico's Zone of Silence — National Geographic",url:""}],
+    connections:{relatedPinIds:["001","017","014"],relatedTopics:["Magnetic anomalies","Radio interference","Desert mysteries"],relatedPeople:["Harry de la Pena"],relatedEvents:["Athena Rocket Crash (1970)"]},
+    media:{heroImageUrl:"", gallery:[]},
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"009", name:"Chernobyl Exclusion Zone", nameEn:"Chernobyl Exclusion Zone", slug:"chernobyl-exclusion-zone",
@@ -161,7 +269,20 @@ const LOCATIONS = [
     whatWeKnow:"The explosion released 400 times more radiation than Hiroshima. 350,000 people were permanently displaced. The Soviet government delayed announcement by 36 hours.",
     theMystery:"The full long-term health consequences for those exposed remain scientifically disputed.",
     safetyNote:"Authorised tours only. Independent access is illegal.",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Deep",
+    tags:["nuclear","Ukraine","disaster","abandoned","Soviet","radiation","tragedy"],
+    era:"1986 – present",
+    timeline:[{date:"26 April 1986",event:"Reactor No. 4 explodes. Soviet government delays announcement 36 hours."},{date:"27 April 1986",event:"Evacuation of Pripyat begins."},{date:"May 1986",event:"Construction of the concrete sarcophagus begins."},{date:"2016",event:"New Safe Confinement structure slides over the old sarcophagus."}],
+    sources:[{type:"Book",title:"Voices from Chernobyl — Svetlana Alexievich (1997)",url:""},{type:"Government Document",title:"IAEA: The True Scale of the Accident (2005)",url:"https://www.iaea.org/publications/7279/chernobyl-the-true-scale-of-the-accident"}],
+    connections:{relatedPinIds:["018","007","016"],relatedTopics:["Nuclear disasters","Soviet history","Abandoned places"],relatedPeople:["Svetlana Alexievich","Valery Legasov"],relatedEvents:["Soviet nuclear programme","New Safe Confinement (2016)"]},
+    media:{heroImageUrl:"", gallery:[]},
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"010", name:"The Great Pyramid of Giza", nameEn:"The Great Pyramid of Giza", slug:"the-great-pyramid-of-giza",
@@ -178,7 +299,28 @@ const LOCATIONS = [
     whatWeKnow:"Built as a tomb for Pharaoh Khufu. The workforce was paid labourers, not slaves. Granite blocks came from Aswan, 800km away.",
     theMystery:"How 80-tonne blocks were moved and placed with such precision using only tools available in 2560 BCE remains genuinely debated. Thermal imaging has revealed unexplored anomalies.",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Deep",
+    tags:["Egypt","pyramid","ancient engineering","Giza","pharaoh","archaeology","UNESCO"],
+    era:"2560 BCE – present",
+    timeline:[{date:"~2560 BCE",event:"Construction begins under Pharaoh Khufu."},{date:"~2540 BCE",event:"Construction complete. Tallest human structure for 3,800 years."},{date:"820 CE",event:"Caliph al-Ma'mun tunnels into the pyramid."},{date:"2017",event:"Thermal imaging reveals a previously unknown void above the Grand Gallery."}],
+    sources:[{type:"Academic Paper",title:"ScanPyramids — Muon Tomography Results (Nature, 2017)",url:"https://www.nature.com/articles/nature24647"},{type:"Government Document",title:"UNESCO — Memphis and its Necropolis",url:"https://whc.unesco.org/en/list/86/"}],
+    connections:{relatedPinIds:["004","005","006"],relatedTopics:["Ancient engineering","Egyptian archaeology","Archaeoastronomy"],relatedPeople:["Pharaoh Khufu","Flinders Petrie"],relatedEvents:["ScanPyramids discovery (2017)"]},
+    media:{heroImageUrl:"", gallery:[]},
+        // ── SP-001 Schema Extension (Sprint 1) ──
+    difficulty:"Deep",
+    tags:["Egypt","pyramid","ancient engineering","Giza","pharaoh","archaeology","UNESCO"],
+    era:"2560 BCE – present",
+    timeline:[{date:"~2560 BCE",event:"Construction begins under Pharaoh Khufu."},{date:"~2540 BCE",event:"Construction complete. Tallest human structure for 3,800 years."},{date:"820 CE",event:"Caliph al-Ma'mun tunnels into the pyramid."},{date:"2017",event:"Thermal imaging reveals a previously unknown void above the Grand Gallery."}],
+    sources:[{type:"Academic Paper",title:"ScanPyramids — Muon Tomography Results (Nature, 2017)",url:"https://www.nature.com/articles/nature24647"},{type:"Government Document",title:"UNESCO — Memphis and its Necropolis",url:"https://whc.unesco.org/en/list/86/"}],
+    connections:{relatedPinIds:["004","005","006"],relatedTopics:["Ancient engineering","Egyptian archaeology","Archaeoastronomy"],relatedPeople:["Pharaoh Khufu","Flinders Petrie"],relatedEvents:["ScanPyramids discovery (2017)"]},
+    media:{heroImageUrl:"", gallery:[]},
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"011", name:"Machu Picchu", nameEn:"Machu Picchu", slug:"machu-picchu",
@@ -195,7 +337,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"012", name:"The Voynich Manuscript", nameEn:"The Voynich Manuscript", slug:"the-voynich-manuscript",
@@ -212,7 +359,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"013", name:"Roanoke Island", nameEn:"Roanoke Island", slug:"roanoke-island",
@@ -229,7 +381,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"014", name:"Sedona Vortexes", nameEn:"Sedona Vortexes", slug:"sedona-vortexes",
@@ -246,7 +403,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"015", name:"Loch Ness", nameEn:"Loch Ness", slug:"loch-ness",
@@ -263,7 +425,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"016", name:"Winchester Mystery House", nameEn:"Winchester Mystery House", slug:"winchester-mystery-house",
@@ -280,7 +447,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"017", name:"Skinwalker Ranch", nameEn:"Skinwalker Ranch", slug:"skinwalker-ranch",
@@ -297,7 +469,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"018", name:"Poveglia Island", nameEn:"Poveglia Island", slug:"poveglia-island",
@@ -314,7 +491,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"019", name:"The Overtoun Bridge", nameEn:"The Overtoun Bridge", slug:"the-overtoun-bridge",
@@ -331,7 +513,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"020", name:"Teotihuacan", nameEn:"Teotihuacan", slug:"teotihuacan",
@@ -348,7 +535,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"021", name:"Dyatlov Pass", nameEn:"Dyatlov Pass", slug:"dyatlov-pass",
@@ -365,7 +557,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"022", name:"The Catacombs of Paris", nameEn:"The Catacombs of Paris", slug:"the-catacombs-of-paris",
@@ -382,7 +579,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"023", name:"Mohenjo-daro", nameEn:"Mohenjo-daro", slug:"mohenjo-daro",
@@ -399,7 +601,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"024", name:"The Tunguska Event Site", nameEn:"The Tunguska Event Site", slug:"the-tunguska-event-site",
@@ -416,7 +623,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"025", name:"Göbekli Tepe", nameEn:"Göbekli Tepe", slug:"g-bekli-tepe",
@@ -433,7 +645,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"026", name:"The Dragon Triangle (Devil\'s Sea)", nameEn:"The Dragon Triangle (Devil\'s Sea)", slug:"the-dragon-triangle-devil-s-sea",
@@ -450,7 +667,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"027", name:"Waitomo Glowworm Caves", nameEn:"Waitomo Glowworm Caves", slug:"waitomo-glowworm-caves",
@@ -467,7 +689,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"028", name:"Richat Structure (Eye of the Sahara)", nameEn:"Richat Structure (Eye of the Sahara)", slug:"richat-structure-eye-of-the-sahara",
@@ -484,7 +711,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"029", name:"Delphi Oracle", nameEn:"Delphi Oracle", slug:"delphi-oracle",
@@ -501,7 +733,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"030", name:"Oak Island Money Pit", nameEn:"Oak Island Money Pit", slug:"oak-island-money-pit",
@@ -518,7 +755,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"031", name:"Crooked Forest", nameEn:"Crooked Forest", slug:"crooked-forest",
@@ -535,7 +777,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"032", name:"The Plain of Jars", nameEn:"The Plain of Jars", slug:"the-plain-of-jars",
@@ -552,7 +799,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"033", name:"Nan Madol", nameEn:"Nan Madol", slug:"nan-madol",
@@ -569,7 +821,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"034", name:"The Mariana Trench", nameEn:"The Mariana Trench", slug:"the-mariana-trench",
@@ -586,7 +843,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"035", name:"Blood Falls", nameEn:"Blood Falls", slug:"blood-falls",
@@ -603,7 +865,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"036", name:"The Hessdalen Lights", nameEn:"The Hessdalen Lights", slug:"the-hessdalen-lights",
@@ -620,7 +887,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"037", name:"Bosnian Pyramids", nameEn:"Bosnian Pyramids", slug:"bosnian-pyramids",
@@ -637,7 +909,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"038", name:"The Longyou Caves", nameEn:"The Longyou Caves", slug:"the-longyou-caves",
@@ -654,7 +931,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"039", name:"The Taos Hum", nameEn:"The Taos Hum", slug:"the-taos-hum",
@@ -671,7 +953,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"040", name:"The Bermeja Island", nameEn:"The Bermeja Island", slug:"the-bermeja-island",
@@ -688,7 +975,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"041", name:"Highgate Cemetery", nameEn:"Highgate Cemetery", slug:"highgate-cemetery",
@@ -705,7 +997,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"042", name:"The Nazca Astronaut", nameEn:"The Nazca Astronaut", slug:"the-nazca-astronaut",
@@ -722,7 +1019,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"043", name:"Pluckley Village", nameEn:"Pluckley Village", slug:"pluckley-village",
@@ -739,7 +1041,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"044", name:"The Eternal Flame Falls", nameEn:"The Eternal Flame Falls", slug:"the-eternal-flame-falls",
@@ -756,7 +1063,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"045", name:"Socotra Island", nameEn:"Socotra Island", slug:"socotra-island",
@@ -773,7 +1085,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"046", name:"The Sleeping City of Kalachi", nameEn:"The Sleeping City of Kalachi", slug:"the-sleeping-city-of-kalachi",
@@ -790,7 +1107,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"047", name:"The Door to Hell", nameEn:"The Door to Hell", slug:"the-door-to-hell",
@@ -807,7 +1129,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"048", name:"Lake Natron", nameEn:"Lake Natron", slug:"lake-natron",
@@ -824,7 +1151,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"049", name:"The Skeleton Lake", nameEn:"The Skeleton Lake", slug:"the-skeleton-lake",
@@ -841,7 +1173,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"050", name:"Eternal Fire of Yanar Dag", nameEn:"Eternal Fire of Yanar Dag", slug:"eternal-fire-of-yanar-dag",
@@ -858,7 +1195,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"051", name:"The Michigan Triangle", nameEn:"The Michigan Triangle", slug:"the-michigan-triangle",
@@ -875,7 +1217,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"052", name:"Paracas Skulls", nameEn:"Paracas Skulls", slug:"paracas-skulls",
@@ -892,7 +1239,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"053", name:"The Hellfire Club", nameEn:"The Hellfire Club", slug:"the-hellfire-club",
@@ -909,7 +1261,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"054", name:"The Cerne Abbas Giant", nameEn:"The Cerne Abbas Giant", slug:"the-cerne-abbas-giant",
@@ -926,7 +1283,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"055", name:"Hang Son Doong Cave", nameEn:"Hang Son Doong Cave", slug:"hang-son-doong-cave",
@@ -943,7 +1305,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"056", name:"Stull Cemetery", nameEn:"Stull Cemetery", slug:"stull-cemetery",
@@ -960,7 +1327,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"057", name:"The Tower of London", nameEn:"The Tower of London", slug:"the-tower-of-london",
@@ -977,7 +1349,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"058", name:"Coral Castle", nameEn:"Coral Castle", slug:"coral-castle",
@@ -994,7 +1371,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"059", name:"The Gate of the Sun", nameEn:"The Gate of the Sun", slug:"the-gate-of-the-sun",
@@ -1011,7 +1393,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"060", name:"The Baltic Sea Anomaly", nameEn:"The Baltic Sea Anomaly", slug:"the-baltic-sea-anomaly",
@@ -1028,7 +1415,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"061", name:"The Bridgewater Triangle", nameEn:"The Bridgewater Triangle", slug:"the-bridgewater-triangle",
@@ -1045,7 +1437,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"062", name:"Akodessewa Fetish Market", nameEn:"Akodessewa Fetish Market", slug:"akodessewa-fetish-market",
@@ -1062,7 +1459,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"063", name:"The Cave of Crystals", nameEn:"The Cave of Crystals", slug:"the-cave-of-crystals",
@@ -1079,7 +1481,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"064", name:"Point Pleasant", nameEn:"Point Pleasant", slug:"point-pleasant",
@@ -1096,7 +1503,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"065", name:"The Carnac Stones", nameEn:"The Carnac Stones", slug:"the-carnac-stones",
@@ -1113,7 +1525,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"066", name:"Lake Anjikuni", nameEn:"Lake Anjikuni", slug:"lake-anjikuni",
@@ -1130,7 +1547,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"067", name:"The Devil\'s Footprints", nameEn:"The Devil\'s Footprints", slug:"the-devil-s-footprints",
@@ -1147,7 +1569,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"068", name:"Sacsayhuaman", nameEn:"Sacsayhuaman", slug:"sacsayhuaman",
@@ -1164,7 +1591,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"069", name:"The Bigelow Aerospace Facility", nameEn:"The Bigelow Aerospace Facility", slug:"the-bigelow-aerospace-facility",
@@ -1181,7 +1613,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"070", name:"Derinkuyu Underground City", nameEn:"Derinkuyu Underground City", slug:"derinkuyu-underground-city",
@@ -1198,7 +1635,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"071", name:"The Flores Island Hobbit Cave", nameEn:"The Flores Island Hobbit Cave", slug:"the-flores-island-hobbit-cave",
@@ -1215,7 +1657,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"072", name:"Teufelsberg", nameEn:"Teufelsberg", slug:"teufelsberg",
@@ -1232,7 +1679,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"073", name:"The Lake Michigan Stonehenge", nameEn:"The Lake Michigan Stonehenge", slug:"the-lake-michigan-stonehenge",
@@ -1249,7 +1701,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"074", name:"Bhangarh Fort", nameEn:"Bhangarh Fort", slug:"bhangarh-fort",
@@ -1266,7 +1723,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"075", name:"The Winchester Catfish Lake", nameEn:"The Winchester Catfish Lake", slug:"the-winchester-catfish-lake",
@@ -1283,7 +1745,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"076", name:"Kuldhara Village", nameEn:"Kuldhara Village", slug:"kuldhara-village",
@@ -1300,7 +1767,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"077", name:"The Sunken City of Yonaguni", nameEn:"The Sunken City of Yonaguni", slug:"the-sunken-city-of-yonaguni",
@@ -1317,7 +1789,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"078", name:"The Oregon Vortex", nameEn:"The Oregon Vortex", slug:"the-oregon-vortex",
@@ -1334,7 +1811,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"079", name:"The Atacama Skeleton", nameEn:"The Atacama Skeleton", slug:"the-atacama-skeleton",
@@ -1351,7 +1833,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"080", name:"The Catacombs of Kom el Shoqafa", nameEn:"The Catacombs of Kom el Shoqafa", slug:"the-catacombs-of-kom-el-shoqafa",
@@ -1368,7 +1855,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"081", name:"The Marfa Lights", nameEn:"The Marfa Lights", slug:"the-marfa-lights",
@@ -1385,7 +1877,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"082", name:"Surtsey Island", nameEn:"Surtsey Island", slug:"surtsey-island",
@@ -1402,7 +1899,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"083", name:"The Bielefeld Conspiracy", nameEn:"The Bielefeld Conspiracy", slug:"the-bielefeld-conspiracy",
@@ -1419,7 +1921,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"084", name:"The Superstition Mountains", nameEn:"The Superstition Mountains", slug:"the-superstition-mountains",
@@ -1436,7 +1943,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"085", name:"Chateau de Brissac", nameEn:"Chateau de Brissac", slug:"chateau-de-brissac",
@@ -1453,7 +1965,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"086", name:"The Lake Toplitz Nazi Cache", nameEn:"The Lake Toplitz Nazi Cache", slug:"the-lake-toplitz-nazi-cache",
@@ -1470,7 +1987,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"087", name:"The Georgia Guidestones", nameEn:"The Georgia Guidestones", slug:"the-georgia-guidestones",
@@ -1487,7 +2009,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"088", name:"Fly Geyser", nameEn:"Fly Geyser", slug:"fly-geyser",
@@ -1504,7 +2031,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"089", name:"The Chichen Itza Serpent", nameEn:"The Chichen Itza Serpent", slug:"the-chichen-itza-serpent",
@@ -1521,7 +2053,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"090", name:"The Pisco Candelabra", nameEn:"The Pisco Candelabra", slug:"the-pisco-candelabra",
@@ -1538,7 +2075,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"091", name:"The Screaming Tunnel", nameEn:"The Screaming Tunnel", slug:"the-screaming-tunnel",
@@ -1555,7 +2097,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"092", name:"The Baigong Pipes", nameEn:"The Baigong Pipes", slug:"the-baigong-pipes",
@@ -1572,7 +2119,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"093", name:"The Flatwoods Monster Site", nameEn:"The Flatwoods Monster Site", slug:"the-flatwoods-monster-site",
@@ -1589,7 +2141,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"094", name:"The Bibbulmun Track Yowie Zone", nameEn:"The Bibbulmun Track Yowie Zone", slug:"the-bibbulmun-track-yowie-zone",
@@ -1606,7 +2163,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"095", name:"Roswell UFO Incident Site", nameEn:"Roswell UFO Incident Site", slug:"roswell-ufo-incident-site",
@@ -1623,7 +2185,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"096", name:"Rendlesham Forest", nameEn:"Rendlesham Forest", slug:"rendlesham-forest",
@@ -1640,7 +2207,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"097", name:"Mount Shasta", nameEn:"Mount Shasta", slug:"mount-shasta",
@@ -1657,7 +2229,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"098", name:"Bell Witch Cave", nameEn:"Bell Witch Cave", slug:"bell-witch-cave",
@@ -1674,7 +2251,12 @@ const LOCATIONS = [
     whatWeKnow:"",
     theMystery:"",
     safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
   },
   {
     id:"099", name:"Point Pleasant — Mothman Bridge", nameEn:"Point Pleasant — Mothman Bridge", slug:"point-pleasant-mothman",
@@ -1688,6 +2270,11 @@ const LOCATIONS = [
     shortPreview:"Between 1966 and 1967, over 100 witnesses reported a large winged humanoid with glowing red eyes. Sightings ended when the Silver Bridge collapsed, killing 46.",
     fullStory:"Between November 1966 and December 1967, over 100 witnesses in Point Pleasant, West Virginia reported sightings of a large winged humanoid with glowing red eyes. Sightings ended when the Silver Bridge collapsed on December 15, 1967, killing 46 people.",
     theStory:"", whatWeKnow:"", theMystery:"", safetyNote:"",
-    stories:[], dateAdded:"2026-06-04", pinPos:{left:"50%",top:"50%"}
-  }
+    stories:[], dateAdded:"2026-06-04",
+    // ── SP-001 Schema Extension (Sprint 1) ── stub
+    difficulty:null, tags:[], era:"", timeline:[], sources:[],
+    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
+    media:{ heroImageUrl:"", gallery:[] },
+    pinPos:{left:"50%",top:"50%"}
+  },
 ];
