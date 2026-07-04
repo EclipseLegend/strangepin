@@ -1013,6 +1013,121 @@
         font-size: 5rem;
       }
     }
+
+    /* ── SP-ContinueExploring — Sprint 2: Discovery Engine ──────────────────
+       Section 7 of the Pin Detail page (SP-002 §7).
+       Six reason-tagged recommendation cards.
+       All tokens from :root — no hardcoded hex values.
+    */
+    .sp-explore {
+      margin-top: 48px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* 2-column grid; 1-column on mobile */
+    .sp-explore-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+    @media (max-width: 640px) {
+      .sp-explore-grid { grid-template-columns: 1fr; gap: 12px; }
+    }
+
+    /* Individual recommendation card */
+    .sp-explore-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+    .sp-explore-card:hover {
+      border-color: rgba(232,98,26,0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    /* Category colour accent bar — top of card */
+    .sp-explore-card-bar {
+      height: 3px;
+      flex-shrink: 0;
+    }
+
+    /* Card body */
+    .sp-explore-card-body {
+      padding: 16px 18px 18px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    /* Top row: category emoji + pin name */
+    .sp-explore-card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .sp-explore-card-icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .sp-explore-card-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.975rem;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    /* Meta line: country · category */
+    .sp-explore-card-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      margin-left: 30px; /* aligns under name, past the icon */
+    }
+
+    /* Reason string — the core SP-002 §7 requirement */
+    .sp-explore-card-reason {
+      font-size: 0.82rem;
+      font-style: italic;
+      color: var(--orange-glow);
+      line-height: 1.55;
+      margin-top: auto;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Bottom row: mystery score */
+    .sp-explore-card-score {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+    .sp-explore-card-score-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .sp-explore-card-score-lbl {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      margin-left: 3px;
+    }
+  
   </style>
 </head>
 <body>
@@ -3950,6 +4065,255 @@ function getNearbyPins(loc, count=3) {
     .slice(0, count);
 }
 
+
+// ── DISCOVERY ENGINE — Sprint 2 ───────────────────────────────────────────────
+// getRelatedPins(loc)
+// Returns up to 6 objects: { pin, reason }
+//
+// Priority order:
+//   1. connections.relatedPinIds  — curated hand-picked links (Featured pins)
+//   2. Attribute scoring          — category, tags, era, difficulty, proximity
+//   3. getNearbyPins fallback     — geographic proximity (last resort)
+//
+// Every result includes a "Because..." reason string (SP-002 §7).
+// Never returns the current pin. Never returns duplicates.
+// ─────────────────────────────────────────────────────────────────────────────
+function getRelatedPins(loc) {
+  const results = [];
+  const usedIds = new Set([loc.id]);
+
+  // ── Helper: derive a "Because..." reason for a curated relatedPinId link ──
+  function curatedReason(source, target) {
+    // Check shared topics first (most specific)
+    const srcTopics = (source.connections && source.connections.relatedTopics) || [];
+    const tgtTopics = (target.connections && target.connections.relatedTopics) || [];
+    const sharedTopics = srcTopics.filter(t => tgtTopics.includes(t));
+    if (sharedTopics.length > 0) {
+      return `Because both are connected through ${sharedTopics[0].toLowerCase()}.`;
+    }
+
+    // Shared tags (if both have tag data)
+    const srcTags = source.tags || [];
+    const tgtTags = target.tags || [];
+    const sharedTags = srcTags.filter(t => tgtTags.includes(t));
+    if (sharedTags.length > 0) {
+      return `Because both involve ${sharedTags[0]}.`;
+    }
+
+    // Same category + overlapping era
+    if (source.category === target.category && source.era && target.era && source.era === target.era) {
+      return `Because both are ${source.category} mysteries from the same era.`;
+    }
+
+    // Same category
+    if (source.category === target.category) {
+      return `Because both locations are classified as ${source.category} mysteries.`;
+    }
+
+    // Geographic proximity (< 1500 km)
+    if (source.coordinates && target.coordinates) {
+      const R = 6371;
+      const dLat = (target.coordinates.lat - source.coordinates.lat) * Math.PI / 180;
+      const dLng = (target.coordinates.lng - source.coordinates.lng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(source.coordinates.lat*Math.PI/180) *
+                Math.cos(target.coordinates.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+      const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      if (km < 1500) {
+        return `Because this case is geographically close to the one you just explored.`;
+      }
+    }
+
+    // Fallback for curated links with no other obvious signal
+    return `Because this is a handpicked connection to the case you just read.`;
+  }
+
+  // ── Helper: derive a "Because..." reason from the highest scoring signal ──
+  function scoredReason(source, target, signal) {
+    if (signal === 'topic') {
+      const srcTopics = (source.connections && source.connections.relatedTopics) || [];
+      const tgtTopics = (target.connections && target.connections.relatedTopics) || [];
+      const shared = srcTopics.filter(t => tgtTopics.includes(t));
+      if (shared.length > 0) return `Because both are connected through ${shared[0].toLowerCase()}.`;
+    }
+    if (signal === 'tag') {
+      const sharedTags = (source.tags||[]).filter(t => (target.tags||[]).includes(t));
+      if (sharedTags.length > 0) return `Because both involve ${sharedTags[0]}.`;
+    }
+    if (signal === 'category_era') {
+      return `Because both are ${source.category} mysteries from the same era.`;
+    }
+    if (signal === 'category') {
+      return `Because both locations are classified as ${source.category} mysteries.`;
+    }
+    if (signal === 'proximity') {
+      return `Because this case is geographically close to the one you just explored.`;
+    }
+    if (signal === 'difficulty') {
+      return `Because both cases share a ${source.difficulty || 'similar'} depth of investigation.`;
+    }
+    return `Because this case shares key characteristics with the one you just explored.`;
+  }
+
+  // ── Step 1: Use connections.relatedPinIds (curated, Featured pins only) ──
+  const relatedIds = (loc.connections && loc.connections.relatedPinIds) || [];
+  for (const rid of relatedIds) {
+    if (usedIds.has(rid)) continue;
+    const pin = LOCATIONS.find(l => l.id === rid);
+    if (!pin) continue;
+    results.push({ pin, reason: curatedReason(loc, pin) });
+    usedIds.add(rid);
+    if (results.length >= 6) break;
+  }
+
+  // ── Step 2: Fill remaining slots via attribute scoring ──
+  if (results.length < 6) {
+    const srcTopics = (loc.connections && loc.connections.relatedTopics) || [];
+    const srcTags   = loc.tags || [];
+
+    const scored = LOCATIONS
+      .filter(l => !usedIds.has(l.id))
+      .map(l => {
+        let score = 0;
+        let topSignal = 'fallback';
+
+        // Same category: +4 (strongest single signal for Short Pins)
+        if (l.category === loc.category) {
+          score += 4;
+          if (topSignal === 'fallback') topSignal = 'category';
+        }
+
+        // Shared relatedTopics: +3 per match
+        const tgtTopics = (l.connections && l.connections.relatedTopics) || [];
+        const matchedTopics = srcTopics.filter(t => tgtTopics.includes(t));
+        if (matchedTopics.length > 0) {
+          score += matchedTopics.length * 3;
+          topSignal = 'topic';
+        }
+
+        // Shared tags: +2 per match (max +6)
+        const tgtTags = l.tags || [];
+        const matchedTags = srcTags.filter(t => tgtTags.includes(t));
+        if (matchedTags.length > 0) {
+          score += Math.min(6, matchedTags.length * 2);
+          if (topSignal === 'category' || topSignal === 'fallback') topSignal = 'tag';
+        }
+
+        // Same era: +2
+        if (loc.era && l.era && loc.era === l.era) {
+          score += 2;
+          if (score >= 6 && topSignal === 'category') topSignal = 'category_era';
+        }
+
+        // Same difficulty: +1
+        if (loc.difficulty && l.difficulty && loc.difficulty === l.difficulty) {
+          score += 1;
+          if (topSignal === 'fallback') topSignal = 'difficulty';
+        }
+
+        // Geographic proximity: +2 if < 2000 km
+        if (loc.coordinates && l.coordinates) {
+          const R = 6371;
+          const dLat = (l.coordinates.lat - loc.coordinates.lat) * Math.PI / 180;
+          const dLng = (l.coordinates.lng - loc.coordinates.lng) * Math.PI / 180;
+          const a = Math.sin(dLat/2)**2 + Math.cos(loc.coordinates.lat*Math.PI/180) *
+                    Math.cos(l.coordinates.lat*Math.PI/180) * Math.sin(dLng/2)**2;
+          const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          if (km < 2000) {
+            score += 2;
+            if (topSignal === 'fallback') topSignal = 'proximity';
+          }
+        }
+
+        return { pin: l, score, topSignal };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const needed = 6 - results.length;
+    for (const item of scored.slice(0, needed)) {
+      results.push({
+        pin: item.pin,
+        reason: scoredReason(loc, item.pin, item.topSignal),
+      });
+      usedIds.add(item.pin.id);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * SP_ContinueExploring
+ * Sprint 2 — SP-002 §7 Discovery Engine
+ * Renders the "Continue Exploring" section with 6 reason-tagged Pin cards.
+ *
+ * @param {object} loc - Current LOCATIONS entry
+ */
+function SP_ContinueExploring(loc) {
+  const related = getRelatedPins(loc);
+  if (related.length === 0) return '';
+
+  const catIcons = {
+    'Haunted':            '👻',
+    'UFO':                '🛸',
+    'Energy Spot':        '⚡',
+    'Urban Legend':       '📖',
+    'Strange Experience': '🌀',
+    'Abandoned Place':    '🏚️',
+    'Other':              '✦',
+  };
+
+  const catBarColor = {
+    'purple': 'var(--purple-glow)',
+    'teal':   'var(--teal)',
+    'amber':  'var(--amber)',
+  };
+
+  const cards = related.map(({ pin, reason }) => {
+    const icon     = catIcons[pin.category] || '✦';
+    const barColor = catBarColor[pin.categoryColor] || 'var(--text-dim)';
+    const score    = pin.mysteryScore || '—';
+    const scoreColor = {
+      purple: 'var(--purple-glow)',
+      teal:   'var(--teal)',
+      amber:  'var(--amber)',
+    }[pin.categoryColor] || 'var(--text-muted)';
+
+    // Escape pin name for onclick safety
+    const safeId = pin.id.replace(/[^a-z0-9]/gi, '');
+
+    return `<div class="sp-explore-card"
+      onclick="showPage('detail',LOCATIONS.find(l=>l.id==='${pin.id}'))"
+      role="button"
+      tabindex="0"
+      aria-label="Explore ${(pin.nameEn||pin.name).replace(/"/g,'&quot;')}">
+      <div class="sp-explore-card-bar" style="background:${barColor};"></div>
+      <div class="sp-explore-card-body">
+        <div class="sp-explore-card-top">
+          <span class="sp-explore-card-icon">${icon}</span>
+          <span class="sp-explore-card-name">${pin.nameEn || pin.name}</span>
+        </div>
+        <div class="sp-explore-card-meta">${pin.country}${pin.category ? ' · ' + pin.category : ''}</div>
+        <div class="sp-explore-card-reason">${reason}</div>
+        <div class="sp-explore-card-score">
+          <span class="sp-explore-card-score-val" style="color:${scoreColor};">${score}</span>
+          <span class="sp-explore-card-score-lbl">/ 10</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="sp-explore">
+    ${SP_SectionTitle(
+      'Continue Exploring',
+      'Selected because of what you just read'
+    )}
+    <div class="sp-explore-grid">
+      ${cards}
+    </div>
+  </div>`;
+}
+
 // ── NEARBY PAGE ───────────────────────────────────────────────────────────────
 function renderNearby() {
   const catIcons = {Haunted:'👻',UFO:'🛸','Energy Spot':'⚡','Urban Legend':'📖','Abandoned Place':'🏚️','Strange Experience':'🌀',Other:'❓'};
@@ -5599,6 +5963,9 @@ function renderDetail(lang) {
         }).join('')}
       </div>
     </div>` : ''}
+
+    <!-- CONTINUE EXPLORING — Sprint 2: Discovery Engine (SP-002 §7) -->
+    ${SP_ContinueExploring(loc)}
 
   </div>`;
 }
