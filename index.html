@@ -1257,6 +1257,67 @@
   </footer>
 </div>
 <script>
+// ── SECURITY HELPERS ─────────────────────────────────────────────────────────
+// Every value that originates from users (Firestore docs, Firebase Auth profile,
+// form inputs, error messages) MUST pass through these helpers before it is
+// interpolated into an HTML string that is assigned to innerHTML.
+
+/** Escape a value for safe use in HTML text and double/single-quoted attributes. */
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value).replace(/[&<>"'`]/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;'
+  }[ch]));
+}
+
+/** Return the URL (normalised) only if it is a valid https: URL, otherwise ''. */
+function safeHttpsUrl(value) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  try {
+    const u = new URL(value.trim());
+    return u.protocol === 'https:' ? u.href : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+/** First character of a display name, upper-cased and HTML-escaped. */
+function avatarInitial(name) {
+  const s = (typeof name === 'string' && name.trim()) ? name.trim() : '?';
+  return escapeHtml(Array.from(s)[0].toUpperCase());
+}
+
+/** Firestore document IDs used inside inline handlers must be plain tokens. */
+function safeDocId(value) {
+  const s = String(value === null || value === undefined ? '' : value);
+  return /^[A-Za-z0-9_-]{1,128}$/.test(s) ? s : '';
+}
+
+/**
+ * Avatar markup: an <img> for a valid https photo URL, otherwise the escaped
+ * initial (wrapped in a span when fallbackStyle is given). The onerror handler
+ * is a fixed function call and never contains user data.
+ */
+function avatarHtml(photoUrl, name, fallbackStyle) {
+  const url = safeHttpsUrl(photoUrl);
+  const initial = avatarInitial(name);
+  const fallback = fallbackStyle ? `<span style="${fallbackStyle}">${initial}</span>` : initial;
+  if (!url) return fallback;
+  return `<img src="${escapeHtml(url)}" alt="" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;"`
+       + ` data-initial="${initial}" data-fallback-style="${escapeHtml(fallbackStyle || '')}" onerror="spAvatarFallback(this)" />`;
+}
+
+/** onerror handler for avatar images: replace the image with the initial. */
+function spAvatarFallback(img) {
+  const parent = img && img.parentElement;
+  if (!parent) return;
+  const span = document.createElement('span');
+  const style = img.getAttribute('data-fallback-style');
+  if (style) span.setAttribute('style', style);
+  span.textContent = img.getAttribute('data-initial') || '?';
+  parent.replaceChildren(span);
+}
+
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const LOCATIONS = [
   {
@@ -3831,9 +3892,9 @@ async function loadHomeStats() {
             const photo = u.photoURL || '';
             return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;">
               <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:1rem;margin:0 auto 8px;">
-                ${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.textContent='${name[0].toUpperCase()}'" />` : name[0].toUpperCase()}
+                ${avatarHtml(photo, name)}
               </div>
-              <div style="font-size:0.82rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+              <div style="font-size:0.82rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
               <div style="font-size:0.72rem;color:${lv.color};font-weight:600;margin:3px 0;">${lv.icon} ${lv.name}</div>
               <div style="font-size:0.7rem;color:var(--text-dim);">${pins} pins · ${pts} pts</div>
             </div>`;
@@ -3856,8 +3917,8 @@ async function loadHomeStats() {
           return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid rgba(232,98,26,0.2);border-radius:10px;margin-top:8px;">
             <span style="font-size:1.1rem;">${catIcons2[pin.category]||'📍'}</span>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:0.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pin.name||'Unknown'}</div>
-              <div style="font-size:0.72rem;color:var(--text-dim);">📍 ${[pin.city,pin.country].filter(Boolean).join(', ')||'Unknown'}</div>
+              <div style="font-size:0.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(pin.name||'Unknown')}</div>
+              <div style="font-size:0.72rem;color:var(--text-dim);">📍 ${escapeHtml([pin.city,pin.country].filter(Boolean).join(', ')||'Unknown')}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
               <div style="font-size:0.68rem;color:var(--orange-glow);font-weight:600;">🆕 NEW</div>
@@ -3956,16 +4017,16 @@ function renderCommentsList(pinId) {
   el.innerHTML = comments.map(c => `
     <div class="comment-card">
       <div style="display:flex;align-items:flex-start;gap:10px;">
-        <div class="comment-avatar">${(c.displayName||'?')[0].toUpperCase()}</div>
+        <div class="comment-avatar">${avatarInitial(c.displayName)}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-            <span style="font-size:0.85rem;font-weight:600;color:var(--text);">${c.displayName||'Anonymous'}</span>
+            <span style="font-size:0.85rem;font-weight:600;color:var(--text);">${escapeHtml(c.displayName||'Anonymous')}</span>
             <span style="font-size:0.72rem;color:var(--text-dim);">${c.at?.toDate ? c.at.toDate().toLocaleDateString() : 'Just now'}</span>
           </div>
-          <p style="font-size:0.875rem;color:var(--text-muted);line-height:1.6;margin:0;">${c.text}</p>
+          <p style="font-size:0.875rem;color:var(--text-muted);line-height:1.6;margin:0;">${escapeHtml(c.text)}</p>
           <div style="margin-top:6px;">
-            <button class="comment-like-btn" onclick="likeComment('${pinId}','${c.id}')">
-              👍 ${c.likes||0}
+            <button class="comment-like-btn" onclick="likeComment('${safeDocId(pinId)}','${safeDocId(c.id)}')">
+              👍 ${Number(c.likes)||0}
             </button>
           </div>
         </div>
@@ -4590,15 +4651,12 @@ function renderProfile() {
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
         <div style="position:relative;flex-shrink:0;">
           <div style="width:64px;height:64px;border-radius:50%;border:3px solid var(--orange);overflow:hidden;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;">
-            ${photo
-              ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=font-size:1.5rem;color:white;font-weight:700>${name[0].toUpperCase()}</span>'" />`
-              : `<span style="font-size:1.5rem;color:white;font-weight:700;">${name[0].toUpperCase()}</span>`
-            }
+            ${avatarHtml(photo, name, 'font-size:1.5rem;color:white;font-weight:700;')}
           </div>
           <div style="position:absolute;bottom:-2px;right:-2px;background:var(--card);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;border:2px solid var(--border);">${level.icon}</div>
         </div>
         <div style="flex:1;min-width:0;">
-          <h1 class="font-display" style="font-size:1.5rem;font-weight:800;margin-bottom:2px;">Welcome, ${name} 👋</h1>
+          <h1 class="font-display" style="font-size:1.5rem;font-weight:800;margin-bottom:2px;">Welcome, ${escapeHtml(name)} 👋</h1>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span style="color:${level.color};font-weight:700;font-size:0.875rem;">${level.icon} ${level.name} Explorer</span>
             <span style="color:var(--text-dim);font-size:0.8rem;">·</span>
@@ -5280,7 +5338,7 @@ function renderMap(lang) {
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:20px;">
       <div style="position:relative;flex:1;min-width:220px;max-width:360px;">
         <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);">🔍</span>
-        <input id="mapSearchInput" value="${mapSearch}" oninput="mapSearch=this.value;refreshMapPins()" placeholder="Search strange places..." style="padding-left:36px;" />
+        <input id="mapSearchInput" aria-label="Search strange places" value="${escapeHtml(mapSearch)}" oninput="mapSearch=this.value;refreshMapPins()" placeholder="Search strange places..." style="padding-left:36px;" />
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">${catBtns}</div>
     </div>
@@ -5667,7 +5725,7 @@ function previewImage(input) {
     const prompt  = document.getElementById('uploadPrompt');
     if (img)     img.src = e.target.result;
     if (preview) preview.style.display = 'block';
-    if (prompt)  prompt.innerHTML = `<p style="font-size:0.8rem;color:var(--orange-glow);">✅ ${file.name}</p><p style="font-size:0.72rem;color:var(--text-dim);margin-top:2px;">Click to change</p>`;
+    if (prompt)  prompt.innerHTML = `<p style="font-size:0.8rem;color:var(--orange-glow);">✅ ${escapeHtml(file.name)}</p><p style="font-size:0.72rem;color:var(--text-dim);margin-top:2px;">Click to change</p>`;
   };
   reader.readAsDataURL(file);
 }
@@ -5774,7 +5832,7 @@ async function handleSubmit() {
     }
   } catch(err) {
     console.error('EmailJS error:', err);
-    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ Send failed: ${err.text || err.message || err}. Please try again.</p>`;
+    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ Send failed: ${escapeHtml(err && (err.text || err.message) || err)}. Please try again.</p>`;
     if (btn) { btn.disabled = false; btn.innerHTML = '📍 Drop the Pin'; }
   }
 }
@@ -5926,7 +5984,7 @@ function renderDetail(lang) {
       </div>
       <div id="commentsList"><p style="color:var(--text-dim);font-size:0.85rem;">Loading...</p></div>
       <div class="comment-input-wrap" style="margin-top:16px;">
-        <div class="comment-avatar" style="margin-top:4px;">${window.currentUser ? (window.currentUser.displayName||'?')[0].toUpperCase() : '?'}</div>
+        <div class="comment-avatar" style="margin-top:4px;">${window.currentUser ? avatarInitial(window.currentUser.displayName) : '?'}</div>
         <div style="flex:1;">
           <textarea id="commentInput" class="comment-input" rows="2"
             placeholder="${window.currentUser ? 'Share your experience or thoughts...' : 'Sign in to comment...'}"
@@ -5984,13 +6042,10 @@ function renderLeaderboard(lang) {
     <div style="background:linear-gradient(135deg,rgba(232,98,26,0.1),rgba(109,40,217,0.1));border:1px solid rgba(232,98,26,0.25);border-radius:14px;padding:20px 24px;margin-bottom:28px;cursor:pointer;" onclick="showPage('profile')" title="View your profile">
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
         <div style="width:48px;height:48px;border-radius:50%;border:2px solid var(--orange);overflow:hidden;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          ${photo
-            ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=color:white;font-weight:700;font-size:1.1rem>${name[0].toUpperCase()}</span>'" />`
-            : `<span style="color:white;font-weight:700;font-size:1.1rem;">${name[0].toUpperCase()}</span>`
-          }
+          ${avatarHtml(photo, name, 'color:white;font-weight:700;font-size:1.1rem;')}
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:1rem;color:var(--text);">Welcome, ${name} 👋</div>
+          <div style="font-weight:700;font-size:1rem;color:var(--text);">Welcome, ${escapeHtml(name)} 👋</div>
           <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">${pins} pin${pins!==1?'s':''} · ${pts} pts</div>
         </div>
         <div style="text-align:right;">
@@ -6086,7 +6141,8 @@ function startLiveLeaderboard() {
     el.innerHTML = users.map((u, i) => {
       const pts   = (typeof u.points === 'number') ? u.points : 0;
       const pins  = (typeof u.pins   === 'number') ? u.pins   : 0;
-      const name  = u.displayName || u.email?.split('@')[0] || 'Anonymous';
+      // Never derive a public name from another user's email address.
+      const name  = (typeof u.displayName === 'string' && u.displayName.trim()) ? u.displayName.trim() : 'Anonymous';
       const photo = u.photoURL || '';
       const level = getLvl(pts);
       const rank  = i + 1;
@@ -6095,10 +6151,10 @@ function startLiveLeaderboard() {
         <div style="text-align:center;">${medal ? `<span style="font-size:1.2rem;">${medal}</span>` : `<span class="font-mono" style="font-size:0.85rem;color:var(--text-dim);">#${rank}</span>`}</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#e8621a,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:white;overflow:hidden;flex-shrink:0;">
-            ${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.textContent='${name[0].toUpperCase()}'" />` : name[0].toUpperCase()}
+            ${avatarHtml(photo, name)}
           </div>
           <div>
-            <div style="font-size:0.9rem;font-weight:500;color:var(--text);">${name}</div>
+            <div style="font-size:0.9rem;font-weight:500;color:var(--text);">${escapeHtml(name)}</div>
             <div style="font-size:0.72rem;color:var(--text-dim);">${pins} pins</div>
           </div>
         </div>
