@@ -1345,6 +1345,79 @@ function previewText(loc, max) {
   return truncateAtWord(source, limit);
 }
 
+// ── BASEMAP CONFIG ───────────────────────────────────────────────────────────
+// Owner decision (see docs/map-providers.md). Production behaviour is unchanged
+// until SP_BASEMAP is switched:
+//   'carto-legacy'     keyless CARTO raster URL (CARTO now serves "API KEY REQUIRED" tiles)
+//   'carto-key'        CARTO Dark Matter raster with a key (set SP_CARTO_KEY; key must be requested by the owner)
+//   'openfreemap-dark' OpenFreeMap "dark" vector style rendered by MapLibre GL via
+//                      maplibre-gl-leaflet; no key, no account. Libraries load lazily.
+const SP_BASEMAP   = 'carto-legacy';
+const SP_CARTO_KEY = '';
+const SP_MAPLIBRE = {
+  js:     { src: 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js',
+            integrity: 'sha384-5+cfbwT0iiub6VsQAdn6yz16nr6sDiQoHx6tm4O8OVYXHYOxcffFmCJBL0dgdvGp' },
+  css:    { href: 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css',
+            integrity: 'sha384-uTttxo/aOKbdE5RlD/SPzSDoDmNvGlUYPjONi2MN/b7c9HPSvW07OIuyP7uL6jxK' },
+  plugin: { src: 'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js',
+            integrity: 'sha384-tXYNKOHx4T02jMP7YYCtBxPIv1B5gaA5mcVPBzqMp6d7VzWzxJgI2aWF/nJLrQdS' },
+};
+
+/** Active basemap. On localhost only, ?basemap=<id> overrides it for testing. */
+function spBasemapChoice() {
+  const ids = ['carto-legacy', 'carto-key', 'openfreemap-dark'];
+  if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+    const q = new URLSearchParams(window.location.search).get('basemap');
+    if (ids.includes(q)) return q;
+  }
+  return SP_BASEMAP;
+}
+
+const _spAssetPromises = {};
+function spLoadAsset(kind, attrs) {
+  const key = attrs.src || attrs.href;
+  if (_spAssetPromises[key]) return _spAssetPromises[key];
+  _spAssetPromises[key] = new Promise((resolve, reject) => {
+    const el = document.createElement(kind === 'css' ? 'link' : 'script');
+    if (kind === 'css') { el.rel = 'stylesheet'; el.href = attrs.href; } else { el.src = attrs.src; }
+    el.integrity = attrs.integrity;
+    el.crossOrigin = 'anonymous';
+    el.onload = () => resolve();
+    el.onerror = () => reject(new Error('failed to load ' + key));
+    document.head.appendChild(el);
+  });
+  return _spAssetPromises[key];
+}
+
+/** Add the configured basemap to a Leaflet map. Resolves to the basemap id used. */
+async function addBasemap(map) {
+  const choice = spBasemapChoice();
+  const osm = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+  if (choice === 'openfreemap-dark') {
+    try {
+      await Promise.all([spLoadAsset('css', SP_MAPLIBRE.css), spLoadAsset('js', SP_MAPLIBRE.js)]);
+      await spLoadAsset('js', SP_MAPLIBRE.plugin);
+      L.maplibreGL({
+        style: 'https://tiles.openfreemap.org/styles/dark',
+        attribution: '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> '
+          + '&copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> ' + osm,
+      }).addTo(map);
+      return choice;
+    } catch (e) {
+      console.warn('StrangePin: vector basemap unavailable, falling back to raster.', e);
+    }
+  }
+  const keyed = (choice === 'carto-key' || choice === 'openfreemap-dark') && SP_CARTO_KEY;
+  L.tileLayer(keyed
+      ? 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(SP_CARTO_KEY)
+      : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: osm + ', &copy; <a href="https://carto.com/attributions/" target="_blank" rel="noopener">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  }).addTo(map);
+  return keyed ? 'carto-key' : 'carto-legacy';
+}
+
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const LOCATIONS = [
   {
@@ -5410,11 +5483,7 @@ function initLeafletMap() {
   // Dark tile layer from CartoDB
   leafletMap = L.map('leafletMap', { zoomControl: true, scrollWheelZoom: true, worldCopyJump: true }).setView([20, -20], 2);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19
-  }).addTo(leafletMap);
+  addBasemap(leafletMap).then(id => { window._spBasemapUsed = id; });
 
   // Force Leaflet to recalculate container size (fixes grey/white areas)
   setTimeout(() => {
@@ -5654,10 +5723,7 @@ function initSubmitMap() {
 
   submitMap = L.map('submitMap', { zoomControl: true, scrollWheelZoom: true, worldCopyJump: true }).setView([20, 0], 2);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap contributors © CARTO',
-    subdomains: 'abcd', maxZoom: 19
-  }).addTo(submitMap);
+  addBasemap(submitMap);
 
   // Fix grey areas
   setTimeout(() => { submitMap.invalidateSize(); }, 100);
