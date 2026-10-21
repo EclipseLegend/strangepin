@@ -32,11 +32,19 @@ async function open(b, hash, { delayCdnMs = 0, preset } = {}) {
 (async () => {
   const b = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
 
-  // 1. First render happens before DOMContentLoaded when CDN scripts are slow.
+  // 1. First render does not wait for the CDN scripts, which are requested only AFTER the first
+  //    contentful paint (spLoadDeferredAssets) and then initialise Firebase.
   let { pg, reqs, errors } = await open(b, '#home', { delayCdnMs: 3000 });
   await sleep(4500);
-  let t = await pg.evaluate(() => ({ ...window.__t, once: window._spAppInitDone, stats: document.getElementById('statPins')?.textContent, countries: document.getElementById('statCountries')?.textContent }));
-  check(t.render && t.dcl && t.render < t.dcl - 1000, 'home renders before DOMContentLoaded (CDN scripts delayed 3 s)', `render=${Math.round(t.render)}ms dcl=${Math.round(t.dcl)}ms`);
+  let t = await pg.evaluate(() => {
+    const fcp = (performance.getEntriesByName('first-contentful-paint')[0] || {}).startTime;
+    const cdn = performance.getEntriesByType('resource').filter(e => /leaflet\.js|email\.min\.js|firebase-app-compat/.test(e.name)).map(e => e.startTime);
+    return { ...window.__t, fcp, cdnFirst: cdn.length ? Math.min(...cdn) : null, cdnCount: cdn.length, fb: !!window._spFirebaseInitialised,
+      once: window._spAppInitDone, stats: document.getElementById('statPins')?.textContent, countries: document.getElementById('statCountries')?.textContent };
+  });
+  check(t.render && t.render < 1000 && t.fcp && t.fcp < 1500, 'home renders and paints without waiting for the (3 s delayed) CDN scripts', `render=${Math.round(t.render)}ms fcp=${Math.round(t.fcp)}ms`);
+  check(t.cdnCount === 3 && t.cdnFirst >= t.fcp - 1, 'CDN scripts are requested only after the first contentful paint', `fcp=${Math.round(t.fcp)} firstCdnRequest=${Math.round(t.cdnFirst)}`);
+  check(t.fb === true, 'Firebase initialises once the delayed SDK scripts arrive (spCdnReady)');
   check(t.once === true, 'initApp ran exactly once (guard set)');
   check(t.stats === '99' && /^\d+$/.test(t.countries || ''), 'stats bar shows local pin/country counts immediately', `${t.stats} pins, ${t.countries} countries`);
   check(!reqs.some(u => u.includes('translate.google.com')), 'Google Translate NOT requested on a plain page load');
@@ -47,8 +55,8 @@ async function open(b, hash, { delayCdnMs = 0, preset } = {}) {
   ({ pg, reqs, errors } = await open(b, '#map', { delayCdnMs: 2500 }));
   await sleep(7000);
   const map = await pg.evaluate(() => ({ markers: document.querySelectorAll('#leafletMap .leaflet-marker-icon').length,
-    css: document.getElementById('leafletCss').media, pane: !!document.querySelector('#leafletMap .leaflet-pane') }));
-  check(map.markers === 99 && map.pane && map.css === 'all', 'map deep link: 99 markers after slow Leaflet; Leaflet CSS applied', JSON.stringify(map));
+    css: !!(document.getElementById('leafletCss') || {}).sheet, pane: !!document.querySelector('#leafletMap .leaflet-pane') }));
+  check(map.markers === 99 && map.pane && map.css === true, 'map deep link: 99 markers after slow Leaflet; Leaflet CSS applied', JSON.stringify(map));
   check(errors.length === 0, 'no page errors (map, slow CDN)', errors.join(' | '));
   await pg.close();
 
