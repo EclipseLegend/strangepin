@@ -1,6 +1,6 @@
 # SEO URL plan: crawlable `/pins/<slug>/` pages
 
-**Status:** this is a plan plus a working local prototype (`scripts/build-pins.js`). Nothing has been deployed and Netlify settings are unchanged.
+**Status:** working local implementation (`scripts/build-pins.js`, `netlify.toml`, `tests/sitemap-check.js`). Nothing has been deployed and Netlify site settings are unchanged; merging `netlify.toml` to `main` WILL change how production builds (see §6).
 
 ## 1. Why
 Every pin today lives at `/#detail/NNN`. Search engines ignore the `#fragment`, so all 99 pins collapse into a single URL (`/`). Only the homepage can be indexed, and there are no per-pin titles, descriptions, Open Graph previews or structured data.
@@ -58,23 +58,26 @@ The build writes `sitemap.xml` with `/`, `/pins/` and every pin page (`lastmod` 
 - **The server never sees the fragment,** so `_redirects` cannot map `/#detail/001` to `/pins/area-51/`.
 - **Plan (client-side; only after the static pages are live):**
   1. Keep `/#detail/NNN` working inside the SPA for shares and history. Do NOT force-redirect users who are on the map.
-  2. In the SPA's `updateSEO()` for the detail view, set `<link rel="canonical">` to the pin's `/pins/<slug>/` (it is `https://strangepin.com/` today), using `pins-manifest.json` or the inline `slug`. This tells crawlers that render JavaScript which page is canonical.
+  2. **DONE (Phase 3):** the SPA's `updateSEO()` sets `<link rel="canonical">` to `https://strangepin.com/pins/<slug>/` on detail views (inline `slug`, validated `^[a-z0-9-]+$`; all 99 inline slugs equal the build slugs — TESTED) and back to `https://strangepin.com/` elsewhere. No forced redirect: `/#detail/NNN` keeps working. An optional client-side `location.replace('/pins/<slug>/')` for first-load deep links is deliberately NOT enabled (it would break the map/back-button flow).
   3. Change the share buttons (X/Facebook/copy link) to share `/pins/<slug>/`, so link previews get per-pin OG tags. Crawlers fetching social previews do not run JavaScript.
   4. Optional: a path-based alias `_redirects` rule `/detail/:id /pins/:slug/ 301` is NOT possible without a per-id rule. The build can emit one line per pin (`/detail/001 /pins/area-51/ 301`) if path-form links are ever introduced.
 - **Static page → app:** the "Open on the interactive map" link uses `/#detail/NNN`. TESTED: clicking it opened the SPA detail view for 001.
 
 ## 6. Netlify implications
-- **Today:** no build step. Netlify publishes the repo root as-is from `main`.
-- **With the generator, a build step is needed.** Proposed `netlify.toml` (NOT added to the repo, because merging it changes how production builds):
+- **Today (main):** no build step. Netlify publishes the repo root as-is.
+- **Phase 3:** `netlify.toml` is added on the technical branch:
   ```toml
   [build]
-    command = "node scripts/build-pins.js --out dist --site https://strangepin.com"
+    command = "node scripts/build-pins.js --out dist --site https://strangepin.com && node tests/sitemap-check.js dist https://strangepin.com"
     publish = "dist"
   [build.environment]
     NODE_VERSION = "20"
-  [context.deploy-preview]
-    command = "node scripts/build-pins.js --out dist --site $DEPLOY_PRIME_URL"
+  [context.deploy-preview]   # and [context.branch-deploy]
+    command = "node scripts/build-pins.js --out dist --site $DEPLOY_PRIME_URL && node tests/sitemap-check.js dist $DEPLOY_PRIME_URL"
   ```
+  The build copies the static files (`index.html`, `sw.js`, `offline.html`, `manifest.json`, `robots.txt`, icons, `og-image.png`, `_headers`, `_redirects` if present) and `fonts/` into `dist/`. Repo-only files (`docs/`, `tests/`, `scripts/`, `firestore.rules`, `firebase.json`, Markdown) are **no longer published** (they are today, from the repo root).
+- **Sitemap check (automated, fails the build):** `tests/sitemap-check.js` verifies every `<loc>` maps to a file in `dist`, no duplicates, single host, no `#`/`?`, every built pin page is listed, and `robots.txt` points to the sitemap. TESTED: passes (101 URLs, 99 pin pages); negative test with an injected unknown URL and a deleted pin directory → exit 1 listing both.
+- **Local Netlify build (TESTED, 2026-10-21 Europe/Lisbon):** `npx netlify-cli@17 build --offline` in a clean worktree of the branch, no login, no site link: `@netlify/build 29.58.0`, context production, build command ran, "Built 99 pin pages", sitemap check passed, "Netlify Build Complete", exit 0. It creates a local `.netlify/` folder (git-ignored). NOT TESTED: a real Netlify deploy, Netlify's Node image, deploy-preview context.
 - **Deploy previews:** canonicals point at the preview host when built with `--site $DEPLOY_PRIME_URL`. Netlify also adds `X-Robots-Tag: noindex` to deploy previews by default (EXPECTED; check it on the first preview).
 - **`_headers` and `_redirects`** must be in the publish directory. The generator copies them from the repo root.
 - **Trailing slashes:** Netlify serves `/pins/x/index.html` at `/pins/x/`. Keep "Pretty URLs" on, and make the canonical include the trailing slash (it does).
@@ -89,7 +92,7 @@ TESTED: local, 2026-10-21, using the `feat/phase2` data.
 | `node scripts/build-pins.js` | 99 pin pages + `/pins/` index + sitemap + manifest, about 0.1 s |
 | `tests/seo-pages.test.js` | **16/16 PASS** (details below) |
 | Browser: `dist/` served on :8092, `/pins/area-51/` | H1 and 6 sections render, no console errors; CTA → SPA detail 001 (`currentPage=detail`) |
-| Lighthouse 12 on `/pins/area-51/` (local) | SEO 100, Accessibility 100 (after fixing CTA contrast), Best Practices 100. JSON: `/workspace/strangepin-dev-tools/lh/seo-pin-area-51.json` |
+| Lighthouse 12 on `/pins/area-51/` (local) | SEO 100, Accessibility 100 (after fixing CTA contrast), Best Practices 100. (JSON kept outside the repo) |
 
 `tests/seo-pages.test.js` covers:
 - slug rules and collision handling;
@@ -103,4 +106,4 @@ Screenshot: `docs/img/seo-pin-page.png`. It was taken before the CTA colour fix 
 **NOT TESTED:**
 - Google Search Console indexing and the Rich Results Test (needs a public URL);
 - real social preview scrapers;
-- the Netlify build itself.
+- a real Netlify deploy (the local offline build is TESTED, §6).
