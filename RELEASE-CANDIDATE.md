@@ -1,31 +1,29 @@
 # StrangePin release candidate: QC pack
 
-- **Prepared:** 2026-10-21, 17:20 CEST (Europe/Madrid). Updated 19:10 CEST for `perf/lcp`.
-- **Status:** LOCAL ONLY.
-  - Nothing has been pushed, no PR has been opened, and nothing has been deployed.
-  - No Firebase, Netlify, EmailJS or Cloudinary setting was changed.
-  - No account was created and nothing was purchased.
-- **Important:** none of this restores or changes production functionality until the owner runs the deployment plan in section 7.
+- **Prepared:** 2026-10-21. Phase 3 update ~20:00 WEST (Europe/Lisbon, UTC+1).
+  - **Time-zone note:** entries written before Phase 3 (here, `CHANGES.md`, `docs/perf-lcp.md`
+    §1–6, `docs/map-providers.md` header) were labelled "CEST (Europe/Madrid)", and those
+    commits carry `+0200`. The owner's zone is Europe/Lisbon (UTC+1); Phase 3 commits carry
+    `+0100`. Treat the older wall-clock labels as approximate (1 h ahead of Lisbon).
+- **Status: LOCAL ONLY.** Nothing pushed, no PR opened, nothing deployed; no Firebase, Netlify,
+  EmailJS or Cloudinary setting changed; no Firestore rules deployed; backfill not run; no
+  account created; nothing purchased. **Nothing here restores production functionality until
+  the owner runs section 8.**
+- Labels: **TESTED** (run here, method stated) · **EXPECTED** (reasoning) · **NOT TESTED**.
 
-| Branch | Head | Base | Contents |
-|---|---|---|---|
-| `fix/audit-critical` | 073b265 | `origin/main` 728e8f5 | Phase 1 fixes (see `CHANGES.md`) |
-| `feat/phase2` | tip = the commit adding this file | `fix/audit-critical` | Phase 2 items 1–6 (code and docs, no pin-data edits) |
-| `content/corrections` | 1 commit on top of `feat/phase2` | `feat/phase2` | Sourced pin-data corrections only, as a **separate PR** |
-| `perf/lcp` | the commit adding the perf section of this file | `feat/phase2` | LCP/first-paint fixes, lazy Google Translate, self-hosted fonts, CSP `frame-src 'self'` (section 1, `docs/perf-lcp.md`). `content/corrections` is also based on `feat/phase2`, so one of them is rebased onto the other after the first merges (no expected conflict: content edits only touch `LOCATIONS`) |
+## 0. The two PR-ready branches (both descend from `main` 728e8f5)
 
-**Patches:**
-- `patches/` (Phase 1)
-- `patches/feat-phase2/0001…0012`
-- `patches/content-corrections/0001`
-- `patches/perf-lcp/` (`git format-patch feat/phase2..perf/lcp`, one patch per commit)
+| Branch | Base for the PR | Contents |
+|---|---|---|
+| `pr/technical` | `main` (728e8f5) | All Phase 1, Phase 2, `perf/lcp` and Phase 3 work: fixes, proposed rules + tests, PWA, detail sections, SEO generator + `netlify.toml`, `_headers`, perf, OpenFreeMap basemap + fallback chain, `locations.js` removal, CI workflow, docs. No pin-data edits. |
+| `pr/content` | `pr/technical` | **One commit, pin content only** (`index.html` `LOCATIONS` array). Depends on the technical PR: 9 of its 23 pins change `timeline`/`sources`, which `main` does not render. Verify: `node scripts/content-diff-check.js pr/technical pr/content`. |
 
-Labels used below:
-- **TESTED:** run here, with the method and environment stated.
-- **EXPECTED:** reasoning only.
-- **NOT TESTED:** needs real devices, real accounts or production.
-
----
+PR order: 1) `pr/technical` → `main`; 2) after it merges, retarget `pr/content` to `main` (its
+diff stays content-only because its base commit is then in `main`). The old working branches
+(`fix/audit-critical`, `feat/phase2`, `perf/lcp`, `content/corrections`, `feat/phase3`) are
+superseded; do not open PRs from them. Patches: regenerate with
+`git format-patch main..pr/technical` / `pr/technical..pr/content` (kept outside git, `patches/`
+is git-ignored).
 
 ## 1. Change summary
 
@@ -48,7 +46,7 @@ Details in `CHANGES.md`.
 | 1 | a20c009 | **Proposed** Firestore rules + 46 rules tests (not deployed) | `firestore.rules`, `firebase.json`, `tests/rules.test.js` |
 | 1 | e95bd91 | Dev-only emulator switch (only on `localhost`/`127.0.0.1` with `?emulator=1`, project `demo-strangepin`); writes aligned with the rules (summary below the table); backfill script (not run) | `index.html`, `tests/e2e-emulator.js`, `scripts/backfill-public-profiles.js` |
 | 1 | 0f881e3 | Smoke-test mock updated for the publicProfiles query chain | `tests/browser-smoke.js` |
-| 2 | 9bcab67 | Basemap set by `SP_BASEMAP` (default `carto-legacy` = unchanged); OpenFreeMap dark prototype via MapLibre (lazy, SRI); keyed CARTO option; provider evaluation | `index.html`, `docs/map-providers.md`, `docs/img/map-*.png` |
+| 2 | 9bcab67 | Basemap set by `SP_BASEMAP` (Phase 3 makes OpenFreeMap dark the default); OpenFreeMap dark prototype via MapLibre (lazy, SRI); keyed CARTO option; provider evaluation | `index.html`, `docs/map-providers.md`, `docs/img/map-*.png` |
 | 3 | c6be1f3, 24bc0da | Service worker, `offline.html`, manifest `id`/`scope`/maskable icon, 180 px apple-touch-icon, PWA tests | `sw.js`, `offline.html`, `manifest.json`, icons, `docs/pwa.md`, `tests/pwa-*.js` |
 | 4 | c7693bf | Timeline and Sources sections on the detail page (escaped; https-only links with `rel="noopener nofollow"`) | `index.html`, `tests/detail-sections.js` |
 | 4 | 7262060, 4a47558 | Review of timeline/sources, now that they are public; proposal for the trust model (verified flag and counts) | `docs/content-corrections.md` §6, `docs/trust-model-proposal.md` |
@@ -73,130 +71,153 @@ Full method, numbers and causes: `docs/perf-lcp.md`.
 - **`_headers`:** `frame-src 'self'`, which the Translate language switch needs.
 - **Tooling and tests:** `scripts/dev-headers-server.js` now resolves its root correctly and supports `/dir/*` globs. Previously, with `.` as the root, every path except `/` returned 403. New `tests/perf-lazy.js`; `tests/csp-report-only.js` now also checks the language switch.
 
-### Content: `content/corrections` (separate PR)
-- 52 field edits on 23 pins, each with a source. See `docs/content-corrections-applied.md`.
-- Items that need a source or an owner decision were left out.
+### Phase 3 (on `pr/technical`)
+- **Map:** `SP_BASEMAP = 'openfreemap-dark'`. Chain: OpenFreeMap dark (MapLibre, WebGL, SRI) →
+  keyed CARTO Dark Matter (only if `SP_CARTO_KEY` is set) → OSM-based dark raster (OSM tiles +
+  CSS filter; allowed for an interactive public site with attribution, no prefetch/offline;
+  `docs/map-providers.md`). If all fail: English overlay "Map tiles are unavailable right now."
+  with "Try again". The unusable `carto-legacy` option was removed.
+- **`locations.js` removed** after a reference audit (`docs/locations-js-removal.md`).
+- **Performance:** static first-paint hero (`scripts/sync-static-hero.js`), CDN scripts and
+  brand fonts loaded after first contentful paint, DM Sans from the second visit,
+  `content-visibility` below the fold (`docs/perf-lcp.md` §7).
+- **SEO:** `netlify.toml` builds the 99 `/pins/<slug>/` pages into `dist/` and fails the build if
+  the sitemap lists anything not in the output (`tests/sitemap-check.js`); the SPA sets the
+  canonical of detail views to `/pins/<slug>/` (no forced redirect; `#detail` cannot be
+  redirected server-side).
+- **Firebase:** compatibility matrix + tests; backfill gets `--confirm-project` and per-user
+  transactions (`docs/firebase-compat-matrix.md`).
+- **CI / repo hygiene:** `.github/workflows/ci.yml`, `docs/branch-protection.md`, extended
+  `.gitignore`, test dependencies pinned in `tests/package*.json`.
 
----
+### Content (`pr/content`)
+- 23 pins, sourced corrections (`docs/content-corrections-applied.md`). Sources: 0 removed,
+  3 citations corrected in place (same work), 1 added.
 
-## 2. Test results: TESTED
-All runs: 2026-10-21, on the box, Google Chrome headless via puppeteer-core 23. Static servers ran on `127.0.0.1` only.
+## 2. Final performance comparison (TESTED)
 
-| Suite | Environment | Expected | Result |
-|---|---|---|---|
-| `tests/rules.test.js` | Firestore emulator, `firebase emulators:exec`, project `demo-strangepin` | Proposed rules allow legitimate writes and deny abuse | **46/46 PASS** (`<local-tools>/rules-test-output.txt`) |
-| `tests/e2e-emulator.js` | Real UI + Auth/Firestore emulators (`?emulator=1`) | Sign-in, doc creation, comments, reactions, saves, points, likes and leaderboard work; abuse is denied; XSS is inert; no real back-end traffic | **22/22 PASS**, including "zero requests to real Firebase/Google back-ends" |
-| `tests/browser-smoke.js` | Static server, mocked Firestore | Phase 1 behaviour, with no regressions | **18/18 PASS** |
-| `tests/helpers.test.js` | Node | Escaping and URL helpers | **7/7 PASS** |
-| `tests/detail-sections.js` | Static server | Timeline/Sources render; hostile data is inert; only https links, with `noopener nofollow` | **9/9 PASS** |
-| `tests/pwa-offline.js` | Own server on :8090; **real offline** (server killed, all hosts unresolvable) | SW controls the page; shell is precached; no Firebase/Google/EmailJS/Cloudinary/tile URLs cached; offline map shows 99 markers; uncached path → `offline.html` | **13/13 PASS** |
-| `tests/pwa-installability.js` | CDP `Page.getInstallabilityErrors` | No installability errors; manifest and icons valid | **11/11 PASS** |
-| `tests/seo-pages.test.js` + html-validate 9 | `node scripts/build-pins.js` output | 99 pages: unique titles, canonical, description, OG, JSON-LD (Place/Article/Breadcrumb); hostile data escaped; sitemap with 101 URLs; valid HTML | **16/16 PASS** |
-| Lighthouse 12, `/pins/area-51/` (generated) | Local | — | SEO 100, Accessibility 100, Best Practices 100 |
-| Map screenshots (`<local-tools>/mapshot.js`) | SwiftShader WebGL | OpenFreeMap dark renders with 99 markers; `carto-legacy` reproduces "API KEY REQUIRED" | As expected. `docs/img/map-openfreemap-dark.png`, `map-carto-legacy.png` |
-| `tests/csp-report-only.js` (on `perf/lcp`) | `_headers` applied by `scripts/dev-headers-server.js`; 7 routes incl. map (both basemaps), detail, submit, leaderboard, plus the Español switch on `#submit` | Header on every response; 0 violations | Header on 7/7 responses, **0 violations**, and the page was translated. One informational `img-src http://translate.google.com/gen204` report appears only because the test origin is http (EXPECTED to be https and allowed on production). The single Translate `script-src-elem` report seen earlier was **explained** as Google rate-limiting: `element.js` got a 302 to `https://www.google.com/sorry/...`, a host that is not allow-listed, and Chrome reports it under the original URL. TESTED by correlation in an 8-run probe; it is not page-specific. With lazy loading, Translate is no longer requested on normal page views |
-| `tests/perf-lazy.js` (`perf/lcp`) | Static server :8080; CDN scripts delayed 3 s; Translate reached read-only | Render before DOMContentLoaded; init runs once; immediate stats; no Translate request on a plain load; map deep link and submit mini-map with slow Leaflet; the language menu loads Translate; Español translates; a saved preference loads Translate | **12/12 PASS** |
-| Lighthouse 12.8.2 mobile, 3 runs per variant, medians (`docs/perf-lcp.md`) | Local HTTPS+gzip servers; simulate and DevTools throttling | — | **Simulate:** `main` perf 70 / LCP 2569 / FCP 2243 / TBT 112 / CLS 0.813; `feat/phase2` 92 / 2747 / 2427 / 137 / 0; `perf/lcp` 86 / **3853** / 2184 / 4 / 0. **DevTools:** `main` 71 / 1439 / 1439 / 255 / 0.808; `feat/phase2` 92 / 1449 / 1449 / 264 / 0; `perf/lcp` **96 / 1312 / 735** / 234 / 0.001. LCP element on `perf/lcp`: hero `h1.hero-title` (previously the shifted footer, then the nav logo) |
-| All suites above, rerun on `perf/lcp` (19:00 CEST) | Same environments | No regressions | helpers 7/7, smoke 18/18, detail 9/9, PWA offline 13/13, installability 11/11, SEO + html-validate 16/16, perf-lazy 12/12, CSP 7/7 + switch with 0 violations, emulator e2e 22/22, rules 46/46: **all PASS** |
-| `content/corrections` | Field-level diff of `LOCATIONS`, plus smoke 18/18, detail 9/9, helpers 7/7 | Only the listed fields and pins changed; 99 pins | PASS |
+Lighthouse 12.8.2, mobile, same local HTTPS+gzip server and flags for every variant, Firebase
+back ends blocked (`--blocked-url-patterns`; every run verified: 0–2 back-end attempts, all
+blocked, none sent). Medians of 5 (simulate) / 3 (DevTools), spread in brackets.
 
-Network safety during tests:
-- Real Firestore, Identity Toolkit and Secure Token requests were aborted in every browser test, except the emulator e2e, which pointed only at `127.0.0.1`.
-- Google Translate, unpkg, OpenFreeMap and CARTO public CDNs were reached read-only.
+| Variant | Mode | Perf | LCP | FCP | TBT | CLS | LCP element |
+|---|---|---|---|---|---|---|---|
+| `main` 728e8f5 | simulate | 70 | 2567 (2421–2891) | 2238 | 104 (69–119) | 0.813 | footer disclaimer (CLS bug) |
+| old `perf/lcp` | simulate | 84 | 4206 (3707–4305) | 2178 | 5 (3–9) | 0 | hero title |
+| **`pr/technical`** | simulate | **99** | **1576 (1565–1610)** | **1507** | **69 (57–88)** | **0** | hero title |
+| `main` | DevTools | 71 | 1452 (1411–1463) | 1452 | 250 | 0.808 | footer disclaimer |
+| **`pr/technical`** | DevTools | **100** | **873 (854–876)** | 854 | 67 | 0 | hero title |
 
-## 3. EXPECTED (reasoned, not verified)
-- **Production Firebase:**
-  - The new client code should work against the current production rules only if those rules are permissive. The live rules were not readable during the audit.
-  - The proposed rules will break old clients that write `points` to `users/{uid}` without the mirror. That is intended.
-- **Leaderboard:** the leaderboard and home stats read `publicProfiles`. Legacy users will be missing from them until `scripts/backfill-public-profiles.js --write` runs.
-- **Points:** points remain client-initiated. The rules cap abuse (≤35 per award, 30 s cooldown, mirror must match), but they cannot fully prevent it. A Cloud Function is the real fix.
-- **OpenFreeMap:**
-  - no account or billing, so no surprise charges;
-  - availability is best-effort (no SLA);
-  - needs WebGL; about 1 MB extra JS, loaded only when a map is shown.
-- **SW updates:** navigations are network-first, so a new deploy is picked up on the next online load. Bump `SP_SW_VERSION` whenever precached files change.
-- **CSP:** the policy needs `'unsafe-inline'` for scripts, because the app uses inline `onclick` handlers and inline scripts. Enforcing it would therefore add little XSS protection until nonces or hashes are adopted. Report-Only mode has no reporting endpoint, so violations appear only in each visitor's console.
+Release blocker **resolved**: default-mode LCP 1576 ≤ 2567 ms, CLS 0 ≤ 0.813, TBT 69 ≤ 104 ms.
+Cause (Lantern graph evidence): every request started before the observed LCP becomes an LCP
+dependency, so the deferred CDN scripts (simulated serial Firebase chain to ~3.26 s) and fonts
+inflated simulated LCP; also a replaced static hero is not an LCP candidate. `main`'s 2.57 s is
+artificially low because its LCP element is the footer, in view only because of the CLS bug.
+Trade-off: first-visit body text uses the metric-matched fallback instead of DM Sans
+(`SP_BODY_FONT_POLICY`). Details: `docs/perf-lcp.md` §7.
 
-## 4. NOT TESTED
-- Android install, iOS Add to Home Screen, and real mobile GPUs. Manual checklist: `docs/pwa.md`.
-- Anything that needs production or the dashboards:
-  - Firestore rules deploy;
-  - the backfill;
-  - EmailJS and Cloudinary flows;
-  - Google sign-in against the real project;
-  - the Netlify build and headers;
-  - the `carto-key` basemap (no key exists);
-  - Search Console and the Rich Results Test;
-  - social preview scrapers.
-- Google Translate under the CSP on the **https** production origin. Locally, the switch was TESTED on an http origin only.
-- Real-device and field performance (CrUX). Netlify's compression and `/fonts/*` caching are EXPECTED, not measured.
+## 3. Automated test results (TESTED, 2026-10-21 ~19:35–19:50 WEST)
 
-## 5. Known limitations
-- `SP_BASEMAP` stays on `'carto-legacy'`, so **production map tiles will still say "API KEY REQUIRED"** until the owner picks a provider. This is a one-line change (section 6).
-- The icons are placeholders (Phase 1); the maskable icon is derived from them.
-- `locations.js` is not used by the app, but it is publicly served and has diverged from the inline data. Proposal: delete it (needs owner approval).
-- The static `/pins/` pages need a Netlify build step (`netlify.toml`). That is intentionally **not** included; it should be a follow-up PR (`docs/seo-url-plan.md` §6).
-- Data quality:
-  - `verified:true` is set on every pin;
-  - `reports` and score values are placeholders;
-  - all pins share `dateAdded` 2026-06-04.
-  - None of these are changed yet (see `docs/trust-model-proposal.md`).
-- **LCP:** the Phase 1 "6.9 s vs 4.1 s" was mostly a measurement artifact: plain http, uncompressed HTML, and an LCP element that waited on Firestore. See `docs/perf-lcp.md` §3.
-  - On `perf/lcp`, **simulated** LCP (what PageSpeed Insights headlines) is still worse than `main`: 3.85 s vs 2.57 s. Lantern counts the hero's font swap with a simulated slow font download, and `main`'s LCP element is a footer that is visible only because of its CLS bug.
-  - With real throttled paints, `perf/lcp` is better: 1.31 s vs 1.44 s, and FCP 0.74 s vs 1.44 s.
-  - Confirm with field data after deploy.
-- **Unresolved, environment-specific:** the colour-emoji first-layout cost (about 100 ms of about 250 ms on this box). Swapping the nav and tab emoji for SVG icons is an optional design change.
-- **Not explained:** font preloads made the first paint bimodal in Lighthouse runs. The preloads were removed rather than explained.
-- `content/corrections` leaves out the items marked "source needed" or "needs approval" (Overtoun, Winchester Catfish, Bibbulmun, Point Pleasant, Roswell, the §6.2 items, and the new categories).
+All suites were run as the CI workflow would, in a **clean worktree** of the branch with
+`npm ci --prefix tests` (pinned lockfile), headless Google Chrome, static servers on
+127.0.0.1, emulators with project `demo-strangepin`. Result: **all green**.
 
-## 6. Map recommendation
-Details, official URLs and the check dates (2026-10-21) are in `docs/map-providers.md`.
+| Suite | Result |
+|---|---|
+| `tests/helpers.test.js` | 7/7 |
+| `scripts/sync-static-hero.js --check` | up to date |
+| `scripts/build-pins.js` + `tests/sitemap-check.js` | 99 pages; 101 URLs all in output (negative test: injected/missing URL → exit 1) |
+| `tests/seo-pages.test.js` + html-validate 9.7.1 | 16/16 |
+| `tests/browser-smoke.js` | 18/18 |
+| `tests/detail-sections.js` | 9/9 |
+| `tests/pwa-installability.js` | 11/11 |
+| `tests/map-fallback.js` (7 failure scenarios, hosts blocked) | 30/30 |
+| `tests/pwa-offline.js` (real offline) | 13/13 |
+| `tests/rules.test.js` (emulator) | 46/46 |
+| `tests/compat-matrix.test.js` (emulator) | 42 cells, 0 unexpected |
+| `tests/e2e-emulator.js` (real UI + emulators) | 22/22, zero real back-end requests |
+| `tests/perf-lazy.js` (network: Translate) | 14/14 |
+| `tests/csp-report-only.js` (network: Translate, OpenFreeMap) | header 7/7, 0 violations (incl. OFM map and OSM fallback routes) |
+| `tests/compat-old-client.js` (`main` client) | `firebase is not defined` on 3 routes, 0 back-end attempts |
+| `scripts/content-diff-check.js pr/technical pr/content` | PASS (negative test → exit 1) |
+| `npx netlify-cli@17 build --offline` (no login, clean worktree) | build command ran, sitemap check passed, exit 0 |
+| `actionlint` on `ci.yml` | clean |
+| Backfill on emulator | dry run; missing/wrong `--confirm-project` → exit 2; two writes → identical docs |
+| Secret scan (section 7) | no secrets; only the public Firebase web config |
 
-- **Primary: OpenFreeMap "dark".** No key, no account, commercial use allowed, no billing. The risk is that it has no SLA.
-  - To ship it, set `const SP_BASEMAP = 'openfreemap-dark';` in `index.html`.
-  - TESTED locally: renders with 99 markers.
-- **Fallback: CARTO Dark Matter with a domain-restricted key.** Free commercial plan, 1M requests/month.
-  - The owner requests the key; then set `SP_CARTO_KEY`.
-  - The code falls back to it automatically if MapLibre/WebGL fails.
-- **Later:** self-hosted Protomaps PMTiles, if SLA or scale matters.
+NOT TESTED: GitHub-hosted runner execution of `ci.yml` (EXPECTED to pass: same commands;
+`ubuntu-latest` ships `/usr/bin/google-chrome`), real Netlify build/deploy, real devices,
+Safari/Firefox, production Firebase/EmailJS/Cloudinary.
 
-## 7. Deployment plan (owner-run; each step needs explicit approval)
-0. **Before any push:** enable branch protection on `main` (section 9).
-1. **Firebase:** dry-run the backfill, then run it for real (owner, with a service account; the script never runs automatically):
-   `node scripts/backfill-public-profiles.js` → review → `--write`.
-2. **Push and open the PR:**
-   - push `feat/phase2` (which contains `fix/audit-critical`);
-   - open a PR into `main` with the description from `CHANGES.md` and this file;
-   - optionally flip `SP_BASEMAP` in the PR after the decision in section 6.
-3. **Netlify deploy preview** is built automatically for the PR. Verify on the preview URL:
-   - [ ] Home, map, detail, submit, leaderboard and about load, with no console errors except CSP Report-Only notes.
-   - [ ] The map renders tiles with the chosen basemap, 99 markers and correct attribution.
-   - [ ] `#detail/001` deep link; Timeline and Sources visible; source links open in a new tab.
-   - [ ] **Google sign-in.** The preview domain must be added to Firebase Auth → Authorized domains first; otherwise mark it untestable on the preview.
-   - [ ] Comment, reaction, save and like against **production** rules (still the old ones at this point): they work, nothing is duplicated, and the leaderboard shows users after the backfill.
-   - [ ] Submission form: EmailJS sends to the owner's inbox only; a Cloudinary upload succeeds with the restricted preset.
-   - [ ] DevTools → Application: the SW is active; caches contain only `sp-shell-v2`/`sp-runtime-v2`; offline reload shows the shell.
-   - [ ] Response headers include the `_headers` set, and `sw.js` is `no-cache`.
-   - [ ] Console CSP Report-Only violations: record them and adjust `_headers`.
-   - [ ] Lighthouse on the preview (mobile, 3 runs, median): compare with `docs/perf-lcp.md`. Expect simulated LCP around 3–4 s with the hero as the LCP element.
-   - [ ] Switch language to Español and back: the page translates, and the console shows no CSP report other than any http-only beacon.
-   - [ ] Android/iOS checklist in `docs/pwa.md` (on the preview, if possible).
-4. **Merge** with the owner's approval. Netlify then publishes `main` to production.
-5. **Deploy `firestore.rules`** after the production smoke checks pass (Firebase console, or `firebase deploy --only firestore:rules --project strangepin-4e538` by the owner). Then repeat the step 3 checks for comments, likes and points on production.
-6. **`content/corrections`:** a separate PR, preview, owner content review, then merge.
-7. **Follow-ups:**
-   - SEO build PR (`netlify.toml` + generator);
-   - CSP enforcement after a clean Report-Only period;
-   - points Cloud Function;
-   - trust-model implementation.
+## 4. Firebase compatibility matrix (summary; `docs/firebase-compat-matrix.md`)
 
-## 8. Rollback plan
-- **Site (instant):** Netlify → Deploys → select the last good production deploy → **"Publish deploy"**. Optionally lock auto-publishing while you investigate.
-- **Code:** create a revert PR with `git revert -m 1 <merge-commit>` (no force push), and merge it after the preview passes.
-- **Firestore rules:** Firebase console → Firestore → Rules → history → restore the previous version. Do this first if writes start failing after step 7.5.
-- **Backfill:** it only adds `publicProfiles/*` docs, which old clients ignore. Leave them in place, or delete them via an admin script only with approval.
-- **Service worker:**
-  - A rollback deploy is picked up on the next online navigation (network-first).
+Production rules are **unknown** (no console access); "old rules" = an assumed permissive set.
+
+| Scenario | Features | Security |
+|---|---|---|
+| Old client + old rules (today) | Nothing Firebase-backed works: `main` never initialises Firebase (TESTED) | Assumed rules allow reading others' email, self-awarding points, editing others' comments (TESTED on assumed rules) |
+| New client + old rules | All allowed (TESTED at rules level in the matrix; the UI e2e ran only against the new rules); leaderboard empty for legacy users until backfill (EXPECTED) | Same as today |
+| New client + new rules (target) | All work (TESTED, e2e 22/22 + matrix) | All tested abuse denied |
+| Rolled-back client + new rules | `main`: nothing works anyway; a working old client: sign-in and comments only, rest denied (TESTED cells) | Protected |
+
+## 5. GitHub PR plan
+
+1. Owner applies branch protection (`docs/branch-protection.md`: PR required, 0 approvals,
+   required check `tests`, no force push, no deletion, no bypass).
+2. Push `pr/technical`; open **PR #1** `pr/technical` → `main`. CI `tests` must pass; Netlify
+   builds a deploy preview with `netlify.toml`.
+3. Push `pr/content`; open **PR #2** `pr/content` → `pr/technical` (diff = content only); after
+   PR #1 merges, retarget PR #2 to `main` (GitHub does this automatically when the base branch is
+   deleted on merge; otherwise edit the base).
+4. Merge PR #1 (owner), production checks, then PR #2.
+
+## 6. Safe deployment order (owner-run; each step needs explicit approval)
+
+1. Capture the live Firestore rules (console → Rules) into the repo and rerun the matrix.
+2. Merge PR #1 → Netlify production (works with old and new rules). Check on the deploy
+   preview first: map (OpenFreeMap tiles + attribution), deep links, `/pins/area-51/`,
+   `sitemap.xml`, headers, SW, sign-in (preview domain must be an authorised Auth domain),
+   comment/reaction/save/like, EmailJS/Cloudinary submit, Lighthouse.
+3. Backfill: `node scripts/backfill-public-profiles.js` (dry run) → review → `--write
+   --confirm-project=strangepin-4e538`.
+4. Deploy `firestore.rules` (`firebase deploy --only firestore:rules --project strangepin-4e538`,
+   owner) and smoke test on production.
+5. Backfill again (idempotent).
+6. Merge PR #2 (content) after the owner's content review on its preview.
+
+## 7. Secret / sensitive-file scan (TESTED)
+
+- **gitleaks 8.30.1** (checksum verified) and **trufflehog 3.99.3** (`--no-verification`, so the
+  key was never sent anywhere) over every commit of `main`, `pr/technical`, `pr/content` and all
+  other local refs. Findings: the Firebase web `apiKey` only, in `index.html` and in two
+  files that the owner uploaded and later deleted in `main`'s own history
+  (`index.html.bak`, `strangepin-dist/`).
+- Manual checks over every commit: no `.env`, service-account JSON, private keys, tokens,
+  cookies, emulator data, Lighthouse traces/reports, `node_modules`, `dist/`, `patches/`; no blob
+  > 500 KB. Box-specific paths were removed from the tip docs (`<local-tools>/`); some older
+  commits' docs still mention local tool paths (directory names only, no secrets).
+- **Public, not secret (listed for completeness):** Firebase web config in `index.html`
+  (`apiKey AIzaSyBn5qHhpLgNwsHXcIegKJF-ZzybomjVTuI`, `authDomain strangepin-4e538.firebaseapp.com`,
+  `projectId strangepin-4e538`, `storageBucket strangepin-4e538.firebasestorage.app`,
+  `messagingSenderId 254898349595`, `appId 1:254898349595:web:1a20cc9c8d4ced1796fabe`); EmailJS
+  public key / service / template IDs and the recipient `thestrangepin@gmail.com`; Cloudinary
+  unsigned preset. Protection comes from rules, key restrictions and dashboard settings
+  (section 11), not from hiding them. trufflehog classifies the key as a "Google (Gemini) API
+  key": an unrestricted AIza key works for any API enabled on the project, so restrict it.
+- `main` contains a stray file `download` (a misnamed copy of `.gitignore`); harmless, can be
+  deleted in a later PR (not touched, to keep the PRs focused).
+
+## 8. Rollback procedures
+
+- **Site:** Netlify → Deploys → last good deploy → "Publish deploy" (instant). Code: revert PR
+  (`git revert -m 1 <merge>`), no force push.
+- **Rules:** Firebase console → Firestore → Rules → history → previous version → publish.
+  **Roll back rules before (or with) the client**: an older client against the new rules loses
+  points/reactions/likes/saves/leaderboard.
+- **Backfill:** additive (`publicProfiles/*`); old clients ignore it; leave in place.
+- **netlify.toml:** reverting PR #1 restores "publish repo root, no build".
+- **Basemap:** `SP_BASEMAP` / `SP_CARTO_KEY` one-line change; the chain already falls back.
+- **Service worker:** a rollback deploy is picked up on the next online navigation.
   - If the SW itself misbehaves, deploy this kill-switch `sw.js` and keep it for at least a few weeks:
     ```js
     self.addEventListener('install', () => self.skipWaiting());
@@ -206,41 +227,32 @@ Details, official URLs and the check dates (2026-10-21) are in `docs/map-provide
       for (const c of await self.clients.matchAll({ type: 'window' })) c.navigate(c.url);
     })()));
     ```
-- **Basemap:** set `SP_BASEMAP` back, or set `SP_CARTO_KEY`. This is a one-line revert.
 
-## 9. Branch protection for `main`: set before any push
-Repository `EclipseLegend/strangepin` → Settings → Rules → Rulesets → New branch ruleset (or classic Branch protection):
+## 9. Remaining known risks
 
-| Setting | Value |
-|---|---|
-| Target branches | `main` (default branch) |
-| Enforcement | Active |
-| Bypass list | **Empty.** Admins are included (classic: "Do not allow bypassing the above settings") |
-| Restrict deletions | On |
-| Block force pushes | On |
-| Require linear history | On (squash or rebase merges only) |
-| Require a pull request before merging | On |
-| · Required approvals | **1** (see the note below) |
-| · Dismiss stale approvals when new commits are pushed | On |
-| · Require approval of the most recent reviewable push | On |
-| · Require review from Code Owners | On, once `CODEOWNERS` exists (e.g. `* @EclipseLegend`) |
-| · Require conversation resolution before merging | On |
-| Require status checks to pass | On: `netlify/…/deploy-preview` (the Netlify check name appears after its first PR run) and, once a GitHub Action runs `tests/helpers.test.js` + `tests/seo-pages.test.js`, that job |
-| · Require branches to be up to date before merging | On |
-| Require signed commits | Optional (recommended if the owner's machine is set up for it) |
-| Allowed merge methods (Settings → General) | Squash (and/or rebase); disable merge commits to keep history linear |
-| Automatically delete head branches | On |
+- Production Firestore rules unknown; abuse exposure today depends on them.
+- Points are client-initiated (rules cap and cool down, not prevent); a Cloud Function is the
+  real fix. Users with non-integer `points` get a 0 mirror and cannot earn points until fixed.
+- OpenFreeMap and OSM tiles have no SLA; OSM fallback is best-effort and policy-bound (no
+  heavy use). CARTO key path NOT TESTED with a real key.
+- Simulated metrics ≠ field data; confirm with CrUX ~28 days after deploy. First-visit body
+  font differs (trade-off).
+- `netlify.toml` changes the production build (publish `dist/` instead of the repo root): repo
+  files like `docs/`, `tests/`, `firestore.rules` stop being public (intended), but any
+  external link to them breaks.
+- 0 required approvals: anyone with write access (including the owner's agents) can merge once
+  `tests` passes; the safeguard is procedural (`docs/branch-protection.md`).
+- CSP is Report-Only and needs `'unsafe-inline'`; Translate untested on the https origin.
+- Content items needing sources/approval are not included (see `docs/content-corrections-applied.md`).
 
-**Note on approvals:** GitHub does not let a PR author approve their own PR.
-- If the owner is the only collaborator and also authors the PRs, a 1-approval rule blocks every merge.
-- In that case, either add a trusted second reviewer, or set Required approvals = 0 while keeping "Require a pull request" and the status checks. That still prevents direct pushes and force pushes.
+## 10. Map recommendation
+OpenFreeMap dark is now the default (section 1). Optional: request a domain-restricted CARTO
+key and set `SP_CARTO_KEY` as a second tier; later, self-hosted Protomaps if SLA matters.
 
-Netlify (optional): Site configuration → Build & deploy → keep Deploy Previews on, and consider "Lock to stop auto publishing" for controlled releases.
-
-## 10. Remaining security items (dashboard or owner only)
+## 11. Remaining security items (dashboard or owner only)
 | Item | Where | Action |
 |---|---|---|
-| Firestore rules | Firebase console / CLI | Run the backfill, then deploy `firestore.rules` (step 7.5) |
+| Firestore rules | Firebase console / CLI | Run the backfill, then deploy `firestore.rules` (section 8, step 5) |
 | Firebase API key restriction | Google Cloud console → APIs & Services → Credentials | Restrict the browser key's HTTP referrers to `strangepin.com/*`, `*.netlify.app/*` (previews) and `localhost` (dev); restrict it to the Identity Toolkit, Token Service and Firestore APIs |
 | Firebase Auth | Authorized domains | Remove unused domains; add the preview domain only while testing |
 | App Check (optional) | Firebase console | reCAPTCHA Enterprise / v3 for Firestore, to reduce scripted abuse |
@@ -248,4 +260,3 @@ Netlify (optional): Site configuration → Build & deploy → keep Deploy Previe
 | Cloudinary | Cloudinary console → Upload presets | Unsigned preset: restrict formats (jpg/png/webp), max file size, folder, no overwrite; moderation if available; consider a signed upload via a function |
 | Security headers | `_headers` (in the PR) | Report-Only first; then add `report-to`, move to nonces/hashes, and enforce |
 | HSTS | Netlify | Netlify serves HTTPS with HSTS by default (EXPECTED; confirm on the preview response). Do not add `preload` without a deliberate decision |
-| `locations.js` | Repo | Delete (approval), since it is a stale public copy of the data |
