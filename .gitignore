@@ -32,3 +32,35 @@ node_modules/
 
 # Logs
 *.log
+
+# Local-only tooling output (never commit)
+patches/
+.netlify/
+**/node_modules/
+.firebase/
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+*-debug.log
+emulator-data/
+.emulator-data/
+lighthouse/
+lh/
+*.trace.json
+*.devtools.log
+*.lighthouse.json
+*.report.json
+*.report.html
+coverage/
+.nyc_output/
+
+# Credentials (never commit)
+*.pem
+*.key
+*.p12
+service-account*.json
+*-service-account*.json
+*firebase-adminsdk*.json
+credentials.json
+.env.*
+!.env.example
