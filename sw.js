@@ -4,14 +4,14 @@
  * - Navigations: network-first, then cached shell, then /offline.html.
  * - Other same-origin requests (e.g. manifest): network-first, cache fallback.
  * (Pin data is inline in index.html; locations.js is not loaded by the app.)
- * - Same-origin static images: cache-first.
+ * - Same-origin static images and self-hosted fonts: cache-first.
  * - Cross-origin: ONLY exact, version-pinned library URLs (Leaflet, MapLibre) are
  *   cached. Everything else, including Firebase Auth/Firestore, Google APIs,
  *   EmailJS, Cloudinary, map tiles, fonts and translate, is never intercepted, so it
  *   is never cached.
  * Bump SP_SW_VERSION on every release that changes precached files.
  */
-const SP_SW_VERSION = 'v1';
+const SP_SW_VERSION = 'v2';
 const SHELL_CACHE = `sp-shell-${SP_SW_VERSION}`;
 const RUNTIME_CACHE = `sp-runtime-${SP_SW_VERSION}`;
 
@@ -108,7 +108,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (/\.(png|jpe?g|webp|svg|ico)$/i.test(url.pathname)) {
+  if (/\.(png|jpe?g|webp|svg|ico|woff2)$/i.test(url.pathname)) {
     event.respondWith(cacheFirst(req, RUNTIME_CACHE));
     return;
   }

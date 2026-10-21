@@ -77,4 +77,4 @@ Local `python3 -m http.server`, headless Google Chrome, 2026-10-21.
 
 ### Desktop
 1. Chrome/Edge: the install icon appears in the address bar, and the app opens in its own window.
-2. DevTools → Application → Service Workers / Cache Storage: only `sp-shell-v1` and `sp-runtime-v1` exist, with no googleapis entries.
+2. DevTools → Application → Service Workers / Cache Storage: only `sp-shell-<version>` and `sp-runtime-<version>` exist (currently v2), with no googleapis entries.

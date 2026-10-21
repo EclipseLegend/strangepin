@@ -154,7 +154,7 @@ Details, official URLs and the check dates (2026-10-21) are in `docs/map-provide
    - [ ] **Google sign-in.** The preview domain must be added to Firebase Auth → Authorized domains first; otherwise mark it untestable on the preview.
    - [ ] Comment, reaction, save and like against **production** rules (still the old ones at this point): they work, nothing is duplicated, and the leaderboard shows users after the backfill.
    - [ ] Submission form: EmailJS sends to the owner's inbox only; a Cloudinary upload succeeds with the restricted preset.
-   - [ ] DevTools → Application: the SW is active; caches contain only `sp-shell-v1`/`sp-runtime-v1`; offline reload shows the shell.
+   - [ ] DevTools → Application: the SW is active; caches contain only `sp-shell-v2`/`sp-runtime-v2`; offline reload shows the shell.
    - [ ] Response headers include the `_headers` set, and `sw.js` is `no-cache`.
    - [ ] Console CSP Report-Only violations: record them and adjust `_headers`.
    - [ ] Lighthouse on the preview (mobile): compare with `/workspace/strangepin-dev-tools/lh/` baselines.

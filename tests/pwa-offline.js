@@ -43,7 +43,7 @@ const check = (ok, name, extra) => { (ok ? pass++ : fail++); console.log(`${ok ?
     return out;
   });
   const all = Object.values(caches).flat();
-  const shell = caches['sp-shell-v1'] || [];
+  const shell = Object.entries(caches).filter(([k]) => k.startsWith('sp-shell-')).flatMap(([, v]) => v);
   for (const u of ['/', '/index.html', '/offline.html', '/manifest.json', '/icon-192.png'])
     check(shell.includes(BASE + u), `precached ${u}`);
   check(all.some(u => u.includes('unpkg.com/leaflet@1.9.4/dist/leaflet.js')), 'pinned Leaflet JS runtime-cached');
