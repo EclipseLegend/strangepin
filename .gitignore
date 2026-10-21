@@ -64,3 +64,4 @@ service-account*.json
 credentials.json
 .env.*
 !.env.example
+PHASE3-PROGRESS.md
