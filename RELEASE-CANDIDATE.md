@@ -1,6 +1,6 @@
 # StrangePin release candidate: QC pack
 
-- **Prepared:** 2026-10-21. Phase 3 update ~20:00 WEST (Europe/Lisbon, UTC+1).
+- **Prepared:** 2026-10-21. Phase 3 update ~19:55 WEST (Europe/Lisbon, UTC+1).
   - **Time-zone note:** entries written before Phase 3 (here, `CHANGES.md`, `docs/perf-lcp.md`
     §1–6, `docs/map-providers.md` header) were labelled "CEST (Europe/Madrid)", and those
     commits carry `+0200`. The owner's zone is Europe/Lisbon (UTC+1); Phase 3 commits carry
