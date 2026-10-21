@@ -5533,7 +5533,10 @@ function SP_PinHero(loc, saved) {
 function renderPage() {
   const lang = LANGS[currentLang] || LANGS.en;
   const el = document.getElementById('mainContent');
-  el.className = 'main page';
+  // perf/lcp: no fade-in on the very first render, so the hero is visible (and counted
+  // as LCP) at first paint; later page changes keep the fadeUp transition.
+  el.className = window._spFirstRenderDone ? 'main page' : 'main';
+  window._spFirstRenderDone = true;
   if (currentPage !== 'leaderboard' && lbUnsubscribe) { lbUnsubscribe(); lbUnsubscribe = null; }
   if (currentPage !== 'map'    && leafletMap)  { leafletMap.remove();  leafletMap  = null; }
   if (currentPage !== 'submit' && submitMap)   { submitMap.remove();   submitMap   = null; }
