@@ -20,4 +20,12 @@ Nominatim, and mocks Firestore/auth data in the page.
 | `pwa-offline.js` | SW registration/control, precache contents, nothing from Firebase/Google/EmailJS/Cloudinary/tiles cached, **real offline** (server killed + all hosts unresolvable) | `node tests/pwa-offline.js` (starts its own server on :8090) |
 | `pwa-installability.js` | Chrome `Page.getInstallabilityErrors` = [], manifest parse, icon sizes, shortcuts | static server on :8080, `node tests/pwa-installability.js` |
 | `seo-pages.test.js` | `scripts/build-pins.js` output: slugs, titles, canonical, description, OG, JSON-LD, escaping, sitemap; optional html-validate | `node scripts/build-pins.js && HTMLVALIDATE=<path to html-validate> node tests/seo-pages.test.js` |
-| `csp-report-only.js` | `_headers` applied by `scripts/dev-headers-server.js`; CSP Report-Only violations per route | `node scripts/dev-headers-server.js . 8093`, then `node tests/csp-report-only.js` |
+| `csp-report-only.js` | `_headers` applied by `scripts/dev-headers-server.js`; CSP Report-Only violations per route, plus the Español language switch on `#submit` (Translate reached read-only) | `node scripts/dev-headers-server.js . 8093`, then `node tests/csp-report-only.js` |
+
+## Performance (`perf/lcp`)
+
+| File | What it checks | How to run |
+|---|---|---|
+| `perf-lazy.js` | First render happens before the deferred CDN scripts (delayed 3 s); init runs once; stats are shown immediately; no Google Translate request on a plain load; map deep link (99 markers) and submit mini-map with slow Leaflet; the language menu lazy-loads Translate; choosing Español translates the page (skipped if Google returns its rate-limit page); a saved preference loads Translate at startup | static server on :8080, `node tests/perf-lazy.js` |
+
+Lighthouse method and results: `docs/perf-lcp.md`.

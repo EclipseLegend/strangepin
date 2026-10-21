@@ -1,6 +1,6 @@
 # StrangePin release candidate: QC pack
 
-- **Prepared:** 2026-10-21, 17:20 CEST (Europe/Madrid).
+- **Prepared:** 2026-10-21, 17:20 CEST (Europe/Madrid). Updated 19:10 CEST for `perf/lcp`.
 - **Status:** LOCAL ONLY.
   - Nothing has been pushed, no PR has been opened, and nothing has been deployed.
   - No Firebase, Netlify, EmailJS or Cloudinary setting was changed.
@@ -12,11 +12,13 @@
 | `fix/audit-critical` | 073b265 | `origin/main` 728e8f5 | Phase 1 fixes (see `CHANGES.md`) |
 | `feat/phase2` | tip = the commit adding this file | `fix/audit-critical` | Phase 2 items 1–6 (code and docs, no pin-data edits) |
 | `content/corrections` | 1 commit on top of `feat/phase2` | `feat/phase2` | Sourced pin-data corrections only, as a **separate PR** |
+| `perf/lcp` | the commit adding the perf section of this file | `feat/phase2` | LCP/first-paint fixes, lazy Google Translate, self-hosted fonts, CSP `frame-src 'self'` (section 1, `docs/perf-lcp.md`). `content/corrections` is also based on `feat/phase2`, so one of them is rebased onto the other after the first merges (no expected conflict: content edits only touch `LOCATIONS`) |
 
 **Patches:**
 - `patches/` (Phase 1)
 - `patches/feat-phase2/0001…0012`
 - `patches/content-corrections/0001`
+- `patches/perf-lcp/` (`git format-patch feat/phase2..perf/lcp`)
 
 Labels used below:
 - **TESTED:** run here, with the method and environment stated.
@@ -61,6 +63,16 @@ Write changes in e95bd91:
 - comment limits;
 - one like per user, enforced through a marker doc.
 
+### Performance: `perf/lcp` (stacked on `feat/phase2`)
+Full method, numbers and causes: `docs/perf-lcp.md`.
+- **CDN scripts:** deferred. The first render runs before them (`spInitAppOnce`), and the map waits for Leaflet and its CSS.
+- **Google Translate:** lazy-loaded on first use of the language menu, or at startup if a non-English language is saved.
+- **Fonts:** self-hosted (OFL) with `font-display: swap` and metric-adjusted local fallbacks; no preload; `/fonts/*` cached as `immutable`.
+- **First render:** no fade-in. Leaflet CSS is non-blocking. The stats bar shows the pin and country counts immediately.
+- **`sw.js`:** `SP_SW_VERSION` is now `v2`; woff2 is cached.
+- **`_headers`:** `frame-src 'self'`, which the Translate language switch needs.
+- **Tooling and tests:** `scripts/dev-headers-server.js` now resolves its root correctly and supports `/dir/*` globs. Previously, with `.` as the root, every path except `/` returned 403. New `tests/perf-lazy.js`; `tests/csp-report-only.js` now also checks the language switch.
+
 ### Content: `content/corrections` (separate PR)
 - 52 field edits on 23 pins, each with a source. See `docs/content-corrections-applied.md`.
 - Items that need a source or an owner decision were left out.
@@ -82,7 +94,10 @@ All runs: 2026-10-21, on the box, Google Chrome headless via puppeteer-core 23. 
 | `tests/seo-pages.test.js` + html-validate 9 | `node scripts/build-pins.js` output | 99 pages: unique titles, canonical, description, OG, JSON-LD (Place/Article/Breadcrumb); hostile data escaped; sitemap with 101 URLs; valid HTML | **16/16 PASS** |
 | Lighthouse 12, `/pins/area-51/` (generated) | Local | — | SEO 100, Accessibility 100, Best Practices 100 |
 | Map screenshots (`/workspace/strangepin-dev-tools/mapshot.js`) | SwiftShader WebGL | OpenFreeMap dark renders with 99 markers; `carto-legacy` reproduces "API KEY REQUIRED" | As expected. `docs/img/map-openfreemap-dark.png`, `map-carto-legacy.png` |
-| `tests/csp-report-only.js` | `_headers` applied by `scripts/dev-headers-server.js`; 7 routes incl. map (both basemaps), detail, submit, leaderboard | Header on every response; 0 violations | Header on 7/7 responses. **0 violations** on the last 2 runs. One earlier run logged a single `script-src-elem` report for the Translate script on `#submit`; the cause is not determined (that URL's host is allow-listed) |
+| `tests/csp-report-only.js` (on `perf/lcp`) | `_headers` applied by `scripts/dev-headers-server.js`; 7 routes incl. map (both basemaps), detail, submit, leaderboard, plus the Español switch on `#submit` | Header on every response; 0 violations | Header on 7/7 responses, **0 violations**, and the page was translated. One informational `img-src http://translate.google.com/gen204` report appears only because the test origin is http (EXPECTED to be https and allowed on production). The single Translate `script-src-elem` report seen earlier was **explained** as Google rate-limiting: `element.js` got a 302 to `https://www.google.com/sorry/...`, a host that is not allow-listed, and Chrome reports it under the original URL. TESTED by correlation in an 8-run probe; it is not page-specific. With lazy loading, Translate is no longer requested on normal page views |
+| `tests/perf-lazy.js` (`perf/lcp`) | Static server :8080; CDN scripts delayed 3 s; Translate reached read-only | Render before DOMContentLoaded; init runs once; immediate stats; no Translate request on a plain load; map deep link and submit mini-map with slow Leaflet; the language menu loads Translate; Español translates; a saved preference loads Translate | **12/12 PASS** |
+| Lighthouse 12.8.2 mobile, 3 runs per variant, medians (`docs/perf-lcp.md`) | Local HTTPS+gzip servers; simulate and DevTools throttling | — | **Simulate:** `main` perf 70 / LCP 2569 / FCP 2243 / TBT 112 / CLS 0.813; `feat/phase2` 92 / 2747 / 2427 / 137 / 0; `perf/lcp` 86 / **3853** / 2184 / 4 / 0. **DevTools:** `main` 71 / 1439 / 1439 / 255 / 0.808; `feat/phase2` 92 / 1449 / 1449 / 264 / 0; `perf/lcp` **96 / 1312 / 735** / 234 / 0.001. LCP element on `perf/lcp`: hero `h1.hero-title` (previously the shifted footer, then the nav logo) |
+| All suites above, rerun on `perf/lcp` (19:00 CEST) | Same environments | No regressions | helpers 7/7, smoke 18/18, detail 9/9, PWA offline 13/13, installability 11/11, SEO + html-validate 16/16, perf-lazy 12/12, CSP 7/7 + switch with 0 violations, emulator e2e 22/22, rules 46/46: **all PASS** |
 | `content/corrections` | Field-level diff of `LOCATIONS`, plus smoke 18/18, detail 9/9, helpers 7/7 | Only the listed fields and pins changed; 99 pins | PASS |
 
 Network safety during tests:
@@ -113,7 +128,8 @@ Network safety during tests:
   - the `carto-key` basemap (no key exists);
   - Search Console and the Rich Results Test;
   - social preview scrapers.
-- Google Translate inside the CSP beyond page load (the language switch itself was not exercised).
+- Google Translate under the CSP on the **https** production origin. Locally, the switch was TESTED on an http origin only.
+- Real-device and field performance (CrUX). Netlify's compression and `/fonts/*` caching are EXPECTED, not measured.
 
 ## 5. Known limitations
 - `SP_BASEMAP` stays on `'carto-legacy'`, so **production map tiles will still say "API KEY REQUIRED"** until the owner picks a provider. This is a one-line change (section 6).
@@ -125,7 +141,12 @@ Network safety during tests:
   - `reports` and score values are placeholders;
   - all pins share `dateAdded` 2026-06-04.
   - None of these are changed yet (see `docs/trust-model-proposal.md`).
-- Phase 1 Lighthouse (mobile, throttled) measured LCP at 6.9 s on the branch vs 4.1 s originally, while CLS improved to 0. Investigate before release.
+- **LCP:** the Phase 1 "6.9 s vs 4.1 s" was mostly a measurement artifact: plain http, uncompressed HTML, and an LCP element that waited on Firestore. See `docs/perf-lcp.md` §3.
+  - On `perf/lcp`, **simulated** LCP (what PageSpeed Insights headlines) is still worse than `main`: 3.85 s vs 2.57 s. Lantern counts the hero's font swap with a simulated slow font download, and `main`'s LCP element is a footer that is visible only because of its CLS bug.
+  - With real throttled paints, `perf/lcp` is better: 1.31 s vs 1.44 s, and FCP 0.74 s vs 1.44 s.
+  - Confirm with field data after deploy.
+- **Unresolved, environment-specific:** the colour-emoji first-layout cost (about 100 ms of about 250 ms on this box). Swapping the nav and tab emoji for SVG icons is an optional design change.
+- **Not explained:** font preloads made the first paint bimodal in Lighthouse runs. The preloads were removed rather than explained.
 - `content/corrections` leaves out the items marked "source needed" or "needs approval" (Overtoun, Winchester Catfish, Bibbulmun, Point Pleasant, Roswell, the §6.2 items, and the new categories).
 
 ## 6. Map recommendation
@@ -157,7 +178,8 @@ Details, official URLs and the check dates (2026-10-21) are in `docs/map-provide
    - [ ] DevTools → Application: the SW is active; caches contain only `sp-shell-v2`/`sp-runtime-v2`; offline reload shows the shell.
    - [ ] Response headers include the `_headers` set, and `sw.js` is `no-cache`.
    - [ ] Console CSP Report-Only violations: record them and adjust `_headers`.
-   - [ ] Lighthouse on the preview (mobile): compare with `/workspace/strangepin-dev-tools/lh/` baselines.
+   - [ ] Lighthouse on the preview (mobile, 3 runs, median): compare with `docs/perf-lcp.md`. Expect simulated LCP around 3–4 s with the hero as the LCP element.
+   - [ ] Switch language to Español and back: the page translates, and the console shows no CSP report other than any http-only beacon.
    - [ ] Android/iOS checklist in `docs/pwa.md` (on the preview, if possible).
 4. **Merge** with the owner's approval. Netlify then publishes `main` to production.
 5. **Deploy `firestore.rules`** after the production smoke checks pass (Firebase console, or `firebase deploy --only firestore:rules --project strangepin-4e538` by the owner). Then repeat the step 3 checks for comments, likes and points on production.
