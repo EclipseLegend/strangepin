@@ -4398,6 +4398,15 @@ function updateSEO(page, data) {
   if (twTitle) twTitle.setAttribute('content', title);
   const twDesc  = document.querySelector('meta[name="twitter:description"]');
   if (twDesc)  twDesc.setAttribute('content', desc);
+  // SEO: the crawlable static page /pins/<slug>/ (built by scripts/build-pins.js on Netlify)
+  // is canonical for a pin; everything else in the SPA is canonical to the homepage.
+  // A #detail/NNN URL cannot be redirected server-side (the fragment never reaches the
+  // server); users keep the in-app view, crawlers that run JS see this canonical.
+  const canon = document.querySelector('link[rel="canonical"]');
+  if (canon) {
+    const slug = page === 'detail' && data && /^[a-z0-9-]+$/.test(data.slug || '') ? data.slug : '';
+    canon.setAttribute('href', slug ? 'https://strangepin.com/pins/' + slug + '/' : 'https://strangepin.com/');
+  }
 }
 
 function showPage(page, data) {

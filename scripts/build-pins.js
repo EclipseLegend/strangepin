@@ -24,6 +24,8 @@ const OUT = path.resolve(ROOT, opt('--out', 'dist'));
 const SITE = opt('--site', 'https://strangepin.com').replace(/\/$/, '');
 
 // Static files that are copied as-is (only those that exist).
+// Static directories copied recursively (self-hosted fonts + their licences).
+const STATIC_DIRS = ['fonts'];
 const STATIC = ['index.html', 'sw.js', 'offline.html', 'manifest.json', 'robots.txt', 'favicon.png',
   'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'og-image.png', '_headers', '_redirects'];
 
@@ -221,6 +223,7 @@ function main() {
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(path.join(OUT, 'pins'), { recursive: true });
   for (const f of STATIC) if (fs.existsSync(path.join(ROOT, f))) fs.copyFileSync(path.join(ROOT, f), path.join(OUT, f));
+  for (const d of STATIC_DIRS) if (fs.existsSync(path.join(ROOT, d))) fs.cpSync(path.join(ROOT, d), path.join(OUT, d), { recursive: true });
   for (const o of all) {
     const dir = path.join(OUT, 'pins', o.slug);
     fs.mkdirSync(dir, { recursive: true });

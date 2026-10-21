@@ -1,0 +1,17 @@
+# Netlify build for strangepin.com (added in the technical PR; see docs/seo-url-plan.md §6).
+# The build copies the static site into dist/ and generates the 99 crawlable
+# /pins/<slug>/ pages, /pins/index.html, sitemap.xml and pins-manifest.json.
+# No dependencies are installed (there is no root package.json; tests/package.json is CI-only).
+[build]
+  command = "node scripts/build-pins.js --out dist --site https://strangepin.com && node tests/sitemap-check.js dist https://strangepin.com"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Deploy previews and branch deploys: canonicals/sitemap point at the preview host.
+[context.deploy-preview]
+  command = "node scripts/build-pins.js --out dist --site $DEPLOY_PRIME_URL && node tests/sitemap-check.js dist $DEPLOY_PRIME_URL"
+
+[context.branch-deploy]
+  command = "node scripts/build-pins.js --out dist --site $DEPLOY_PRIME_URL && node tests/sitemap-check.js dist $DEPLOY_PRIME_URL"
