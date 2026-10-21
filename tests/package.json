@@ -1,0 +1,13 @@
+{
+  "name": "strangepin-tests",
+  "private": true,
+  "description": "Dev/CI-only test dependencies (not part of the site; Netlify does not install these).",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "3.0.4",
+    "firebase": "10.12.0",
+    "firebase-tools": "13.35.1",
+    "html-validate": "9.7.1",
+    "puppeteer-core": "23.11.1"
+  }
+}
