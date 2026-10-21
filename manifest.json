@@ -7,12 +7,23 @@
   "background_color": "#07070e",
   "theme_color": "#07070e",
   "orientation": "portrait-primary",
-  "categories": ["travel", "lifestyle", "entertainment"],
+  "categories": [
+    "travel",
+    "lifestyle",
+    "entertainment"
+  ],
   "icons": [
     {
-      "src": "/og-image.png",
-      "sizes": "1200x630",
-      "type": "image/png"
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
@@ -21,21 +32,39 @@
       "short_name": "Nearby",
       "description": "Find strange places near you",
       "url": "/#nearby",
-      "icons": [{ "src": "/og-image.png", "sizes": "1200x630" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Explore Map",
       "short_name": "Map",
       "description": "Explore the world mystery map",
       "url": "/#map",
-      "icons": [{ "src": "/og-image.png", "sizes": "1200x630" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Pin a Location",
       "short_name": "Pin It",
       "description": "Submit a mysterious location",
       "url": "/#submit",
-      "icons": [{ "src": "/og-image.png", "sizes": "1200x630" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
