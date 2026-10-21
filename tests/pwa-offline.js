@@ -47,7 +47,7 @@ const check = (ok, name, extra) => { (ok ? pass++ : fail++); console.log(`${ok ?
   for (const u of ['/', '/index.html', '/offline.html', '/manifest.json', '/icon-192.png'])
     check(shell.includes(BASE + u), `precached ${u}`);
   check(all.some(u => u.includes('unpkg.com/leaflet@1.9.4/dist/leaflet.js')), 'pinned Leaflet JS runtime-cached');
-  const forbidden = all.filter(u => /googleapis\.com|gstatic\.com|firebase|identitytoolkit|securetoken|emailjs|cloudinary|cartocdn|openfreemap|translate/.test(u));
+  const forbidden = all.filter(u => /googleapis\.com|gstatic\.com|firebase|identitytoolkit|securetoken|emailjs|cloudinary|cartocdn|openfreemap|openstreetmap|translate/.test(u));
   check(forbidden.length === 0, 'no Firebase/googleapis/gstatic/EmailJS/Cloudinary/tile/translate URLs in any cache', forbidden.slice(0, 3).join(' '));
 
   check(errors.length === 0, 'online: no uncaught page errors', errors.slice(0, 2).join(' | '));

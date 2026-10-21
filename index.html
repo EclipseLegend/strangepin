@@ -655,6 +655,13 @@
     .hero { min-height:90vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
     .hero-content { position:relative; z-index:10; text-align:center; max-width:900px; padding:0 20px; }
     .hero-eyebrow { display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:999px; background:rgba(232,98,26,0.1); border:1px solid rgba(232,98,26,0.25); color:var(--orange-glow); font-size:0.85rem; font-family:'JetBrains Mono',monospace; margin-bottom:32px; }
+    /* Basemap fallback: darkened OSM raster, and the all-failed overlay */
+    .sp-osm-dark { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6); }
+    .sp-map-error { position:absolute; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; background:rgba(10,10,15,0.72); pointer-events:none; }
+    .sp-map-error-card { pointer-events:auto; max-width:340px; text-align:center; background:var(--surface,#15151c); border:1px solid var(--border,#2a2a35); border-radius:14px; padding:18px 20px; color:var(--text,#eee); font-size:0.9rem; line-height:1.5; }
+    .sp-map-error-card p { color:var(--text-muted,#aaa); margin:8px 0 12px; }
+    .sp-map-error-icon { font-size:1.6rem; margin-bottom:6px; }
+    .sp-map-error-retry { background:var(--orange,#e8621a); color:#fff; border:none; border-radius:8px; padding:8px 16px; font-weight:700; cursor:pointer; }
     .hero-title { font-family:'Syne','Syne Fallback',sans-serif; font-size:clamp(3rem,8vw,5.5rem); font-weight:800; line-height:0.95; letter-spacing:-0.02em; color:var(--text); margin-bottom:24px; }
     .hero-desc { font-size:1.1rem; color:var(--text-muted); max-width:520px; margin:0 auto 40px; line-height:1.7; }
     .hero-btns { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; margin-bottom:48px; }
@@ -1672,14 +1679,22 @@ function previewText(loc, max) {
 }
 
 // ── BASEMAP CONFIG ───────────────────────────────────────────────────────────
-// Owner decision (see docs/map-providers.md). Production behaviour is unchanged
-// until SP_BASEMAP is switched:
-//   'carto-legacy'     keyless CARTO raster URL (CARTO now serves "API KEY REQUIRED" tiles)
-//   'carto-key'        CARTO Dark Matter raster with a key (set SP_CARTO_KEY; key must be requested by the owner)
-//   'openfreemap-dark' OpenFreeMap "dark" vector style rendered by MapLibre GL via
-//                      maplibre-gl-leaflet; no key, no account. Libraries load lazily.
-const SP_BASEMAP   = 'carto-legacy';
+// Owner decision (docs/map-providers.md): OpenFreeMap "dark" is the primary basemap.
+// Fallback chain, tried in order until one works (each step is detected, not assumed):
+//   1. 'openfreemap-dark'  OpenFreeMap vector style via MapLibre GL (no key, no account).
+//                          Needs WebGL, the MapLibre libraries (unpkg) and tiles.openfreemap.org.
+//   2. 'carto-key'         CARTO Dark Matter raster, ONLY if SP_CARTO_KEY is set (owner-requested key).
+//   3. 'osm-dark'          OpenStreetMap Standard raster from tile.openstreetmap.org, darkened with a
+//                          CSS filter. Allowed for normal interactive viewing on public sites under the
+//                          OSMF Tile Usage Policy (visible attribution, browser Referer, no prefetch or
+//                          offline caching: sw.js never caches cross-origin tiles). Best-effort, no SLA.
+//   4. none                a friendly English overlay on the map ("Map tiles are unavailable"); pins stay
+//                          clickable in the list views.
+// The keyless CARTO URL ('carto-legacy') was removed from the chain: CARTO serves
+// "API KEY REQUIRED" images for it, which load successfully and cannot be detected as a failure.
+const SP_BASEMAP   = 'openfreemap-dark';
 const SP_CARTO_KEY = '';
+const SP_BASEMAP_TIMEOUT_MS = 10000;
 const SP_MAPLIBRE = {
   js:     { src: 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js',
             integrity: 'sha384-5+cfbwT0iiub6VsQAdn6yz16nr6sDiQoHx6tm4O8OVYXHYOxcffFmCJBL0dgdvGp' },
@@ -1689,14 +1704,25 @@ const SP_MAPLIBRE = {
             integrity: 'sha384-tXYNKOHx4T02jMP7YYCtBxPIv1B5gaA5mcVPBzqMp6d7VzWzxJgI2aWF/nJLrQdS' },
 };
 
-/** Active basemap. On localhost only, ?basemap=<id> overrides it for testing. */
-function spBasemapChoice() {
-  const ids = ['carto-legacy', 'carto-key', 'openfreemap-dark'];
+/** Fallback order starting at the configured basemap. On localhost only, ?basemap=<id> picks the start (testing). */
+function spBasemapChain() {
+  const chain = ['openfreemap-dark', 'carto-key', 'osm-dark'];
+  let start = SP_BASEMAP;
   if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
     const q = new URLSearchParams(window.location.search).get('basemap');
-    if (ids.includes(q)) return q;
+    if (chain.includes(q)) start = q;
   }
-  return SP_BASEMAP;
+  const i = Math.max(0, chain.indexOf(start));
+  return chain.slice(i).filter(id => id !== 'carto-key' || SP_CARTO_KEY);
+}
+/** Back-compat helper (first basemap that would be tried). */
+function spBasemapChoice() { return spBasemapChain()[0] || 'none'; }
+
+function spHasWebGL() {
+  try {
+    const c = document.createElement('canvas');
+    return !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl')));
+  } catch (e) { return false; }
 }
 
 const _spAssetPromises = {};
@@ -1715,33 +1741,91 @@ function spLoadAsset(kind, attrs) {
   return _spAssetPromises[key];
 }
 
-/** Add the configured basemap to a Leaflet map. Resolves to the basemap id used. */
+const SP_OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+
+/** Vector basemap: resolves when the style has loaded, rejects on any failure or timeout. */
+async function spTryOpenFreeMap(map) {
+  if (!spHasWebGL()) throw new Error('WebGL unavailable');
+  await Promise.all([spLoadAsset('css', SP_MAPLIBRE.css), spLoadAsset('js', SP_MAPLIBRE.js)]);
+  await spLoadAsset('js', SP_MAPLIBRE.plugin);
+  const layer = L.maplibreGL({
+    style: 'https://tiles.openfreemap.org/styles/dark',
+    attribution: '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> '
+      + '&copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> ' + SP_OSM_ATTR,
+  });
+  try {
+    layer.addTo(map);
+    const gl = layer.getMaplibreMap && layer.getMaplibreMap();
+    if (!gl) throw new Error('MapLibre map not created');
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('style load timeout')), SP_BASEMAP_TIMEOUT_MS);
+      if (gl.isStyleLoaded && gl.isStyleLoaded()) { clearTimeout(t); return resolve(); }
+      gl.once('load', () => { clearTimeout(t); resolve(); });
+      gl.on('error', (e) => {
+        // Style/source failures before 'load' are fatal; later tile errors are not.
+        if (!gl.isStyleLoaded || !gl.isStyleLoaded()) { clearTimeout(t); reject((e && e.error) || new Error('style error')); }
+      });
+    });
+    return layer;
+  } catch (e) {
+    try { map.removeLayer(layer); } catch (_) {}
+    throw e;
+  }
+}
+
+/** Raster basemap: resolves after the first tile loads; rejects if only errors arrive or on timeout. */
+function spTryRaster(map, url, opts) {
+  return new Promise((resolve, reject) => {
+    const layer = L.tileLayer(url, opts);
+    let errors = 0, done = false;
+    const finish = (ok, err) => {
+      if (done) return; done = true; clearTimeout(t);
+      if (ok) resolve(layer); else { try { map.removeLayer(layer); } catch (_) {} reject(err); }
+    };
+    const t = setTimeout(() => finish(false, new Error('tile timeout')), SP_BASEMAP_TIMEOUT_MS);
+    layer.on('tileload', () => finish(true));
+    layer.on('tileerror', () => { if (++errors >= 4) finish(false, new Error('tile errors')); });
+    layer.addTo(map);
+  });
+}
+
+function spShowMapError(map) {
+  const el = map.getContainer();
+  if (el.querySelector('.sp-map-error')) return;
+  const box = document.createElement('div');
+  box.className = 'sp-map-error';
+  box.setAttribute('role', 'alert');
+  box.innerHTML = '<div class="sp-map-error-card"><div class="sp-map-error-icon" aria-hidden="true">🗺️</div>'
+    + '<strong>Map tiles are unavailable right now.</strong>'
+    + '<p>The map background could not be loaded (network, browser or provider issue). '
+    + 'Pins are still listed on the Home and Nearby pages. Please try again later.</p>'
+    + '<button type="button" class="sp-map-error-retry">Try again</button></div>';
+  box.querySelector('button').addEventListener('click', () => location.reload());
+  el.appendChild(box);
+}
+
+/** Add the first working basemap in the fallback chain. Resolves to its id, or 'none'. */
 async function addBasemap(map) {
-  const choice = spBasemapChoice();
-  const osm = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
-  if (choice === 'openfreemap-dark') {
+  for (const id of spBasemapChain()) {
     try {
-      await Promise.all([spLoadAsset('css', SP_MAPLIBRE.css), spLoadAsset('js', SP_MAPLIBRE.js)]);
-      await spLoadAsset('js', SP_MAPLIBRE.plugin);
-      L.maplibreGL({
-        style: 'https://tiles.openfreemap.org/styles/dark',
-        attribution: '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> '
-          + '&copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> ' + osm,
-      }).addTo(map);
-      return choice;
+      if (id === 'openfreemap-dark') {
+        await spTryOpenFreeMap(map);
+      } else if (id === 'carto-key') {
+        await spTryRaster(map, 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(SP_CARTO_KEY), {
+          attribution: SP_OSM_ATTR + ', &copy; <a href="https://carto.com/attributions/" target="_blank" rel="noopener">CARTO</a>', maxZoom: 19 });
+      } else if (id === 'osm-dark') {
+        await spTryRaster(map, 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: SP_OSM_ATTR, maxZoom: 19, className: 'sp-osm-dark' });
+      }
+      map.getContainer().dataset.basemap = id;
+      return id;
     } catch (e) {
-      console.warn('StrangePin: vector basemap unavailable, falling back to raster.', e);
+      console.warn('StrangePin: basemap "' + id + '" unavailable, trying the next one.', e && e.message ? e.message : e);
     }
   }
-  const keyed = (choice === 'carto-key' || choice === 'openfreemap-dark') && SP_CARTO_KEY;
-  L.tileLayer(keyed
-      ? 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(SP_CARTO_KEY)
-      : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: osm + ', &copy; <a href="https://carto.com/attributions/" target="_blank" rel="noopener">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19,
-  }).addTo(map);
-  return keyed ? 'carto-key' : 'carto-legacy';
+  map.getContainer().dataset.basemap = 'none';
+  spShowMapError(map);
+  return 'none';
 }
 
 // ── DATA ──────────────────────────────────────────────────────────────────────
@@ -5882,7 +5966,7 @@ function initLeafletMap() {
     return;
   }
 
-  // Dark tile layer from CartoDB
+  // Basemap: OpenFreeMap dark with a detected fallback chain (see BASEMAP CONFIG)
   leafletMap = L.map('leafletMap', { zoomControl: true, scrollWheelZoom: true, worldCopyJump: true }).setView([20, -20], 2);
 
   addBasemap(leafletMap).then(id => { window._spBasemapUsed = id; });

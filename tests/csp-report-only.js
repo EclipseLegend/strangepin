@@ -2,7 +2,8 @@
 // (Report-Only) violations per page. Start: node scripts/dev-headers-server.js . 8093
 const puppeteer = require('puppeteer-core');
 const BASE = process.env.BASE || 'http://localhost:8093';
-const routes = ['/?nosw=1#home', '/?nosw=1#map', '/?nosw=1&basemap=openfreemap-dark#map', '/?nosw=1#detail/001', '/?nosw=1#submit', '/?nosw=1#leaderboard', '/offline.html'];
+const PNG = require('fs').readFileSync(__dirname + '/../icon-192.png');
+const routes = ['/?nosw=1#home', '/?nosw=1#map', '/?nosw=1&basemap=osm-dark#map', '/?nosw=1#detail/001', '/?nosw=1#submit', '/?nosw=1#leaderboard', '/offline.html'];
 (async () => {
   const b = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   let total = 0, hdr = 0; const all = [];
@@ -11,7 +12,9 @@ const routes = ['/?nosw=1#home', '/?nosw=1#map', '/?nosw=1&basemap=openfreemap-d
     await pg.evaluateOnNewDocument(() => { window.__csp = []; document.addEventListener('securitypolicyviolation', e => window.__csp.push(`${e.effectiveDirective} ${e.blockedURI}`)); });
     await pg.setRequestInterception(true);
     // Firebase back ends and the plain-http translate script are aborted (no real back-end traffic; port 80 hangs here).
-    pg.on('request', q => /^http:\/\/translate\.google|^https:\/\/(firestore|identitytoolkit|securetoken)\.googleapis\.com/.test(q.url()) ? q.abort() : q.continue());
+    // OSM tiles are mocked (served locally; CSP is still evaluated) so the test sends no automated traffic to tile.openstreetmap.org.
+    pg.on('request', q => /^http:\/\/translate\.google|^https:\/\/(firestore|identitytoolkit|securetoken)\.googleapis\.com/.test(q.url()) ? q.abort()
+      : /^https:\/\/tile\.openstreetmap\.org\//.test(q.url()) ? q.respond({ status: 200, contentType: 'image/png', body: PNG }) : q.continue());
     const resp = await pg.goto(BASE + r, { waitUntil: 'domcontentloaded' });
     if (resp.headers()['content-security-policy-report-only']) hdr++;
     await new Promise(res => setTimeout(res, r.includes('map') ? 7000 : 3000));
