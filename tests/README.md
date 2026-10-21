@@ -29,3 +29,17 @@ Nominatim, and mocks Firestore/auth data in the page.
 | `perf-lazy.js` | First render happens before the deferred CDN scripts (delayed 3 s); init runs once; stats are shown immediately; no Google Translate request on a plain load; map deep link (99 markers) and submit mini-map with slow Leaflet; the language menu lazy-loads Translate; choosing Español translates the page (skipped if Google returns its rate-limit page); a saved preference loads Translate at startup | static server on :8080, `node tests/perf-lazy.js` |
 
 Lighthouse method and results: `docs/perf-lcp.md`.
+
+## Phase 3
+
+| File | What it checks | How to run |
+|---|---|---|
+| `map-fallback.js` | Basemap chain OpenFreeMap dark → keyed CARTO (only with a key) → OSM-based dark raster, and the English error overlay when every provider fails (hosts blocked per scenario) | static server on :8080, `node tests/map-fallback.js` |
+| `sitemap-check.js` | Every sitemap `<loc>` exists in the build output; every pin page is listed; one host, no `#`/`?`; robots.txt Sitemap line | `node scripts/build-pins.js --out dist && node tests/sitemap-check.js dist https://strangepin.com` (also run by `netlify.toml`) |
+| `compat-matrix.test.js` | 42 cells: old/new client request shapes × assumed-old/new rules, plus abuse cases (`docs/firebase-compat-matrix.md`) | inside `firebase emulators:exec --only auth,firestore --project demo-strangepin` |
+| `compat-old-client.js` | Runs the `main` client (served separately) with every Firebase back end aborted; records init errors and back-end attempts | serve `main` on :8301, `node tests/compat-old-client.js` |
+| `../scripts/content-diff-check.js` | The content PR changes only pin content in `index.html`, no source removed | `node scripts/content-diff-check.js pr/technical pr/content` |
+| `../scripts/sync-static-hero.js --check` | The static first-paint hero matches `renderHomeHero()` | `node scripts/sync-static-hero.js --check` |
+
+Dependencies are pinned in `tests/package.json` / `tests/package-lock.json` (`npm ci --prefix tests`).
+CI: `.github/workflows/ci.yml` (required job `tests`; see `docs/branch-protection.md`).
