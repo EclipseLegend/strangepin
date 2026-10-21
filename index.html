@@ -6308,9 +6308,20 @@ if (document.readyState === 'loading') {
   </div>
 </nav>
 
-<!-- Firebase compat — runs AFTER page renders, non-blocking -->
+<!-- Firebase compat — initialised after the deferred SDK scripts have executed -->
 <script>
-(function initFirebase() {
+// The Firebase SDK <script> tags in <head> use `defer`, so they execute only
+// after the whole document has been parsed. This inline script runs during
+// parsing, i.e. BEFORE the SDK exists. Initialising immediately caused
+// "ReferenceError: firebase is not defined" in production. Deferred scripts
+// always run before DOMContentLoaded, so we initialise from that event.
+function initFirebase() {
+  if (window._spFirebaseInitialised) return;
+  if (typeof window.firebase === 'undefined' || !window.firebase.initializeApp) {
+    console.error('StrangePin: Firebase SDK not loaded; auth and community features are disabled.');
+    return;
+  }
+  window._spFirebaseInitialised = true;
   const firebaseConfig = {
     apiKey: "AIzaSyBn5qHhpLgNwsHXcIegKJF-ZzybomjVTuI",
     authDomain: "strangepin-4e538.firebaseapp.com",
@@ -6456,7 +6467,13 @@ if (document.readyState === 'loading') {
     if (window.currentPage === 'leaderboard') window.renderPage();
     if (window.currentPage === 'profile')     window.renderPage();
   });
-})();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFirebase);
+} else {
+  initFirebase();
+}
 </script>
 </body>
 </html>
