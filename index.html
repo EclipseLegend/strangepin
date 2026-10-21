@@ -63,8 +63,8 @@
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
-  <!-- perf/lcp: fonts are self-hosted (fonts/, SIL OFL) with display=swap; the hero
-       font (Syne, latin) and body font (DM Sans, latin) are preloaded.
+  <!-- perf/lcp: fonts are self-hosted (fonts/, SIL OFL) with display=swap and
+       metric-adjusted local fallbacks; not preloaded (preloads made first paint bimodal, docs/perf-lcp.md).
        Leaflet CSS loads without blocking first render (the map waits for it). -->
   <style>
 /* SP-FONTS:BEGIN (generated from fonts/fonts.css) */
