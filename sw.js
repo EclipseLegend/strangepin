@@ -2,7 +2,8 @@
  *
  * - Precaches the app shell (same-origin files listed below).
  * - Navigations: network-first, then cached shell, then /offline.html.
- * - Same-origin data (locations.js, manifest): network-first, cache fallback.
+ * - Other same-origin requests (e.g. manifest): network-first, cache fallback.
+ * (Pin data is inline in index.html; locations.js is not loaded by the app.)
  * - Same-origin static images: cache-first.
  * - Cross-origin: ONLY exact, version-pinned library URLs (Leaflet, MapLibre) are
  *   cached. Everything else, including Firebase Auth/Firestore, Google APIs,
@@ -17,7 +18,6 @@ const RUNTIME_CACHE = `sp-runtime-${SP_SW_VERSION}`;
 const SHELL = [
   '/',
   '/index.html',
-  '/locations.js',
   '/offline.html',
   '/manifest.json',
   '/favicon.png',

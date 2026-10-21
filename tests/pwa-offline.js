@@ -44,7 +44,7 @@ const check = (ok, name, extra) => { (ok ? pass++ : fail++); console.log(`${ok ?
   });
   const all = Object.values(caches).flat();
   const shell = caches['sp-shell-v1'] || [];
-  for (const u of ['/', '/index.html', '/locations.js', '/offline.html', '/manifest.json', '/icon-192.png'])
+  for (const u of ['/', '/index.html', '/offline.html', '/manifest.json', '/icon-192.png'])
     check(shell.includes(BASE + u), `precached ${u}`);
   check(all.some(u => u.includes('unpkg.com/leaflet@1.9.4/dist/leaflet.js')), 'pinned Leaflet JS runtime-cached');
   const forbidden = all.filter(u => /googleapis\.com|gstatic\.com|firebase|identitytoolkit|securetoken|emailjs|cloudinary|cartocdn|openfreemap|translate/.test(u));
@@ -64,7 +64,7 @@ const check = (ok, name, extra) => { (ok ? pass++ : fail++); console.log(`${ok ?
   const off1 = await page.evaluate(() => ({ title: document.title, hasApp: !!document.getElementById('app') || document.body.innerText.length > 500,
     markers: document.querySelectorAll('.leaflet-marker-icon').length }));
   check(off1.hasApp, 'offline: root navigation serves cached app shell', JSON.stringify(off1));
-  check(off1.markers > 0, 'offline: map markers render from cached locations.js + Leaflet', `markers=${off1.markers}`);
+  check(off1.markers > 0, 'offline: map markers render from cached index.html (inline data) + Leaflet', `markers=${off1.markers}`);
 
   await page.goto(BASE + '/pins/not-cached-yet/', { waitUntil: 'domcontentloaded' });
   const off2 = await page.evaluate(() => document.title);
