@@ -3885,7 +3885,8 @@ async function loadHomeStats() {
   try {
     if (!window._db) return;
     const [usersSnap, pinsSnap] = await Promise.all([
-      window._db.collection('users').get(),
+      // publicProfiles is the world-readable mirror; users/{uid} is private (firestore.rules)
+      window._db.collection('publicProfiles').orderBy('points','desc').limit(50).get(),
       window._db.collection('pins').get(),
     ]);
     const pinners   = usersSnap.size;
@@ -3905,7 +3906,7 @@ async function loadHomeStats() {
     if (usersSnap.size > 0) {
       const liveUsers = usersSnap.docs
         .map(d => d.data())
-        .filter(u => u.displayName || u.email)
+        .filter(u => u.displayName)
         .sort((a,b) => (b.points||0) - (a.points||0))
         .slice(0,4);
       const getLvl = window.getLevelInfo || (pts => ({ name:'Curious', icon:'🔍', color:'#8888aa' }));
@@ -3985,7 +3986,7 @@ async function toggleReaction(pinId, reactionId) {
   if (window.currentUser && window._db) {
     const ref = window._db.collection('pins').doc(pinId).collection('reactions').doc(window.currentUser.uid);
     if (isSame) { await ref.delete().catch(()=>{}); }
-    else { await ref.set({ type: reactionId, uid: window.currentUser.uid, at: new Date() }); }
+    else { await ref.set({ type: reactionId, uid: window.currentUser.uid, at: firebase.firestore.FieldValue.serverTimestamp() }).catch(e => console.warn('reaction not saved:', e && e.code)); }
   }
   // Update UI without full re-render
   loadPinData(pinId);
@@ -4062,6 +4063,8 @@ function renderCommentsList(pinId) {
     </div>`).join('');
 }
 
+const SP_COMMENT_MAX = 1000; // keep in sync with firestore.rules
+
 async function submitComment(pinId) {
   if (!window.currentUser) { alert('Please sign in to comment.'); return; }
   const input = document.getElementById('commentInput');
@@ -4072,9 +4075,9 @@ async function submitComment(pinId) {
   try {
     await window._db.collection('pins').doc(pinId).collection('comments').add({
       uid:         window.currentUser.uid,
-      displayName: window.currentUser.displayName || 'Anonymous',
-      photoURL:    window.currentUser.photoURL || '',
-      text,
+      displayName: String(window.currentUser.displayName || 'Anonymous').slice(0, 80),
+      photoURL:    safeHttpsUrl(window.currentUser.photoURL),
+      text:        text.slice(0, SP_COMMENT_MAX),
       likes: 0,
       at:   firebase.firestore.FieldValue.serverTimestamp(),
     });
@@ -4085,12 +4088,21 @@ async function submitComment(pinId) {
 }
 
 async function likeComment(pinId, commentId) {
-  if (!window._db) return;
+  if (!window._db || !commentId) return;
+  if (!window.currentUser) { alert('Please sign in to like comments.'); return; }
   try {
-    await window._db.collection('pins').doc(pinId).collection('comments').doc(commentId)
-      .update({ likes: firebase.firestore.FieldValue.increment(1) });
-    await loadComments(pinId);
-  } catch(e) {}
+    // One like per user: create likes/{uid} marker and increment in a single batch.
+    const commentRef = window._db.collection('pins').doc(pinId).collection('comments').doc(commentId);
+    const batch = window._db.batch();
+    batch.set(commentRef.collection('likes').doc(window.currentUser.uid),
+              { at: firebase.firestore.FieldValue.serverTimestamp() });
+    batch.update(commentRef, { likes: firebase.firestore.FieldValue.increment(1) });
+    await batch.commit();
+  } catch(e) {
+    // permission-denied here usually means "already liked"
+    console.warn('like not saved:', e && e.code);
+  }
+  await loadComments(pinId);
 }
 
 // ── SAVE / FAVOURITE ──────────────────────────────────────────────────────────
@@ -4106,7 +4118,7 @@ async function toggleSave(pinId) {
     const ref = window._db.collection('users').doc(window.currentUser.uid)
                   .collection('saved').doc(id);
     if (wasSaved) { await ref.delete().catch(()=>{}); }
-    else          { await ref.set({ pinId: id, at: new Date() }); }
+    else          { await ref.set({ pinId: id, at: firebase.firestore.FieldValue.serverTimestamp() }).catch(e => console.warn('save not stored:', e && e.code)); }
   }
   const btn = document.getElementById('saveBtn_'+id);
   if (btn) {
@@ -4119,12 +4131,8 @@ async function toggleSave(pinId) {
 async function loadSavedCount(pinId) {
   const el = document.getElementById('savedCount_'+pinId);
   if (!el || !window._db) return;
-  try {
-    const snap = await window._db.collection('users')
-      .where('savedPins', 'array-contains', pinId).get().catch(()=>null);
-    // Fallback: count from saved subcollections not possible without extra query
-    // Just show local saved state
-  } catch(e) {}
+  // A public "saved by N" count needs a server-maintained counter; reading other
+  // users' documents is not allowed by firestore.rules. Show local state only.
 }
 
 // ── MYSTERY SCORE ─────────────────────────────────────────────────────────────
@@ -5845,10 +5853,9 @@ async function handleSubmit() {
     if (res.status === 200) {
       // Award points if logged in
       if (window.currentUser && window.fbAddPoints) {
-        await window.fbAddPoints(window.currentUser.uid, 'pin');
-        if (imageUrl && imageUrl !== '—' && imageUrl !== '(upload failed)') {
-          await window.fbAddPoints(window.currentUser.uid, 'photo');
-        }
+        const awards = ['pin'];
+        if (imageUrl && imageUrl !== '—' && imageUrl !== '(upload failed)') awards.push('photo');
+        await window.fbAddPoints(window.currentUser.uid, awards).catch(e => console.warn('points not awarded:', e && e.code));
       }
       submitted = true;
       submitCategory = '';
@@ -6014,7 +6021,7 @@ function renderDetail(lang) {
       <div class="comment-input-wrap" style="margin-top:16px;">
         <div class="comment-avatar" style="margin-top:4px;">${window.currentUser ? avatarInitial(window.currentUser.displayName) : '?'}</div>
         <div style="flex:1;">
-          <textarea id="commentInput" class="comment-input" rows="2" aria-label="Write a comment"
+          <textarea id="commentInput" class="comment-input" rows="2" maxlength="1000" aria-label="Write a comment"
             placeholder="${window.currentUser ? 'Share your experience or thoughts...' : 'Sign in to comment...'}"
             ${!window.currentUser ? 'disabled' : ''}></textarea>
           <div style="display:flex;justify-content:flex-end;margin-top:8px;">
@@ -6371,9 +6378,27 @@ function initFirebase() {
     appId: "1:254898349595:web:1a20cc9c8d4ced1796fabe"
   };
 
+  // ── DEV-ONLY: Firebase Local Emulator Suite ─────────────────────────────────
+  // Active only when BOTH: the page is served from localhost/127.0.0.1 AND the
+  // URL contains ?emulator=1. On strangepin.com this branch can never run.
+  // The "demo-" project id makes the SDK unable to reach any real project.
+  const SP_USE_EMULATOR = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    && new URLSearchParams(window.location.search).get('emulator') === '1';
+  if (SP_USE_EMULATOR) {
+    firebaseConfig.projectId  = 'demo-strangepin';
+    firebaseConfig.apiKey     = 'demo-api-key';
+    firebaseConfig.authDomain = 'demo-strangepin.firebaseapp.com';
+  }
+
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db   = firebase.firestore();
+  if (SP_USE_EMULATOR) {
+    auth.useEmulator('http://127.0.0.1:9099');
+    db.useEmulator('127.0.0.1', 8085);
+    window._spEmulator = true;
+    console.info('StrangePin: using local Firebase emulators (demo-strangepin).');
+  }
   window._db = db; // expose for stats, reactions, comments
   const provider = new firebase.auth.GoogleAuthProvider();
 
@@ -6397,54 +6422,61 @@ function initFirebase() {
 
   window.fbSignIn = async function() {
     try {
-      const r = await auth.signInWithPopup(provider);
-      const ref = db.collection('users').doc(r.user.uid);
-      const snap = await ref.get();
-      if (!snap.exists) {
-        // ── Future-ready database schema ──────────────────────────────────────
-        // Includes fields for: badges, followers, achievements, country ranking
-        await ref.set({
-          // Core identity
-          uid:         r.user.uid,
-          displayName: r.user.displayName || '',
-          email:       r.user.email       || '',
-          photoURL:    r.user.photoURL     || '',
-          // Points & progression
-          points:      0,
-          pins:        0,
-          // Prepared for future features (not yet active)
-          badges:      [],           // e.g. ['first_pin','verified_explorer']
-          achievements:[],           // e.g. ['10_pins','first_international']
-          followers:   0,            // follower count
-          following:   0,            // following count
-          verified:    false,        // verified explorer status
-          country:     '',           // user's country (for country rankings)
-          bio:         '',           // user bio
-          website:     '',           // user website
-          // Metadata
-          joinedAt:    firebase.firestore.FieldValue.serverTimestamp(),
-          lastActive:  firebase.firestore.FieldValue.serverTimestamp(),
-          // Settings
-          notifications: { newComment: true, newReaction: true, weeklyDigest: true },
-          // App version
-          _schemaVersion: 1,
-        });
-      } else {
-        // Update lastActive on every login
-        await ref.update({ lastActive: firebase.firestore.FieldValue.serverTimestamp() });
-      }
+      await auth.signInWithPopup(provider);
+      // users/{uid} + publicProfiles/{uid} are created in onAuthStateChanged → ensureUserDoc
     } catch(e) { console.error('Sign in error:', e); }
   };
 
+  // Create the private user doc and its public mirror on first sign-in (one batch,
+  // as required by firestore.rules), or refresh lastActive on later sign-ins.
+  async function ensureUserDoc(user) {
+    const ref  = db.collection('users').doc(user.uid);
+    const pub  = db.collection('publicProfiles').doc(user.uid);
+    const snap = await ref.get();
+    const displayName = String(user.displayName || '').slice(0, 80);
+    const photoURL    = safeHttpsUrl(user.photoURL || '');
+    if (!snap.exists) {
+      const ts = firebase.firestore.FieldValue.serverTimestamp();
+      const batch = db.batch();
+      batch.set(ref, {
+        // Core identity (private: readable only by the owner)
+        uid: user.uid, displayName, email: user.email || '', photoURL,
+        // Points & progression (changed only via fbAddPoints, rules-limited)
+        points: 0, pins: 0,
+        // Prepared for future features (not yet active; server-owned)
+        badges: [], achievements: [], followers: 0, following: 0, verified: false,
+        country: '', bio: '', website: '',
+        joinedAt: ts, lastActive: ts,
+        notifications: { newComment: true, newReaction: true, weeklyDigest: true },
+        _schemaVersion: 2,
+      });
+      batch.set(pub, { displayName, photoURL, points: 0, pins: 0, updatedAt: ts });
+      await batch.commit();
+      return (await ref.get()).data();
+    }
+    await ref.update({ lastActive: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+    return snap.data();
+  }
+  window._spEnsureUserDoc = ensureUserDoc;
+
   window.fbSignOut = () => auth.signOut();
 
-  window.fbAddPoints = async function(uid, type) {
-    const pts = window.SP_POINTS[type]||0;
-    if (!pts||!uid) return;
-    const ref = db.collection('users').doc(uid);
-    const up  = { points: firebase.firestore.FieldValue.increment(pts) };
-    if (type==='pin') up.pins = firebase.firestore.FieldValue.increment(1);
-    await ref.update(up);
+  // Award points for one or more actions at once, e.g. fbAddPoints(uid, ['pin','photo']).
+  // firestore.rules: +1..35 points and +0/1 pin per award, 30 s cooldown, and
+  // users/{uid} and publicProfiles/{uid} must change together in one batch.
+  window.fbAddPoints = async function(uid, types) {
+    const list = Array.isArray(types) ? types : [types];
+    const pts  = list.reduce((sum, t) => sum + (window.SP_POINTS[t] || 0), 0);
+    if (!pts || !uid) return;
+    const ref  = db.collection('users').doc(uid);
+    const pub  = db.collection('publicProfiles').doc(uid);
+    const inc  = firebase.firestore.FieldValue.increment;
+    const ts   = firebase.firestore.FieldValue.serverTimestamp();
+    const pinInc = list.includes('pin') ? 1 : 0;
+    const batch = db.batch();
+    batch.update(ref, { points: inc(pts), pins: inc(pinInc), lastPointsAt: ts });
+    batch.update(pub, { points: inc(pts), pins: inc(pinInc), updatedAt: ts });
+    await batch.commit();
     if (window.currentUser) {
       window.currentUser.spData = (await ref.get()).data();
       window.updateNavAuth();
@@ -6481,15 +6513,15 @@ function initFirebase() {
   };
 
   window.fbListenLeaderboard = function(cb) {
-    return db.collection('users').orderBy('points','desc').limit(20)
-      .onSnapshot(s => cb(s.docs.map(d=>d.data())));
+    // publicProfiles holds only public fields (no email); see firestore.rules
+    return db.collection('publicProfiles').orderBy('points','desc').limit(20)
+      .onSnapshot(s => cb(s.docs.map(d=>d.data())), e => console.warn('leaderboard unavailable:', e && e.code));
   };
 
   auth.onAuthStateChanged(async u => {
     if (u) {
       try {
-        const snap = await db.collection('users').doc(u.uid).get();
-        const spData = snap.exists ? (snap.data() || {}) : {};
+        const spData = (await ensureUserDoc(u)) || {};
         window.currentUser = {
           uid:         u.uid,
           displayName: u.displayName || spData.displayName || '',
