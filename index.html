@@ -1318,6 +1318,31 @@ function spAvatarFallback(img) {
   parent.replaceChildren(span);
 }
 
+// ── TEXT HELPERS ─────────────────────────────────────────────────────────────
+
+/** Shorten text to at most `max` characters, cutting on a word boundary, adding "…". */
+function truncateAtWord(text, max) {
+  const t = String(text || '').trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max + 1);
+  let idx = cut.lastIndexOf(' ');
+  if (idx < max * 0.6) idx = max; // no sensible space: hard cut
+  return cut.slice(0, idx).replace(/[\s,;:.\-—–]+$/, '') + '…';
+}
+
+/**
+ * Display preview for a pin. Some stored shortPreview values were cut at
+ * exactly 200 characters mid-word; when fullStory continues that text we
+ * re-derive the preview from fullStory. Stored data is never modified.
+ */
+function previewText(loc, max) {
+  const limit = max || 200;
+  const sp = (loc && loc.shortPreview) || '';
+  const full = (loc && loc.fullStory) || '';
+  const source = (full.length > sp.length && full.startsWith(sp)) ? full : (sp || full);
+  return truncateAtWord(source, limit);
+}
+
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const LOCATIONS = [
   {
@@ -3754,7 +3779,7 @@ function updateSEO(page, data) {
     desc  = 'Explore 99+ mysterious locations on an interactive world map. Filter by haunted places, UFO sightings, ancient mysteries, energy spots, and more.';
   } else if (page === 'detail' && data) {
     title = `${data.nameEn || data.name} — ${data.category} Mystery | StrangePin`;
-    desc  = (data.shortPreview || data.desc || baseDesc).substring(0, 160);
+    desc  = (data.shortPreview || data.fullStory) ? previewText(data, 160) : truncateAtWord(data.desc || baseDesc, 160);
   } else if (page === 'submit') {
     title = 'Pin a Mystery Location | StrangePin';
     desc  = 'Submit a strange or unexplained location to the StrangePin world map. Share your experience in any language.';
@@ -4431,7 +4456,7 @@ function renderNearby() {
             </div>
             <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:10px;
               overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">
-              ${loc.shortPreview || loc.fullStory || ''}
+              ${previewText(loc)}
             </p>
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
               <span class="distance-badge">${dist}</span>
@@ -4766,7 +4791,7 @@ function locationCard(loc, compact=false) {
         <span>${[loc.city,loc.country].filter(Boolean).join(', ')}</span>
       </div>
       ${loc.hook && !compact ? `<p style="font-size:0.88rem;color:var(--text-muted);font-style:italic;line-height:1.55;margin-bottom:12px;">"${loc.hook}"</p>` : ''}
-      ${!compact && !loc.hook ? `<div class="loc-preview">${loc.shortPreview||''}</div>` : ''}
+      ${!compact && !loc.hook ? `<div class="loc-preview">${previewText(loc)}</div>` : ''}
       <div class="loc-footer">
         <div style="display:flex;align-items:center;gap:8px;">
           ${loc.status ? `<span class="badge ${statusMap[loc.status]||'badge-muted'}" style="font-size:0.68rem;">${loc.status}</span>` : ''}
@@ -4919,7 +4944,7 @@ function SP_PinHero(loc, saved) {
     .join('');
 
   // The display text — prefer hook as pull-quote; fall back to shortPreview
-  const summaryText = loc.hook || loc.shortPreview || '';
+  const summaryText = loc.hook || previewText(loc);
 
   return `
   <div class="pin-hero">
@@ -5405,7 +5430,7 @@ function addMarkersToMap(locations) {
         <div style="font-size:0.72rem;color:${color};font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">${loc.category}</div>
         <div style="font-size:0.95rem;font-weight:700;color:#111;margin-bottom:4px;line-height:1.3;">${loc.nameEn||loc.name}</div>
         <div style="font-size:0.78rem;color:#666;margin-bottom:8px;">📍 ${[loc.city,loc.country].filter(Boolean).join(', ')}</div>
-        <div style="font-size:0.78rem;color:#444;line-height:1.5;margin-bottom:10px;">${loc.shortPreview.substring(0,100)}…</div>
+        <div style="font-size:0.78rem;color:#444;line-height:1.5;margin-bottom:10px;">${previewText(loc, 100)}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:0.72rem;color:#888;">📋 ${loc.reports} reports · ⚡ ${loc.mysteryScore}/10</span>
           <button onclick="showPage('detail',LOCATIONS.find(l=>l.id==='${loc.id}'))" 
