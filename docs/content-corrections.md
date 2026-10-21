@@ -158,3 +158,54 @@ The "Abandoned Place" and "Other" categories exist in the UI but currently have 
   - Show "Verified" only for pins with at least one cited source.
   - Hide report counts until they come from real data.
   - Reword the hero claim "Real locations. Verified facts." until sources exist (owner decision).
+
+---
+
+## 6. Timeline and Sources review (Phase 2)
+
+The detail page now renders `timeline` and `sources` (feature branch `feat/phase2`), so these fields are newly **public**.
+
+- **Scope:** the 10 pins that have them: 001–010.
+- **Checked on:** 2026-10-21, against the sources listed.
+- **Status labels:**
+  - "APPLY" items are in branch `content/corrections`.
+  - "SOURCE NEEDED" items were **not** changed.
+
+### 6.1 Errors with a reliable source (APPLY)
+
+| Pin | Field | Current | Proposed | Source |
+|---|---|---|---|---|
+| 001 Area 51 | sources | Link `cia.gov/readingroom/document/0000619941` resolves to the generic Reading Room landing page, not the document | "The Central Intelligence Agency and Overhead Reconnaissance: The U-2 and OXCART Programs, 1954–1974 (CIA history, declassified 2013)" → https://nsarchive2.gwu.edu/NSAEBB/NSAEBB434/ | National Security Archive page (names the study and its authors Pedlow & Welzenbach) |
+| 001 Area 51 | sources | "The Road to Area 51 — Annie Jacobsen (2011)" | "Area 51: An Uncensored History of America's Top Secret Military Base — Annie Jacobsen (2011)" | https://en.wikipedia.org/wiki/Annie_Jacobsen |
+| 001 Area 51 | timeline 2013 | "CIA officially acknowledges the base's existence." | unchanged (correct) | https://en.wikipedia.org/wiki/Area_51 |
+| 002 Aokigahara | timeline 1968 | "Biologist Alexandru Sift photographs unexplained lights near the forest." | **Remove.** This is the Hoia-Baciu (Romania) legend, duplicated from pin 007 | Internal: identical to the 007 entry; https://en.wikipedia.org/wiki/Aokigahara has no such event |
+| 003 Bermuda Triangle | timeline 1918 | "USS Cyclops disappears with 309 crew." | "USS Cyclops disappears with 306 crew and passengers." | https://en.wikipedia.org/wiki/USS_Cyclops_(AC-4) |
+| 003 Bermuda Triangle | timeline 1975 | "Lloyd's of London states it does not charge higher premiums in this area." | Date **1992**: "Asked for a Channel 4 documentary, Lloyd's of London finds no unusual number of sinkings here and does not charge higher rates for the area." | https://en.wikipedia.org/wiki/Bermuda_Triangle |
+| 003 Bermuda Triangle | sources | Kusche only, no URL | Keep, and add "Vincent Gaddis, 'The Deadly Bermuda Triangle', Argosy (Feb 1964)" as text (no URL) | https://en.wikipedia.org/wiki/Bermuda_Triangle |
+| 004 Stonehenge | timeline 2000 BCE | "Sarsen stones erected." | "c. 2600–2400 BCE: The great sarsen circle is raised." | https://en.wikipedia.org/wiki/Stonehenge |
+| 005 Nazca Lines | timeline 1939 | "Paul Kosok identifies the lines from the air." | Two entries: "1927: Peruvian archaeologist Toribio Mejía Xesspe records the lines." and "1940s: Historian Paul Kosok makes the first in-depth scholarly study of the lines." | https://en.wikipedia.org/wiki/Nazca_Lines |
+| 005 Nazca Lines | sources | "Nazca: Eighth Wonder of the World — Silverman & Proulx (2002)", type Academic Paper | "The Nasca — Helaine Silverman & Donald A. Proulx (Blackwell, 2002)", type Book, URL https://doi.org/10.1002/9780470693384 | Wiley catalogue https://www.wiley.com/en-us/the-nasca-p-9780631232247; NYPL catalogue |
+| 006 Easter Island | timeline 700 CE | "Polynesian settlers arrive on Easter Island." | "c. 1200 CE: Polynesian settlers arrive (current best estimate; older estimates ranged 400–1300 CE)." | https://en.wikipedia.org/wiki/Easter_Island |
+| 006 Easter Island | timeline 1100 CE | "Moai carving begins at Rano Raraku quarry." | "13th century onward: Moai carving at the Rano Raraku quarry begins soon after settlement." | https://en.wikipedia.org/wiki/Easter_Island |
+| 008 Zona del Silencio | timeline 1970 | "An Athena test rocket crashes here. Recovery teams note radio failure." | "An off-course US Athena test rocket carrying small cobalt-57 sources crashes in the area. Many of the zone's legends grew around the recovery operation." | https://en.wikipedia.org/wiki/Zone_of_Silence |
+| 009 Chernobyl | timeline 26 Apr 1986 | "Reactor No. 4 explodes. Soviet government delays announcement 36 hours." | "Reactor No. 4 explodes during a safety test." | https://en.wikipedia.org/wiki/Chernobyl_disaster |
+| 009 Chernobyl | timeline 27 Apr 1986 | "Evacuation of Pripyat begins." | "Evacuation of Pripyat begins, about 36 hours after the explosion." | same |
+| 009 Chernobyl | timeline May 1986 | "Construction of the concrete sarcophagus begins." | "June–November 1986: The 'Sarcophagus' shelter is built around the wrecked reactor." | same ("construction was from June to late November") |
+| 010 Great Pyramid | timeline ~2540 BCE | "Tallest human structure for 3,800 years." | "…the world's tallest human-made structure for more than 3,700 years." | https://en.wikipedia.org/wiki/Great_Pyramid_of_Giza |
+| 010 Great Pyramid | timeline 820 CE | "Caliph al-Ma'mun tunnels into the pyramid." | Date **832 CE** | same |
+| 010 Great Pyramid | timeline 2017 | "Thermal imaging reveals a previously unknown void above the Grand Gallery." | "Cosmic-ray muon imaging (ScanPyramids) reveals a large void above the Grand Gallery." | https://www.nature.com/articles/nature24647 (the pin's own source) |
+
+### 6.2 SOURCE NEEDED (not changed)
+- **002 Aokigahara:**
+  - "Pre-14th century: folklore as a dwelling place of demons": no source found. Wikipedia mentions *yūrei* (ghosts), not demons, and gives no date.
+  - "1960: Matsumoto's novel": English Wikipedia gives 1961 for *Nami no Tō*; the date needs a primary source.
+  - Source "Inside Aokigahara (Vice)" has no URL.
+- **004 Stonehenge:** "2500 BCE: bluestones transported 250 km from Wales". Wikipedia suggests the first bluestones may have arrived around 3000 BC and gives about 230–240 km. Confirm against English Heritage before editing.
+- **007 Hoia-Baciu:** the 1968 Sift photograph, the "1970s military investigators" entry, and the "2019 tourism authorities heritage attraction" entry. Wikipedia's article calls these legends and does not support them. The source "Inside Romania's Haunted Forest (BBC Travel)" has no URL.
+- **008 Zona del Silencio:** "1930s pilot reports" and "1979 biosphere reserve" (the UNESCO MAB page could not be fetched; verify the Mapimí designation year). The National Geographic source has no URL.
+- **009 Chernobyl:** the IAEA source URL returned a bot-protection page (HTTP 403) to automated checks. Verify it in a browser.
+
+### 6.3 Unused data file
+`locations.js` is **not loaded** by `index.html`; the live data is the inline `LOCATIONS` array. It is still publicly served at `/locations.js` and has diverged (it still contains the empty stubs).
+
+**Proposal:** delete it, or make it the single source of truth via the build step in `docs/seo-url-plan.md`. Deletion needs owner approval.
