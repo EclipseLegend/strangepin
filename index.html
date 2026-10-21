@@ -4979,6 +4979,52 @@ function SP_QuickFact(icon, label, value) {
  * @param {object} loc - A LOCATIONS entry
  */
 // Sprint 1: SP_QuickFacts extended with Era, Reading Time, Difficulty, Maps link
+/**
+ * Timeline section for featured pins. All values are escaped; entries
+ * without an event text are skipped.
+ */
+function SP_Timeline(loc) {
+  const items = (Array.isArray(loc.timeline) ? loc.timeline : [])
+    .filter(t => t && typeof t.event === 'string' && t.event.trim());
+  if (!items.length) return '';
+  return `
+    <div class="story-section" data-section="timeline">
+      <div class="story-section-label" style="color:var(--amber);">Timeline</div>
+      <ol style="list-style:none;margin:0;padding:0;border-left:2px solid var(--border);">
+        ${items.map(t => `
+        <li style="position:relative;padding:0 0 14px 18px;">
+          <span aria-hidden="true" style="position:absolute;left:-6px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--amber);"></span>
+          <span class="font-mono" style="display:block;font-size:0.78rem;color:var(--text-dim);">${escapeHtml(t.date || '')}</span>
+          <span style="font-size:0.9rem;color:var(--text-muted);line-height:1.6;">${escapeHtml(t.event)}</span>
+        </li>`).join('')}
+      </ol>
+    </div>`;
+}
+
+/**
+ * Sources section. Only https URLs become links (new tab, rel="noopener nofollow");
+ * sources without a valid URL are shown as plain text.
+ */
+function SP_Sources(loc) {
+  const items = (Array.isArray(loc.sources) ? loc.sources : [])
+    .filter(s => s && typeof s.title === 'string' && s.title.trim());
+  if (!items.length) return '';
+  return `
+    <div class="story-section" data-section="sources">
+      <div class="story-section-label" style="color:var(--teal);">Sources</div>
+      <ul style="margin:0;padding-left:18px;font-size:0.875rem;color:var(--text-muted);line-height:1.7;">
+        ${items.map(s => {
+          const url = safeHttpsUrl(s.url);
+          const title = escapeHtml(s.title);
+          const type = s.type ? `<span class="badge badge-muted" style="margin-left:6px;">${escapeHtml(s.type)}</span>` : '';
+          return `<li>${url
+            ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener nofollow" style="color:var(--teal);">${title}</a>`
+            : `<span>${title}</span>`}${type}</li>`;
+        }).join('')}
+      </ul>
+    </div>`;
+}
+
 function SP_QuickFacts(loc) {
   // Reading time from fullStory word count at 200 wpm
   const text = loc.fullStory || loc.shortPreview || '';
@@ -6038,6 +6084,10 @@ function renderDetail(lang) {
       </div>
       <p>${loc.theMystery}</p>
     </div>` : ''}
+
+    <!-- TIMELINE + SOURCES (escaped; empty arrays render nothing) -->
+    ${SP_Timeline(loc)}
+    ${SP_Sources(loc)}
 
     <!-- LOCATION -->
     <div class="story-section">
