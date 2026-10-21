@@ -5,7 +5,7 @@ const BASE = process.env.BASE || 'http://localhost:8080';
 let pass = 0, fail = 0;
 const check = (ok, n, x) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAIL'} - ${n}${x ? ' ' + x : ''}`); };
 (async () => {
-  const b = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
+  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
   const pg = await b.newPage();
   const errors = [];
   pg.on('pageerror', e => errors.push(e.message));

@@ -30,7 +30,7 @@ async function open(b, hash, { delayCdnMs = 0, preset } = {}) {
   return { pg, reqs, errors };
 }
 (async () => {
-  const b = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
+  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
 
   // 1. First render does not wait for the CDN scripts, which are requested only AFTER the first
   //    contentful paint (spLoadDeferredAssets) and then initialise Firebase.

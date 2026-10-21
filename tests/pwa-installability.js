@@ -4,7 +4,7 @@
 const puppeteer = require('puppeteer-core');
 const BASE = process.env.BASE || 'http://localhost:8080';
 (async () => {
-  const b = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
+  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
   const pg = await b.newPage();
   await pg.setRequestInterception(true);
   pg.on('request', r => /^http:\/\/translate\.google|^https:\/\/(firestore|identitytoolkit|securetoken)\.googleapis\.com/.test(r.url()) ? r.abort() : r.continue());

@@ -10,7 +10,7 @@ const fs = require('fs'), os = require('os'), path = require('path');
 const PORT = 8090;
 const BASE = `http://localhost:${PORT}`;
 const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-pwa-'));
-const launch = (extra = []) => puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new',
+const launch = (extra = []) => puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new',
   userDataDir: PROFILE, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', ...extra] });
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;

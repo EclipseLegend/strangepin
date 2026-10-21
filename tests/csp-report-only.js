@@ -5,7 +5,7 @@ const BASE = process.env.BASE || 'http://localhost:8093';
 const PNG = require('fs').readFileSync(__dirname + '/../icon-192.png');
 const routes = ['/?nosw=1#home', '/?nosw=1#map', '/?nosw=1&basemap=osm-dark#map', '/?nosw=1#detail/001', '/?nosw=1#submit', '/?nosw=1#leaderboard', '/offline.html'];
 (async () => {
-  const b = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   let total = 0, hdr = 0; const all = [];
   for (const r of routes) {
     const pg = await b.newPage();
