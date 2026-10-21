@@ -1,0 +1,5 @@
+# robots.txt for https://strangepin.com/
+User-agent: *
+Allow: /
+
+Sitemap: https://strangepin.com/sitemap.xml

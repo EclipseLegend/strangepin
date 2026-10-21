@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Homepage only for now. Individual pins currently live at hash routes
+  (e.g. /#detail/001), which search engines do not index as separate URLs.
+  Add one <url> per pin once clean per-pin paths (e.g. /pins/area-51/) are
+  served by static pages or Netlify rewrites. See CHANGES.md.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://strangepin.com/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>
