@@ -1,8 +1,12 @@
 {
+  "id": "/",
   "name": "StrangePin — Pin the Unexplained",
   "short_name": "StrangePin",
   "description": "Discover mysterious locations near you. Haunted places, UFO sightings, energy spots, and unexplained phenomena worldwide.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#07070e",
   "theme_color": "#07070e",
@@ -24,6 +28,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
