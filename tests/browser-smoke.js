@@ -96,9 +96,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // Home "active pinners" + "latest pins" with a mocked Firestore
   await page.evaluate(xss => {
     const doc = d => ({ data: () => d });
-    window._db = { collection: name => ({ get: async () => name === 'users'
+    const q = name => ({ orderBy: () => q(name), limit: () => q(name), get: async () => name === 'publicProfiles'
       ? { size: 1, docs: [doc({ displayName: xss, photoURL: 'javascript:window.__xss=1', points: 3, pins: 1 })] }
-      : { size: 1, docs: [doc({ name: xss, city: xss, country: 'X', category: 'UFO', submittedAt: { seconds: 1 } })] } }) };
+      : { size: 1, docs: [doc({ name: xss, city: xss, country: 'X', category: 'UFO', submittedAt: { seconds: 1 } })] } });
+    window._db = { collection: q };
     showPage('home');
   }, XSS);
   await sleep(1500);
