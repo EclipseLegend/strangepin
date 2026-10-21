@@ -85,3 +85,107 @@ That comparison was made over plain http with uncompressed HTML (`lh/lh-orig.jso
   - real phones and real networks;
   - Netlify's actual compression and headers (`_headers` `/fonts/*` caching is EXPECTED to apply);
   - Safari/Firefox behaviour of the fallback overrides. EXPECTED from compatibility tables (not verified here): Firefox supports all four descriptors; Safari supports `size-adjust` (17+) but not `ascent-override`/`descent-override`. Where they are unsupported, the fallback is plain or only width-adjusted Arial, so the swap can cause a small shift.
+
+## 7. Phase 3: the simulated-LCP regression, identified and resolved
+
+Measured 2026-10-21, ~19:10–19:45 WEST (Europe/Lisbon). (The "CEST (Europe/Madrid)" labels in
+§1–§6 above are the earlier box setting, UTC+2; Phase 3 times are Europe/Lisbon, UTC+1.)
+
+### 7.1 Identical environment for every variant (TESTED)
+
+- Lighthouse 12.8.2, mobile, **default simulate throttling**, performance only, Chrome headless,
+  `--ignore-certificate-errors`; same local HTTPS + gzip server (`https-server.py`) for every
+  variant (`main` :8201, old `perf/lcp` :8202, Phase 3 :8203); **5 runs each**, median + spread.
+- **No production Firebase traffic:** `--blocked-url-patterns` for `*firestore.googleapis.com*`,
+  `*identitytoolkit.googleapis.com*`, `*securetoken.googleapis.com*`, `*firebaseapp.com*`,
+  `*apis.google.com*`. Every run's network log was checked: 0–2 back-end requests per run, all
+  with status "blocked" (never sent). The only Google request that still loads is the static
+  Firebase SDK JavaScript from `www.gstatic.com` (a CDN file, not a back-end call). On `main`
+  there are 0 back-end attempts because its Firebase init fails (`firebase is not defined`).
+- Script: `lh5.sh <label> <url> 5` (tooling kept outside the repo).
+
+### 7.2 Results (TESTED, simulate mode, 5 runs each)
+
+| Variant | Perf | LCP median (spread) | FCP | TBT median (spread) | CLS | LCP element | Observed (unthrottled) FCP / LCP |
+|---|---|---|---|---|---|---|---|
+| `main` 728e8f5 | 70 | 2567 ms (2421–2891) | 2238 | 104 ms (69–119) | 0.813 | footer `div.disclaimer` | 206–262 / same |
+| `perf/lcp` 9fa4cd9 | 84 | 4206 ms (3707–4305) | 2178 | 5 ms (3–9) | 0 | `h1.hero-title` | 166–216 / 333–423 |
+| **Phase 3** (`feat/phase3`) | **99** | **1576 ms (1565–1610)** | **1507** | **69 ms (57–88)** | **0** | `h1.hero-title` | 181–213 / same |
+
+A second 5-run `main` batch gave 69 / 2568 ms (2418–3333) / TBT 103 / CLS 0.813, so the
+baseline is stable. (The earlier 3-run `perf/lcp` figure, 3853 ms, was measured with production
+back ends reachable; with them blocked it is 4206 ms.)
+
+**DevTools mode (real throttled paints), 3 runs each, same settings:**
+
+| Variant | Perf | LCP | FCP | TBT | CLS | LCP element |
+|---|---|---|---|---|---|---|
+| `main` | 71 | 1452 ms (1411–1463) | 1452 | 250 ms | 0.808 | footer disclaimer |
+| **Phase 3** | **100** | **873 ms (854–876)** | 854 | 67 ms | 0 | `h1.hero-title` |
+
+Goal "default-mode LCP ≤ main, CLS and TBT not worse": **met** (1576 vs 2567 ms; CLS 0 vs
+0.813; TBT 69 vs 104 ms). Against old `perf/lcp`, TBT rose from 5 to 69 ms (brand fonts now
+swap in after first paint; see 7.4); it is still below `main`.
+
+### 7.3 What exactly drove the regression (TESTED with Lantern debug traces)
+
+Method: `LANTERN_DEBUG=1` single runs export the optimistic/pessimistic LCP simulation graphs
+(`*LargestContentfulPaint.trace.json`), which list every network/CPU node the simulated LCP
+depends on.
+
+1. **Lantern makes every request that *started* before the observed LCP an LCP dependency.**
+   On `perf/lcp` the observed LCP (hero text at its font swap, 333–423 ms) came after the start
+   of the `defer` CDN scripts (Leaflet, EmailJS, three Firebase SDK files) and the three WOFF2
+   fonts. Under simulated slow 4G these are "downloaded" before LCP; the Firebase chain alone
+   ended at ~3258 ms in the graph. This is why simulated LCP was 3.7–4.3 s while the real
+   paint was ~0.35 s. Not a font-swap issue alone: removing only the font swap (hero3) still
+   gave 3211 ms; deferring the CDN until after first paint (hero4) gave 1671 ms.
+2. **A static first-paint hero that is later replaced is not an LCP candidate.** Chrome drops a
+   candidate whose node is removed before presentation. The first attempt (static hero
+   replaced by `innerHTML`) scored 4309 ms; keeping the static `section.hero` node and appending
+   the rest of the page after it fixed this (3612 ms in isolation).
+3. **The flaky first paint with font preloads (§6)** is now moot: there are no font preloads; the
+   fonts are not requested before first paint at all.
+
+Single-run experiments (simulate): hero1 static hero replaced 4309 ms · hero2 node kept 3612 ·
+hero3 fonts after paint 3211 · hero4 CDN after paint 1671 ms (TBT 247) · then TBT work below.
+
+### 7.4 Fixes shipped (all features kept; CSP/SRI unchanged)
+
+- **Static hero markup** in `index.html` between `SP-STATIC-HERO` markers, generated from
+  `renderHomeHero()` by `scripts/sync-static-hero.js` (`--check` runs in CI). The SPA keeps that
+  node on the first `#home` render. Non-home deep links clear it before first paint.
+- **Deferred assets after first contentful paint:** Leaflet CSS/JS, EmailJS and the Firebase
+  SDK (same versions, same SRI hashes, `async=false` to keep order) are injected after the
+  `first-contentful-paint` entry (fallbacks: `load` + 1 s, hard 3 s). `window.spCdnReady`
+  resolves when they have loaded; Firebase init and the EmailJS submit wait for it. Map and
+  submit mini-map wait for Leaflet (tested with a slowed CDN).
+- **Fonts:** metric-adjusted local fallbacks paint first. Syne + JetBrains Mono (brand/hero)
+  activate right after first paint. DM Sans (body) is prefetched at idle and used **from the
+  next visit** (`SP_BODY_FONT_POLICY = 'repeat-visit'`), because activating it during the
+  first visit cost ~70–100 ms of relayout (TBT 247 → 276 ms when swapped on idle). Option
+  `'swap-after-load'` exists if the owner prefers brand body text on the first visit (EXPECTED
+  TBT ≈ 120–130 ms simulated, still near `main`).
+- **`content-visibility: auto`** on below-the-fold home sections and the footer, with
+  `contain-intrinsic-size`, to shrink the post-paint relayout (TBT 128 → 73 ms in exp7).
+- Tried and not kept: font preloads (bimodal first paint), `font-display: optional` for the
+  hero (fallback is already metric-matched; no gain once fonts are after paint), subsetting
+  (not needed once fonts are off the critical path), inlining more critical CSS (the CSS is
+  already inline).
+
+### 7.5 Why `main`'s 2.57 s was artificially low (TESTED)
+
+On `main` the LCP element is the footer `div.disclaimer`. It is in the first viewport only
+because of the layout-shift bug (CLS 0.806–0.813: the main area starts with no height, so the
+footer paints at the top and is then pushed down). The hero appears later with a fade-in from
+opacity 0, which Chrome does not count. So `main` reports the paint time of the wrong element;
+once CLS is fixed (Phase 1+), the real hero becomes the LCP element and is what is measured.
+
+### 7.6 Trade-offs and NOT TESTED
+
+- First visit: body text uses the metric-adjusted Arial fallback instead of DM Sans (brand
+  change visible to the owner; switch with `SP_BODY_FONT_POLICY`).
+- Interactivity: map, sign-in and the form become usable when the deferred assets have loaded
+  (~0.3–1 s after first paint on this box; EXPECTED longer on slow phones).
+- NOT TESTED: real devices/networks, PageSpeed Insights on the deployed site, CrUX field data
+  (needs ~28 days after deploy), Safari/Firefox.

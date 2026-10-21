@@ -68,7 +68,7 @@ Source: https://operations.osmfoundation.org/policies/tiles/, read 2026-10-21.
 
 ### TESTED
 
-Run: `tests/map-fallback.js`, 30/30, 2026-10-21 19:05 CEST, headless Chrome, static server on :8080. Failure modes were forced by aborting host requests or launching Chrome without WebGL.
+Run: `tests/map-fallback.js`, 30/30, 2026-10-21 ~19:05 WEST (Europe/Lisbon), headless Chrome, static server on :8080. Failure modes were forced by aborting host requests or launching Chrome without WebGL.
 
 - **OSM and CARTO tiles in this test:** mocked, i.e. served from a local PNG, so the test never sends automated traffic to `tile.openstreetmap.org` and needs no CARTO key.
 - **OpenFreeMap:** reached for real (read-only) where it is expected to work.

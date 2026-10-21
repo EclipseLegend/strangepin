@@ -3,7 +3,7 @@
 - **Owner-approved** in Phase 3.
 - Removed in a normal `git rm` commit on the technical branch. The file stays in git history: `git show 728e8f5:locations.js`.
 
-## Evidence that nothing used it (TESTED, 2026-10-21 19:10 CEST)
+## Evidence that nothing used it (TESTED, 2026-10-21 ~19:05 WEST, Europe/Lisbon)
 
 | Check | Method | Result |
 |---|---|---|

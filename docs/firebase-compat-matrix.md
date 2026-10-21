@@ -23,7 +23,7 @@ and rerun `tests/compat-matrix.test.js` against them.**
 ## 1. Important finding: the current main client never talks to Firebase
 
 TESTED (`tests/compat-old-client.js`, main @ 728e8f5 served on http://127.0.0.1:8301, headless
-Chrome, every Firebase/Google back-end request aborted, 2026-10-21 ~20:00 Europe/Lisbon):
+Chrome, every Firebase/Google back-end request aborted, 2026-10-21 ~19:25 WEST (Europe/Lisbon, UTC+1)):
 
 | Route | `firebase` global | apps | `_db` | errors | back-end requests attempted |
 |---|---|---|---|---|---|
