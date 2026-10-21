@@ -164,14 +164,15 @@ hero3 fonts after paint 3211 · hero4 CDN after paint 1671 ms (TBT 247) · then 
   activate right after first paint. DM Sans (body) is prefetched at idle and used **from the
   next visit** (`SP_BODY_FONT_POLICY = 'repeat-visit'`), because activating it during the
   first visit cost ~70–100 ms of relayout (TBT 247 → 276 ms when swapped on idle). Option
-  `'swap-after-load'` exists if the owner prefers brand body text on the first visit (EXPECTED
-  TBT ≈ 120–130 ms simulated, still near `main`).
+  `'swap-after-load'` exists if the owner prefers brand body text on the first visit (its TBT
+  was not measured on the final build; EXPECTED higher than 69 ms, by roughly the DM Sans
+  relayout cost above).
 - **`content-visibility: auto`** on below-the-fold home sections and the footer, with
   `contain-intrinsic-size`, to shrink the post-paint relayout (TBT 128 → 73 ms in exp7).
-- Tried and not kept: font preloads (bimodal first paint), `font-display: optional` for the
-  hero (fallback is already metric-matched; no gain once fonts are after paint), subsetting
-  (not needed once fonts are off the critical path), inlining more critical CSS (the CSS is
-  already inline).
+- Tried and dropped: font preloads (bimodal first paint, §6). Considered but **not run as
+  separate experiments** (NOT TESTED), because the fonts are no longer requested before first
+  paint: `font-display: optional` for the hero, font subsetting, more inline critical CSS (the
+  site CSS is already inline).
 
 ### 7.5 Why `main`'s 2.57 s was artificially low (TESTED)
 
