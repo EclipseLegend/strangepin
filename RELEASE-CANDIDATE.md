@@ -18,7 +18,7 @@
 - `patches/` (Phase 1)
 - `patches/feat-phase2/0001…0012`
 - `patches/content-corrections/0001`
-- `patches/perf-lcp/` (`git format-patch feat/phase2..perf/lcp`)
+- `patches/perf-lcp/` (`git format-patch feat/phase2..perf/lcp`, one patch per commit)
 
 Labels used below:
 - **TESTED:** run here, with the method and environment stated.
