@@ -3824,16 +3824,45 @@ function showPage(page, data) {
 }
 
 // Handle browser back / forward buttons
+// ── HASH ROUTES ──────────────────────────────────────────────────────────────
+// Supported deep links: #home, #map, #map?q=term, #submit, #nearby,
+// #leaderboard, #about, #profile, #detail/<id> (e.g. #detail/001) and
+// #detail/<slug> (e.g. #detail/area-51). Unknown routes fall back to home.
+const SP_ROUTE_PAGES = ['home','map','submit','detail','leaderboard','about','profile','nearby'];
+
+function parseHashRoute(hash) {
+  const raw = String(hash || '').replace(/^#\/?/, '');
+  const [pathPart, queryPart] = raw.split('?');
+  const [pageRaw, idRaw] = pathPart.split('/');
+  const page = (pageRaw || 'home').toLowerCase();
+  if (!SP_ROUTE_PAGES.includes(page)) return { page: 'home', detail: null, query: '' };
+  let query = '';
+  if (queryPart) {
+    try { query = new URLSearchParams(queryPart).get('q') || ''; } catch (e) { query = ''; }
+  }
+  if (page === 'detail') {
+    let key = '';
+    try { key = decodeURIComponent(idRaw || ''); } catch (e) { key = ''; }
+    const detail = LOCATIONS.find(l => l.id === key || l.slug === key) || null;
+    return detail ? { page: 'detail', detail, query: '' } : { page: 'home', detail: null, query: '' };
+  }
+  return { page, detail: null, query };
+}
+
 window.addEventListener('popstate', function(e) {
-  if (e.state) {
+  if (!e.state) {
+    // Manually edited hash or the initial entry: derive the page from the URL.
+    const route = parseHashRoute(window.location.hash);
+    currentPage = route.page;
+    if (route.detail) currentDetail = route.detail;
+    if (route.query) mapSearch = route.query;
+    if (typeof updateSEO === 'function') updateSEO(currentPage, currentDetail);
+  } else {
     const { page, detailId } = e.state;
     currentPage = page || 'home';
     if (detailId) {
       currentDetail = LOCATIONS.find(l => l.id === detailId) || currentDetail;
     }
-  } else {
-    // No state = went back to the very beginning
-    currentPage = 'home';
   }
   document.querySelectorAll('.nav-link, .mobile-nav-link').forEach(el => {
     el.classList.toggle('active', el.dataset.page === currentPage);
@@ -6265,8 +6294,18 @@ window.initApp = function() {
   });
   observer.observe(document.body, { attributes: true, childList: true, subtree: false });
 
-  // Set initial history state so back button works from the start
-  window.history.replaceState({ page:'home', detailId:null }, '', window.location.href);
+  // Honour deep links (e.g. #detail/001, #map, manifest shortcuts) on first load,
+  // then set the initial history state so the back button works from the start.
+  const route = parseHashRoute(window.location.hash);
+  currentPage = route.page;
+  if (route.detail) currentDetail = route.detail;
+  if (route.query) mapSearch = route.query;
+  updateSEO(currentPage, currentDetail);
+  ['home','map','submit','nearby','leaderboard','about'].forEach(p => {
+    const btn = document.getElementById('tab_' + p);
+    if (btn) btn.classList.toggle('active', p === currentPage);
+  });
+  window.history.replaceState({ page: currentPage, detailId: route.detail ? route.detail.id : null }, '', window.location.href);
 
   renderPage();
 };
