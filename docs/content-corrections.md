@@ -208,4 +208,4 @@ The detail page now renders `timeline` and `sources` (feature branch `feat/phase
 ### 6.3 Unused data file
 `locations.js` is **not loaded** by `index.html`; the live data is the inline `LOCATIONS` array. It is still publicly served at `/locations.js` and has diverged (it still contains the empty stubs).
 
-**Proposal:** delete it, or make it the single source of truth via the build step in `docs/seo-url-plan.md`. Deletion needs owner approval.
+**Done (owner-approved, technical PR):** removed with `git rm` after proving nothing references it (see `docs/locations-js-removal.md`). History is preserved.

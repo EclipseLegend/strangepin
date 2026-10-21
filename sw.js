@@ -3,7 +3,7 @@
  * - Precaches the app shell (same-origin files listed below).
  * - Navigations: network-first, then cached shell, then /offline.html.
  * - Other same-origin requests (e.g. manifest): network-first, cache fallback.
- * (Pin data is inline in index.html; locations.js is not loaded by the app.)
+ * (Pin data is inline in index.html.)
  * - Same-origin static images and self-hosted fonts: cache-first.
  * - Cross-origin: ONLY exact, version-pinned library URLs (Leaflet, MapLibre) are
  *   cached. Everything else, including Firebase Auth/Firestore, Google APIs,

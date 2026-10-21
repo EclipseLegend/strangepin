@@ -4,7 +4,7 @@
 - **`sw.js`**: a minimal service worker. See the header comment for the exact strategy.
   - Precaches the app shell.
   - Navigations: network-first, then the cached shell, then `/offline.html`.
-  - Other same-origin requests: network-first. Pin data is inline in `index.html`; `locations.js` is not loaded by the app and is not precached.
+  - Other same-origin requests: network-first. Pin data is inline in `index.html` (the stale `locations.js` copy was removed).
   - Same-origin images: cache-first.
   - Version-pinned Leaflet/MapLibre library URLs are cache-first.
   - **All other cross-origin requests are never intercepted.** That covers Firebase Auth/Firestore, `*.googleapis.com`, gstatic, EmailJS, Cloudinary, tiles, fonts and translate.

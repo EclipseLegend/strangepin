@@ -13,7 +13,6 @@ StrangePin is a single-file vanilla JavaScript SPA. No build system. No framewor
 | File | Purpose |
 |---|---|
 | `index.html` | Entire application — HTML, CSS, routing, render functions, Firebase integration |
-| `locations.js` | Extracted reference copy of the `LOCATIONS[]` pin data array (SP-001 schema) |
 | `manifest.json` | PWA manifest — standalone display, shortcuts, theme colour |
 | `og-image.html` | Open Graph image source — rendered to `og-image.png` externally |
 
