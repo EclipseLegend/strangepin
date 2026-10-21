@@ -1176,7 +1176,7 @@
             </div>
           </div>
           <button class="nav-btn" onclick="showPage('submit')">📍 <span data-t="nav.submit">Pin It</span></button>
-          <button class="hamburger" onclick="toggleMobile()" id="hamburger">☰</button>
+          <button class="hamburger" onclick="toggleMobile()" id="hamburger" aria-label="Menu" aria-controls="mobileMenu">☰</button>
         </div>
       </div>
     </div>
@@ -1218,7 +1218,9 @@
   </div>
   <!-- Hidden Google Translate widget -->
   <div id="google_translate_element" style="display:none;"></div>
-  <main class="main" id="mainContent"></main>
+  <!-- min-height reserves space so the footer is not shoved down (CLS) when
+       the SPA renders into #mainContent after load. -->
+  <main class="main" id="mainContent" style="min-height:100vh;"></main>
   <footer>
     <div class="container">
       <div class="footer-grid">
@@ -5564,22 +5566,22 @@ function renderSubmit(lang) {
       </div>
 
       <!-- ② LOCATION DETAILS (auto-filled from reverse geocode) -->
-      <div class="form-group"><label>Location Name <span style="color:#f87171;">*</span></label><input id="f_name" placeholder="e.g. The Whispering Bridge of Kyoto" /></div>
+      <div class="form-group"><label for="f_name">Location Name <span style="color:#f87171;">*</span></label><input id="f_name" placeholder="e.g. The Whispering Bridge of Kyoto" /></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="form-group">
-        <div><label>Country <span style="color:#f87171;">*</span></label><input id="f_country" placeholder="Auto-filled from pin" /></div>
-        <div><label>City / Region</label><input id="f_city" placeholder="Auto-filled from pin" /></div>
+        <div><label for="f_country">Country <span style="color:#f87171;">*</span></label><input id="f_country" placeholder="Auto-filled from pin" /></div>
+        <div><label for="f_city">City / Region</label><input id="f_city" placeholder="Auto-filled from pin" /></div>
       </div>
-      <div class="form-group"><label>Address or Landmark</label><input id="f_address" placeholder="Street address, landmark, or description" /></div>
+      <div class="form-group"><label for="f_address">Address or Landmark</label><input id="f_address" placeholder="Street address, landmark, or description" /></div>
 
       <!-- ③ CATEGORY -->
       <div class="form-group"><label>Category <span style="color:#f87171;">*</span></label><div class="category-grid">${catBtns}</div></div>
 
       <!-- ④ STORY -->
       <div class="form-group">
-        <label>Your Story <span style="color:#f87171;">*</span></label>
+        <label for="f_story">Your Story <span style="color:#f87171;">*</span></label>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <span style="font-size:0.8rem;color:var(--text-dim);">🌐 Story language:</span>
-          <select id="f_lang" style="width:auto;padding:4px 8px;font-size:0.8rem;">
+          <select id="f_lang" aria-label="Story language" style="width:auto;padding:4px 8px;font-size:0.8rem;">
             ${storyLangs.map(([code,name])=>`<option value="${code}" ${code===currentLang?'selected':''}>${name}</option>`).join('')}
           </select>
         </div>
@@ -5588,11 +5590,11 @@ function renderSubmit(lang) {
       </div>
 
       <!-- ⑤ DATE + INTENSITY -->
-      <div class="form-group"><label>Date / Time of Experience</label><input id="f_date" type="datetime-local" /></div>
+      <div class="form-group"><label for="f_date">Date / Time of Experience</label><input id="f_date" type="datetime-local" /></div>
       <div class="form-group">
-        <label>Strangeness Score — <span id="intensityLabel">5 — Clearly unusual</span></label>
+        <label for="f_intensity">Strangeness Score — <span id="intensityLabel">5 — Clearly unusual</span></label>
         <div class="intensity-row">
-          <input type="range" min="1" max="10" value="${submitIntensity}" oninput="submitIntensity=+this.value;updateIntensity(this.value)" />
+          <input id="f_intensity" type="range" min="1" max="10" value="${submitIntensity}" oninput="submitIntensity=+this.value;updateIntensity(this.value)" />
           <span class="intensity-val" id="intensityVal">${submitIntensity}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-dim);margin-top:4px;"><span>1</span><span>5</span><span>10</span></div>
@@ -5600,7 +5602,7 @@ function renderSubmit(lang) {
 
       <!-- ⑥ PHOTO -->
       <div class="form-group">
-        <label>Photo (optional)</label>
+        <label for="f_image">Photo (optional)</label>
         <div id="imageUploadArea" style="border:2px dashed var(--border);border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.2s;position:relative;"
              onmouseover="this.style.borderColor='rgba(232,98,26,0.4)'"
              onmouseout="this.style.borderColor='var(--border)'"
@@ -5619,7 +5621,7 @@ function renderSubmit(lang) {
       </div>
 
       <!-- ⑦ USERNAME -->
-      <div class="form-group"><label>Your Username <span style="color:#f87171;">*</span></label><input id="f_username" placeholder="Your Pinner name" /></div>
+      <div class="form-group"><label for="f_username">Your Username <span style="color:#f87171;">*</span></label><input id="f_username" placeholder="Your Pinner name" /></div>
 
       <button id="submitBtn" class="btn-primary" style="width:100%;justify-content:center;font-size:1rem;padding:14px;" onclick="handleSubmit()">
         📍 Drop the Pin
@@ -6012,7 +6014,7 @@ function renderDetail(lang) {
       <div class="comment-input-wrap" style="margin-top:16px;">
         <div class="comment-avatar" style="margin-top:4px;">${window.currentUser ? avatarInitial(window.currentUser.displayName) : '?'}</div>
         <div style="flex:1;">
-          <textarea id="commentInput" class="comment-input" rows="2"
+          <textarea id="commentInput" class="comment-input" rows="2" aria-label="Write a comment"
             placeholder="${window.currentUser ? 'Share your experience or thoughts...' : 'Sign in to comment...'}"
             ${!window.currentUser ? 'disabled' : ''}></textarea>
           <div style="display:flex;justify-content:flex-end;margin-top:8px;">
