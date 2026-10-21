@@ -44,6 +44,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await p2.close();
   }
 
+  // 2b. A missing SDK script (CDN outage / content blocker) must not throw
+  {
+    const p3 = await browser.newPage();
+    const errs3 = [];
+    p3.on('pageerror', e => errs3.push(e.message));
+    await p3.setRequestInterception(true);
+    p3.on('request', r => ((BLOCK.test(r.url()) || /firebase-firestore-compat\.js/.test(r.url())) ? r.abort() : r.continue()));
+    await p3.goto(BASE, { waitUntil: 'load' });
+    await sleep(1000);
+    check('missing Firestore SDK degrades without uncaught errors', errs3.length === 0, errs3.join(' | '));
+    await p3.close();
+  }
+
   // 3. Featured pin timeline/sources are no longer wiped by stubs
   const tl = await page.evaluate(() => LOCATIONS.filter(l => l.timeline && l.timeline.length).length);
   check('10 featured pins keep authored timelines', tl === 10, 'count=' + tl);

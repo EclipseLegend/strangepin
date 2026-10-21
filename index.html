@@ -6355,8 +6355,10 @@ if (document.readyState === 'loading') {
 // always run before DOMContentLoaded, so we initialise from that event.
 function initFirebase() {
   if (window._spFirebaseInitialised) return;
-  if (typeof window.firebase === 'undefined' || !window.firebase.initializeApp) {
-    console.error('StrangePin: Firebase SDK not loaded; auth and community features are disabled.');
+  const fb = window.firebase;
+  if (!fb || typeof fb.initializeApp !== 'function' || typeof fb.auth !== 'function' || typeof fb.firestore !== 'function') {
+    // e.g. a CDN outage or a content blocker removed one of the SDK scripts.
+    console.error('StrangePin: Firebase SDK not (fully) loaded; auth and community features are disabled.');
     return;
   }
   window._spFirebaseInitialised = true;
