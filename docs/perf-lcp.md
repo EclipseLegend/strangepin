@@ -2,6 +2,7 @@
 
 - **Branch:** `perf/lcp`, stacked on `feat/phase2` (f1724ef). Status: LOCAL ONLY, not pushed or deployed.
 - **Measured:** 2026-10-21, 17:50–19:05 CEST (Europe/Madrid), on the shared Linux box.
+- `<local-tools>/` = measurement scripts and raw output kept on the dev box, deliberately not committed.
 - Labels: **TESTED** = run here (method stated); **EXPECTED** = reasoning only; **NOT TESTED**.
 
 ## 1. Method
@@ -9,12 +10,12 @@
 - **Tool:** Lighthouse 12.8.2 (`npx lighthouse@12.8.2`), mobile form factor, performance only, Chrome headless (`/usr/bin/google-chrome`).
   - **Simulate mode** (Lighthouse default, "Lantern"): the page loads unthrottled; the metrics are then *simulated* for slow 4G with 4x CPU slowdown.
   - **DevTools mode** (`--throttling-method=devtools`): the page really loads under network and CPU throttling, so the metrics are real paints.
-- **Server:** a local HTTPS + gzip static server (`/workspace/strangepin-dev-tools/https-server.py`, self-signed localhost certificate). Reasons:
+- **Server:** a local HTTPS + gzip static server (`<local-tools>/https-server.py`, self-signed localhost certificate). Reasons:
   - Netlify serves the HTML compressed (about 66 KB with brotli). The python `http.server` serves it uncompressed (about 340–370 KB), which inflates simulated times.
   - On a plain-http origin, the old protocol-relative `//translate.google.com/...` script became `http://`. Port 80 is blocked on this box, so the request hung and Lighthouse reported NO_FCP on `main`.
 - **Variants** (three servers side by side): `main` 728e8f5 (`https://localhost:8201`), `feat/phase2` f1724ef (`:8202`), `perf/lcp` (`:8203`). Each was run 3 times; the median is reported.
 - **Back-end traffic during the Lighthouse runs:** the page made its normal **read-only** requests to production Firebase (Firestore listen channel, Identity Toolkit `getProjectConfig`). No writes were made, no form was submitted, and no account was used.
-- Raw runs: `/workspace/strangepin-dev-tools/lh/runs/*.json`. Summary script: `node /workspace/strangepin-dev-tools/lh-summary.js <labels>`.
+- Raw runs: `<local-tools>/lh/runs/*.json`. Summary script: `node <local-tools>/lh-summary.js <labels>`.
 
 ## 2. Results (TESTED, medians of 3)
 
@@ -69,7 +70,7 @@ That comparison was made over plain http with uncompressed HTML (`lh/lh-orig.jso
 ## 5. CSP: the single Google Translate violation (TESTED)
 
 - **Root cause:** Google rate-limits automated traffic. It answered `element.js` with `302 → https://www.google.com/sorry/...`. That host is not in `script-src`, and Chrome reports the violation under the **original** Translate URL, which is why it looked like an allow-listed host being blocked.
-  - In an 8-run probe (`/workspace/strangepin-dev-tools/csp-probe.js`), the one violation coincided with that 302.
+  - In an 8-run probe (`<local-tools>/csp-probe.js`), the one violation coincided with that 302.
   - The page does not matter (seen on `#home` here, on `#submit` earlier). Real users are rarely served `/sorry`. `www.google.com` was deliberately **not** added to `script-src`.
 - **With lazy loading,** Translate is not requested on a normal page view (TESTED in `tests/perf-lazy.js`). The violation can therefore only appear after a visitor chooses a language.
 - **New check:** the language switch under the CSP (`tests/csp-report-only.js`, last row): switching to Español on `#submit` translates the page.
