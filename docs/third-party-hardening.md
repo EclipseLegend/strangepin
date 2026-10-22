@@ -7,10 +7,17 @@ recommendations for the owner and have NOT been changed** (no access was used).
 
 ### Code (pr/technical-v2)
 
-- `to_email` is **no longer sent from the browser** (TESTED: `tests/e2e-emulator.js` checks the
-  params). Previously the recipient came from the page, so anyone could call the public EmailJS
-  API with the site's public key and choose any recipient: an open relay for spam in
-  StrangePin's name.
+- `to_email` is **still sent, as a fixed constant** `thestrangepin@gmail.com`
+  (`EMAILJS_TO_EMAIL` in `index.html`, never taken from user input; TESTED:
+  `tests/e2e-emulator.js` asserts it equals the constant). It is kept for compatibility: the
+  live site sends the same value and the owner confirms notifications arrive, but without
+  dashboard access we cannot tell whether template `template_6luvilv` hard-codes the recipient
+  or uses `{{to_email}}`. Removing the param could silently stop notifications.
+- The intended setup is a recipient **hard-coded in the template** (step 1 below, pending owner
+  access). Until then, if the template uses `{{to_email}}`, anyone could call the public EmailJS
+  API with the site's public key and choose any recipient (an open relay for spam in
+  StrangePin's name); the constant in our code does not prevent that, only the template
+  setting does. Once the template is confirmed hard-coded, the param is harmless (ignored).
 - New param `submission_id` (the Firestore id, or "(not signed in)").
 - Hidden honeypot field `f_website` (off-screen, `aria-hidden`, `tabindex=-1`,
   `autocomplete=off`): if filled, the site shows the success screen and sends nothing.
@@ -21,10 +28,10 @@ recommendations for the owner and have NOT been changed** (no access was used).
 
 ### Dashboard settings for Effie (EmailJS → account `Ux77…`, service `service_spyyqld`, template `template_6luvilv`)
 
-1. **Template → Settings → "To Email"**: replace `{{to_email}}` (if present) with the fixed
-   address `thestrangepin@gmail.com`. **Merge prerequisite**: if the template still uses
-   `{{to_email}}`, removing the param from the code makes the notification go nowhere
-   (NOT TESTED; the template is not visible from the code).
+1. **Template → Settings → "To Email"**: should be hard-coded to `thestrangepin@gmail.com`
+   (replace `{{to_email}}` if present). **Pending owner access** (NOT VERIFIED; the template is
+   not visible from the code). Not a merge blocker any more: the code keeps sending the same
+   fixed `to_email`, so notifications keep arriving either way.
 2. Template body: add `Submission ID: {{submission_id}}`.
 3. **Account → Security → "Allowed origins"** (or "Domains"): `https://strangepin.com`
    (and `https://strangepin.netlify.app` only if still used). Blocks use of the public key from

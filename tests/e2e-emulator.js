@@ -134,7 +134,7 @@ const text = (page, sel) => page.evaluate(s => { const el = document.querySelect
   const sd = subs[0] && subs[0].data();
   check('submissions/{id} stored: status pending, authorUid, no points field', subs.length === 1 && sd.status === 'pending' && !('points' in sd) && !('pointsAwarded' in sd), JSON.stringify(sd && { status: sd.status, keys: Object.keys(sd).length }));
   const mail = await a.evaluate(() => window.__mail);
-  check('EmailJS notification params: no to_email, includes submission_id', mail.length === 1 && !('to_email' in mail[0]) && mail[0].submission_id === subs[0].id, JSON.stringify(mail[0] && Object.keys(mail[0])));
+  check('EmailJS notification params: to_email is the fixed StrangePin inbox, includes submission_id', mail.length === 1 && mail[0].to_email === 'thestrangepin@gmail.com' && mail[0].submission_id === subs[0].id, JSON.stringify(mail[0] && Object.keys(mail[0])));
   check('points unchanged after submitting (0)', (await get('users/' + A)).points === 0 && (await get('publicProfiles/' + A)).points === 0);
   await a.evaluate(() => showPage('profile'));
   await a.waitForSelector('.sp-submission-status', { timeout: 8000 });

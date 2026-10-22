@@ -279,8 +279,9 @@ owner-reported text was emulated); Firestore indexes in production (the queries 
     - Cloudinary unsigned preset (cloud `dz9p5t4sj`, preset in public HTML): anyone can upload to the account. Restrict
       formats (jpg/png/webp), max size, a dedicated folder, enable moderation, consider signed uploads.
     - EmailJS: set allowed origins to strangepin.com; enable rate limiting; **make sure the template's "To" address is
-      hard-coded**, not `{{to_email}}` — the client sends `to_email` as a parameter, so a `{{to_email}}` template would
-      let anyone send mail to arbitrary addresses through your account.
+      hard-coded**, not `{{to_email}}` — a `{{to_email}}` template would let anyone send mail to arbitrary addresses
+      through your account. (Update, pr/technical-v2: the client keeps sending `to_email` as the fixed constant
+      `thestrangepin@gmail.com` for compatibility; see docs/third-party-hardening.md.)
 11. Privacy: public profile opt-in/alias; account-deletion process (R3, R4); update the privacy notice.
 12. Netlify: 301 `strangepin.netlify.app` → `strangepin.com`.
 

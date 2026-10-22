@@ -6784,8 +6784,12 @@ async function handleSubmit() {
   }
 
   // ── EMAILJS (notification to the StrangePin inbox) ───────────────────────
-  // The recipient is NOT sent from the page: it must be fixed in the EmailJS template
-  // (docs/third-party-hardening.md), so this form cannot be used to e-mail anyone else.
+  // The recipient should be hard-coded in the EmailJS template ("To Email" =
+  // thestrangepin@gmail.com; docs/third-party-hardening.md). We cannot yet confirm the live
+  // template does not use {{to_email}}, so the same fixed address is still sent for
+  // compatibility (the live site sends it and notifications arrive). It is a constant, never
+  // taken from user input.
+  const EMAILJS_TO_EMAIL    = 'thestrangepin@gmail.com';
   const EMAILJS_SERVICE_ID  = 'service_spyyqld';
   const EMAILJS_TEMPLATE_ID = 'template_6luvilv';
   const EMAILJS_PUBLIC_KEY  = 'Ux77rlmJMXmPUmxjC';
@@ -6803,6 +6807,7 @@ async function handleSubmit() {
     username:      fields.username,
     image_url:     imageUrl || '—',
     submission_id: submissionId || '(not signed in)',
+    to_email:      EMAILJS_TO_EMAIL,
   };
 
   let emailOk = false;

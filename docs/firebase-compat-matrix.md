@@ -109,8 +109,9 @@ counts-only output, dry run by default, guarded target (TESTED on the emulator).
 
 1. **Capture the live rules** (console → Firestore → Rules → copy; note the version in the
    history = rollback target). Owner-reported today: expired test mode (deny all).
-2. **EmailJS template**: fixed recipient instead of `{{to_email}}` (docs/third-party-hardening.md)
-   — before the client is deployed, or notifications stop arriving.
+2. **EmailJS template**: fixed recipient instead of `{{to_email}}` (docs/third-party-hardening.md),
+   pending owner access. Not a deploy blocker: the v3 client still sends the fixed
+   `to_email: 'thestrangepin@gmail.com'` for compatibility, so notifications keep arriving.
 3. **Deploy the v3 client** (merge the technical PR → Netlify). With the expired rules every
    Firestore feature still fails, but now visibly and without losing typed text (TESTED,
    `tests/e2e-expired-rules.js`). Rollback: Netlify → Deploys → previous deploy → Publish.
