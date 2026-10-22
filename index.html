@@ -60,13 +60,400 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="StrangePin" />
-  <link rel="icon" type="image/png" href="https://strangepin.com/favicon.png" />
-  <link rel="apple-touch-icon"     href="https://strangepin.com/favicon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" defer></script>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <!-- perf/lcp: fonts are self-hosted (fonts/, SIL OFL) with display=swap and
+       metric-adjusted local fallbacks; not preloaded (docs/perf-lcp.md).
+       Leaflet CSS loads without blocking first render (the map waits for it). -->
+  <style>
+/* Metric-adjusted local fallbacks: keep text geometry close to the web fonts
+   so the font-display:swap does not shift the hero (CLS). Values measured in
+   Chrome (canvas measureText, Syne/DM Sans vs Arial) - see docs/perf-lcp.md. */
+@font-face { font-family: 'Syne Fallback'; src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('Helvetica Bold'); font-weight: 800 900; size-adjust: 163.7%; ascent-override: 56.8%; descent-override: 17.1%; line-gap-override: 0%; }
+@font-face { font-family: 'Syne Fallback'; src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('Helvetica Bold'); font-weight: 100 799; size-adjust: 113.4%; ascent-override: 82%; descent-override: 24.7%; line-gap-override: 0%; }
+@font-face { font-family: 'DM Sans Fallback'; src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('Helvetica'); font-weight: 100 549; size-adjust: 103.4%; ascent-override: 95.7%; descent-override: 30%; line-gap-override: 0%; }
+@font-face { font-family: 'DM Sans Fallback'; src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('Helvetica Bold'); font-weight: 550 900; size-adjust: 100.1%; ascent-override: 98.9%; descent-override: 31%; line-gap-override: 0%; }
+  </style>
+  <!-- perf: the web-font @font-face rules start inactive (media="print") and are switched on
+       right after the first paint (PerformanceObserver 'paint'; 'load' and a 3 s timer as
+       fallbacks). First paint therefore uses the metric-adjusted fallbacks above, and the
+       font downloads no longer sit on the critical path to LCP. docs/perf-lcp.md §7. -->
+  <style id="spFonts" media="print">
+/* SP-FONTS:BEGIN (generated from fonts/fonts.css) */
+/* Self-hosted Google Fonts (SIL Open Font License 1.1, see /fonts/LICENSES.md).
+   Generated from fonts.googleapis.com css2 (Syne 400-800, DM Sans 300-600, JetBrains Mono 400-500, display=swap). */
+/* JetBrains Mono cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-cyrillic-ext.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* JetBrains Mono cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-cyrillic.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* JetBrains Mono greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* JetBrains Mono vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-vietnamese.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* JetBrains Mono latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* JetBrains Mono latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* JetBrains Mono cyrillic-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-cyrillic-ext.woff2) format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+/* JetBrains Mono cyrillic */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-cyrillic.woff2) format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+/* JetBrains Mono greek */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* JetBrains Mono vietnamese */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-vietnamese.woff2) format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* JetBrains Mono latin-ext */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* JetBrains Mono latin */
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/jetbrainsmono-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Syne greek */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/syne-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* Syne latin-ext */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/syne-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Syne latin */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/syne-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Syne greek */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/fonts/syne-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* Syne latin-ext */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/fonts/syne-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Syne latin */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/fonts/syne-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Syne greek */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/syne-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* Syne latin-ext */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/syne-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Syne latin */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/syne-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* Syne greek */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(/fonts/syne-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+/* Syne latin-ext */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(/fonts/syne-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* Syne latin */
+@font-face {
+  font-family: 'Syne';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(/fonts/syne-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* SP-FONTS:END */
+  </style>
+  <style id="spFontsBody" media="print">
+/* SP-FONTS-BODY:BEGIN (DM Sans; activated separately, see spLoadDeferredAssets) */
+/* DM Sans latin-ext */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(/fonts/dmsans-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* DM Sans latin */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(/fonts/dmsans-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* DM Sans latin-ext */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/dmsans-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* DM Sans latin */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/dmsans-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* DM Sans latin-ext */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/dmsans-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* DM Sans latin */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/fonts/dmsans-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* DM Sans latin-ext */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/fonts/dmsans-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* DM Sans latin */
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/fonts/dmsans-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* SP-FONTS-BODY:END */
+  </style>
+  <script>
+  // perf: everything that is not needed for the first paint starts loading right AFTER it
+  // (PerformanceObserver 'paint', first-contentful-paint entry; 'load' and a 3 s timer are fallbacks, e.g. hidden tabs):
+  //   - the web-font @font-face rules (#spFonts, media="print" until then),
+  //   - Leaflet CSS + JS, EmailJS, Firebase app/auth/firestore (in this order, async=false
+  //     keeps execution order). window.spCdnReady resolves when all have loaded or failed.
+  // Before, these were <script defer> / non-blocking <link> tags requested while the HTML
+  // was still parsing, which put them on the critical path to LCP (docs/perf-lcp.md §7).
+  (function () {
+    var SCRIPTS = [
+      'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+      'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js',
+      'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
+      'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js',
+      'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js'
+    ];
+    // 'repeat-visit' (default): DM Sans from the second visit on; 'swap-after-load': swap to
+    // DM Sans after the load event on every visit (brand font sooner, more main-thread work).
+    window.SP_BODY_FONT_POLICY = window.SP_BODY_FONT_POLICY || 'repeat-visit';
+    var bodyFontActive = false;
+    try {
+      if (window.SP_BODY_FONT_POLICY === 'repeat-visit' && localStorage.getItem('sp_fonts_cached') === '1') {
+        // Fonts are in the HTTP cache (immutable, 1 year): use them from the first layout.
+        document.getElementById('spFonts').media = 'all';
+        document.getElementById('spFontsBody').media = 'all';
+        bodyFontActive = true;
+      }
+    } catch (e) {}
+    var resolveReady;
+    window.spCdnReady = new Promise(function (r) { resolveReady = r; });
+    var started = false;
+    function start() {
+      if (started) return; started = true;
+      // Display/mono fonts (Syne, JetBrains Mono): right after the first paint, in their own task.
+      setTimeout(function () { var f = document.getElementById('spFonts'); if (f) f.media = 'all'; }, 0);
+      // Body font (DM Sans): switching it re-lays out nearly all text (~70-100 ms of main
+      // thread on the test box), so on a FIRST visit the metric-adjusted fallback is kept and
+      // DM Sans is only downloaded at idle (low priority). Later visits use it from the HTTP
+      // cache from the first paint (see SP_BODY_FONT_POLICY below and docs/perf-lcp.md §7).
+      var idle = window.requestIdleCallback || function (cb) { return setTimeout(cb, 200); };
+      var later = function () {
+        if (window.SP_BODY_FONT_POLICY === 'swap-after-load') {
+          var f = document.getElementById('spFontsBody'); if (f) f.media = 'all'; return;
+        }
+        if (bodyFontActive) return;
+        Promise.all(['/fonts/dmsans-latin.woff2', '/fonts/dmsans-latin-ext.woff2'].map(function (u) {
+          return fetch(u, { mode: 'cors', credentials: 'same-origin', priority: 'low' }).then(function (r) { if (!r.ok) throw new Error(u); return r.arrayBuffer(); });
+        })).then(function () { try { localStorage.setItem('sp_fonts_cached', '1'); } catch (e) {} }).catch(function () {});
+      };
+      if (document.readyState === 'complete') idle(later, { timeout: 4000 });
+      else window.addEventListener('load', function () { idle(later, { timeout: 4000 }); });
+      var css = document.createElement('link');
+      css.rel = 'stylesheet'; css.id = 'leafletCss'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      css.onload = function () { window._spLeafletCssReady = true; };
+      document.head.appendChild(css);
+      var left = SCRIPTS.length;
+      SCRIPTS.forEach(function (src) {
+        var el = document.createElement('script');
+        el.src = src; el.async = false;
+        el.onload = el.onerror = function () { if (--left === 0) resolveReady(); };
+        document.head.appendChild(el);
+      });
+    }
+    window.spLoadDeferredAssets = start;
+    try {
+      new PerformanceObserver(function (l) {
+        if (l.getEntries().some(function (e) { return e.name === 'first-contentful-paint'; })) start();
+      }).observe({ type: 'paint', buffered: true });
+    } catch (e) {}
+    // Fallbacks only (no paint timing, hidden tab): 'load' can fire BEFORE the first paint
+    // when nothing is pending, so it waits another second.
+    window.addEventListener('load', function () { setTimeout(start, 1000); });
+    setTimeout(start, 3000);
+  })();
+  </script>
+  <noscript><link rel="stylesheet" href="/fonts/fonts.css"></noscript>
+  <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
   <!-- Google Translate (hidden widget, controlled by custom UI) -->
   <script type="text/javascript">
     function googleTranslateElementInit() {
@@ -78,7 +465,29 @@
       }, 'google_translate_element');
     }
   </script>
-  <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+  <script>
+    // perf/lcp: Google Translate is loaded on demand (language menu opened, a language
+    // chosen, or a saved non-English preference), never as a parser-blocking script.
+    // Resolves once the hidden .goog-te-combo select exists; rejects after 15 s.
+    window.spLoadTranslate = function () {
+      if (window._spTranslatePromise) return window._spTranslatePromise;
+      window._spTranslatePromise = new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+        s.async = true;
+        s.onerror = function () { window._spTranslatePromise = null; reject(new Error('translate script failed')); };
+        document.head.appendChild(s);
+        var t0 = Date.now();
+        (function poll() {
+          // The SIMPLE layout renders a gadget (no <select>); either means the widget is ready.
+          if (document.querySelector('.goog-te-combo, #google_translate_element .goog-te-gadget')) return resolve();
+          if (Date.now() - t0 > 15000) { window._spTranslatePromise = null; return reject(new Error('translate widget timeout')); }
+          setTimeout(poll, 100);
+        })();
+      });
+      return window._spTranslatePromise;
+    };
+  </script>
   <style>
     /* Completely hide Google's iframe banner bar */
     .goog-te-banner-frame { display:none !important; visibility:hidden !important; }
@@ -117,9 +526,6 @@
     }
     #translateBar button:hover { opacity:0.8; }
   </style>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js" defer></script>
   <style>
     :root {
       --bg: #08080d; --surface: #0f0f16; --card: #13131c; --border: #1c1c2a; --muted: #252535;
@@ -138,10 +544,10 @@
       .two-col-grid { grid-template-columns:1fr !important; }
       .submit-wrap, .profile-wrap { padding-left:16px !important; padding-right:16px !important; }
     }
-    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans','DM Sans Fallback', system-ui, sans-serif; min-height: 100vh; -webkit-font-smoothing: antialiased; }
     ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-track { background: var(--bg); } ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 3px; }
     ::selection { background: rgba(232,98,26,0.3); }
-    .font-display { font-family: 'Syne', system-ui, sans-serif; }
+    .font-display { font-family: 'Syne','Syne Fallback', system-ui, sans-serif; }
     .font-mono { font-family: 'JetBrains Mono', monospace; }
 
     /* Layout */
@@ -155,7 +561,7 @@
     .nav-inner { display:flex; align-items:center; justify-content:space-between; height:64px; }
     .logo { display:flex; align-items:center; gap:10px; text-decoration:none; cursor:pointer; }
     .logo-icon { width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,var(--orange),var(--purple)); display:flex; align-items:center; justify-content:center; font-size:14px; box-shadow:0 4px 16px rgba(232,98,26,0.3); }
-    .logo-text { font-family:'Syne',sans-serif; font-weight:700; font-size:1.15rem; color:var(--text); }
+    .logo-text { font-family:'Syne','Syne Fallback',sans-serif; font-weight:700; font-size:1.15rem; color:var(--text); }
     .logo-text span { background:linear-gradient(135deg,var(--orange-glow),var(--purple-glow)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
     .nav-links { display:flex; align-items:center; gap:4px; }
     .nav-link { padding:8px 14px; border-radius:8px; font-size:0.875rem; font-weight:500; color:var(--text-muted); text-decoration:none; cursor:pointer; border:none; background:none; transition:all 0.2s; }
@@ -208,7 +614,7 @@
       display:flex; flex-direction:column; align-items:center; justify-content:center;
       gap:3px; padding:6px 4px;
       background:none; border:none; cursor:pointer;
-      color:var(--text-dim); font-size:0.62rem; font-family:'DM Sans',sans-serif;
+      color:var(--text-dim); font-size:0.62rem; font-family:'DM Sans','DM Sans Fallback',sans-serif;
       transition:color 0.15s; min-height:48px;
     }
     .tab-btn .tab-icon { font-size:1.25rem; line-height:1; }
@@ -265,7 +671,7 @@
     .badge-muted { background:var(--muted); color:var(--text-muted); border:1px solid var(--border); }
 
     /* Inputs */
-    input, textarea, select { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; transition:all 0.2s; }
+    input, textarea, select { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 16px; color:var(--text); font-family:'DM Sans','DM Sans Fallback',sans-serif; font-size:0.9rem; outline:none; transition:all 0.2s; }
     input:focus, textarea:focus, select:focus { border-color:var(--orange); box-shadow:0 0 0 3px rgba(232,98,26,0.15); }
     input::placeholder, textarea::placeholder { color:var(--text-dim); }
     label { display:block; font-size:0.875rem; font-weight:500; color:var(--text-muted); margin-bottom:6px; }
@@ -291,7 +697,7 @@
     /* Location card */
     .loc-card { cursor:pointer; }
     .loc-card-inner { padding:18px 18px 14px; }
-    .loc-title { font-family:'Syne',sans-serif; font-weight:700; font-size:1.1rem; color:var(--text); line-height:1.3; margin:0 0 5px; transition:color 0.2s; }
+    .loc-title { font-family:'Syne','Syne Fallback',sans-serif; font-weight:700; font-size:1.1rem; color:var(--text); line-height:1.3; margin:0 0 5px; transition:color 0.2s; }
     .loc-card:hover .loc-title { color:var(--orange-glow); }
     .loc-meta { display:flex; align-items:center; gap:6px; font-size:0.82rem; color:var(--text-dim); margin-bottom:10px; }
     .loc-preview { font-size:0.9rem; color:var(--text-muted); line-height:1.65; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:14px; }
@@ -329,7 +735,18 @@
     .hero { min-height:90vh; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
     .hero-content { position:relative; z-index:10; text-align:center; max-width:900px; padding:0 20px; }
     .hero-eyebrow { display:inline-flex; align-items:center; gap:8px; padding:6px 16px; border-radius:999px; background:rgba(232,98,26,0.1); border:1px solid rgba(232,98,26,0.25); color:var(--orange-glow); font-size:0.85rem; font-family:'JetBrains Mono',monospace; margin-bottom:32px; }
-    .hero-title { font-family:'Syne',sans-serif; font-size:clamp(3rem,8vw,5.5rem); font-weight:800; line-height:0.95; letter-spacing:-0.02em; color:var(--text); margin-bottom:24px; }
+    /* Basemap fallback: darkened OSM raster, and the all-failed overlay */
+    .sp-osm-dark { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.6); }
+    .sp-map-error { position:absolute; inset:0; z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; background:rgba(10,10,15,0.72); pointer-events:none; }
+    .sp-map-error-card { pointer-events:auto; max-width:340px; text-align:center; background:var(--surface,#15151c); border:1px solid var(--border,#2a2a35); border-radius:14px; padding:18px 20px; color:var(--text,#eee); font-size:0.9rem; line-height:1.5; }
+    .sp-map-error-card p { color:var(--text-muted,#aaa); margin:8px 0 12px; }
+    .sp-map-error-icon { font-size:1.6rem; margin-bottom:6px; }
+    .sp-map-error-retry { background:var(--orange,#e8621a); color:#fff; border:none; border-radius:8px; padding:8px 16px; font-weight:700; cursor:pointer; }
+    /* perf: skip layout/paint of off-screen home sections and the footer until they near the
+       viewport (home page only; keeps the post-first-paint render task short; TBT). Sizes are placeholders
+       for scrollbar stability; 'auto' remembers the real size once rendered. */
+    #mainContent > section.hero ~ section:not(.stats-bar), body > footer { content-visibility: auto; contain-intrinsic-size: auto 600px; }
+    .hero-title { font-family:'Syne','Syne Fallback',sans-serif; font-size:clamp(3rem,8vw,5.5rem); font-weight:800; line-height:0.95; letter-spacing:-0.02em; color:var(--text); margin-bottom:24px; }
     .hero-desc { font-size:1.1rem; color:var(--text-muted); max-width:520px; margin:0 auto 40px; line-height:1.7; }
     .hero-btns { display:flex; flex-wrap:wrap; justify-content:center; gap:16px; margin-bottom:48px; }
     .hero-pills { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
@@ -353,7 +770,7 @@
     /* Section */
     .section { padding:80px 0; }
     .section-sm { padding:48px 0; }
-    .section-title { font-family:'Syne',sans-serif; font-weight:700; font-size:1.85rem; color:var(--text); margin-bottom:8px; }
+    .section-title { font-family:'Syne','Syne Fallback',sans-serif; font-weight:700; font-size:1.85rem; color:var(--text); margin-bottom:8px; }
     .section-sub { color:var(--text-muted); font-size:0.95rem; }
     .section-header { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:32px; }
 
@@ -376,7 +793,7 @@
     .how-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; }
     .how-icon { width:48px; height:48px; background:var(--muted); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; margin-bottom:16px; }
     .how-num { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--orange); margin-bottom:4px; }
-    .how-title { font-family:'Syne',sans-serif; font-weight:700; font-size:0.95rem; color:var(--text); margin-bottom:6px; }
+    .how-title { font-family:'Syne','Syne Fallback',sans-serif; font-weight:700; font-size:0.95rem; color:var(--text); margin-bottom:6px; }
     .how-desc { font-size:0.85rem; color:var(--text-muted); line-height:1.6; }
 
     /* Detail page */
@@ -422,7 +839,7 @@
     .comment-card:last-child { border-bottom:none; }
     .comment-avatar { width:30px; height:30px; border-radius:50%; background:linear-gradient(135deg,var(--orange),var(--purple)); display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; color:white; flex-shrink:0; }
     .comment-input-wrap { display:flex; gap:10px; align-items:flex-start; margin-top:16px; }
-    .comment-input { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 14px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.875rem; resize:none; outline:none; transition:border-color 0.2s; min-height:42px; }
+    .comment-input { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 14px; color:var(--text); font-family:'DM Sans','DM Sans Fallback',sans-serif; font-size:0.875rem; resize:none; outline:none; transition:border-color 0.2s; min-height:42px; }
     .comment-input:focus { border-color:var(--orange); }
     .comment-like-btn { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:0.78rem; padding:2px 6px; border-radius:4px; transition:all 0.15s; }
     .comment-like-btn:hover { color:var(--orange-glow); }
@@ -536,7 +953,7 @@
     .nearby-big-card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:12px; cursor:pointer; transition:all 0.2s; display:flex; gap:14px; align-items:flex-start; }
     .nearby-big-card:hover { border-color:var(--orange); transform:translateY(-1px); }
     .nearby-cat-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; flex-shrink:0; }
-    .locate-btn { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:16px; background:linear-gradient(135deg,var(--orange),#c45210); color:white; border:none; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.2s; box-shadow:0 4px 20px rgba(232,98,26,0.3); }
+    .locate-btn { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:16px; background:linear-gradient(135deg,var(--orange),#c45210); color:white; border:none; border-radius:14px; font-size:1rem; font-weight:700; cursor:pointer; font-family:'DM Sans','DM Sans Fallback',sans-serif; transition:all 0.2s; box-shadow:0 4px 20px rgba(232,98,26,0.3); }
     .locate-btn:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(232,98,26,0.4); }
     .locate-btn:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
     .pulse-dot { width:10px; height:10px; border-radius:50%; background:#4ade80; display:inline-block; animation:pulse 1.5s infinite; }
@@ -674,7 +1091,7 @@
       justify-content: center;
       gap: 8px;
       border-radius: 10px;
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'DM Sans','DM Sans Fallback', sans-serif;
       font-weight: 600;
       font-size: 1rem;
       padding: 12px 24px;
@@ -726,7 +1143,7 @@
               </div>
     */
     .sp-section-title h2 {
-      font-family: 'Syne', sans-serif;
+      font-family: 'Syne','Syne Fallback', sans-serif;
       font-weight: 700;
       font-size: 1.6rem;
       color: var(--text);
@@ -891,7 +1308,7 @@
 
     /* Title */
     .pin-hero__title {
-      font-family: 'Syne', sans-serif;
+      font-family: 'Syne','Syne Fallback', sans-serif;
       font-weight: 800;
       font-size: clamp(1.75rem, 4vw, 2.6rem);
       line-height: 1.1;
@@ -1080,7 +1497,7 @@
       margin-top: 1px;
     }
     .sp-explore-card-name {
-      font-family: 'Syne', sans-serif;
+      font-family: 'Syne','Syne Fallback', sans-serif;
       font-weight: 700;
       font-size: 0.975rem;
       color: var(--text);
@@ -1176,7 +1593,7 @@
             </div>
           </div>
           <button class="nav-btn" onclick="showPage('submit')">📍 <span data-t="nav.submit">Pin It</span></button>
-          <button class="hamburger" onclick="toggleMobile()" id="hamburger">☰</button>
+          <button class="hamburger" onclick="toggleMobile()" id="hamburger" aria-label="Menu" aria-controls="mobileMenu">☰</button>
         </div>
       </div>
     </div>
@@ -1218,14 +1635,38 @@
   </div>
   <!-- Hidden Google Translate widget -->
   <div id="google_translate_element" style="display:none;"></div>
-  <main class="main" id="mainContent"></main>
+  <!-- min-height reserves space so the footer is not shoved down (CLS) when
+       the SPA renders into #mainContent after load. -->
+  <main class="main" id="mainContent" style="min-height:100vh;"><!-- SP-STATIC-HERO:BEGIN -->
+<!-- Hero -->
+  <section class="hero">
+    <div class="dot-grid" style="position:absolute;inset:0;"></div>
+    <div class="orb orb1"></div><div class="orb orb2"></div>
+    <div style="position:absolute;inset:0;background:radial-gradient(ellipse 90% 55% at 50% 65%,rgba(232,98,26,0.07),transparent);pointer-events:none;"></div>
+    <div class="hero-content">
+      <div class="hero-eyebrow">🌍 Worldwide · <span id="heroStatPins">99</span> pins active</div>
+      <h1 class="hero-title font-display">Every mystery has a place.</h1>
+      <p class="hero-desc">Real locations. Verified facts. Unexplained stories. StrangePin is the world's first mystery story map — every Pin tells a story.</p>
+      <div class="hero-btns">
+        <button class="btn-primary" style="font-size:1.05rem;padding:15px 28px;" onclick="showPage('map')">📍 Explore the Map</button>
+        <button class="btn-secondary" style="font-size:1.05rem;padding:15px 22px;" onclick="requestLocation();showPage('nearby')">📡 Near Me</button>
+      </div>
+      <div class="hero-pills">
+        <span class="hero-pill badge badge-purple" onclick="mapFilter='Haunted';showPage('map')" style="cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">👻 Haunted</span><span class="hero-pill badge badge-teal" onclick="mapFilter='UFO';showPage('map')" style="cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">🛸 UFO</span><span class="hero-pill badge badge-teal" onclick="mapFilter='Energy Spot';showPage('map')" style="cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">⚡ Energy Spot</span><span class="hero-pill badge badge-amber" onclick="mapFilter='Urban Legend';showPage('map')" style="cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">📖 Urban Legend</span><span class="hero-pill badge badge-amber" onclick="mapFilter='Abandoned Place';showPage('map')" style="cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">🏚️ Abandoned</span><span class="hero-pill badge badge-purple" onclick="mapFilter='Strange Experience';showPage('map')" style="cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">🌀 Strange</span>
+      </div>
+    </div>
+  </section>
+<!-- SP-STATIC-HERO:END --></main>
+  <!-- perf: the static hero above is the home page's first paint (LCP). It is replaced by
+       renderPage() moments later; on deep links (#map, #detail/...) it is removed at once. -->
+  <script>(function () { var h = location.hash.replace(/^#/, ''); if (h && h !== 'home') document.getElementById('mainContent').innerHTML = ''; })();</script>
   <footer>
     <div class="container">
       <div class="footer-grid">
         <div>
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
             <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;font-size:13px;">📍</div>
-            <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;">Strange<span class="text-gradient">Pin</span></span>
+            <span style="font-family:'Syne','Syne Fallback',sans-serif;font-weight:700;font-size:1.05rem;">Strange<span class="text-gradient">Pin</span></span>
           </div>
           <p style="font-size:0.85rem;color:var(--text-muted);font-style:italic;margin-bottom:12px;">"Pin the unexplained."</p>
           <div class="social-btns">
@@ -1257,6 +1698,316 @@
   </footer>
 </div>
 <script>
+// ── SECURITY HELPERS ─────────────────────────────────────────────────────────
+// Every value that originates from users (Firestore docs, Firebase Auth profile,
+// form inputs, error messages) MUST pass through these helpers before it is
+// interpolated into an HTML string that is assigned to innerHTML.
+
+/** Escape a value for safe use in HTML text and double/single-quoted attributes. */
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value).replace(/[&<>"'`]/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;'
+  }[ch]));
+}
+
+/** Return the URL (normalised) only if it is a valid https: URL, otherwise ''. */
+function safeHttpsUrl(value) {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  try {
+    const u = new URL(value.trim());
+    return u.protocol === 'https:' ? u.href : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+/** First character of a display name, upper-cased and HTML-escaped. */
+function avatarInitial(name) {
+  const s = (typeof name === 'string' && name.trim()) ? name.trim() : '?';
+  return escapeHtml(Array.from(s)[0].toUpperCase());
+}
+
+/** Firestore document IDs used inside inline handlers must be plain tokens. */
+function safeDocId(value) {
+  const s = String(value === null || value === undefined ? '' : value);
+  return /^[A-Za-z0-9_-]{1,128}$/.test(s) ? s : '';
+}
+
+/**
+ * Avatar markup: an <img> for a valid https photo URL, otherwise the escaped
+ * initial (wrapped in a span when fallbackStyle is given). The onerror handler
+ * is a fixed function call and never contains user data.
+ */
+function avatarHtml(photoUrl, name, fallbackStyle) {
+  const url = safeHttpsUrl(photoUrl);
+  const initial = avatarInitial(name);
+  const fallback = fallbackStyle ? `<span style="${fallbackStyle}">${initial}</span>` : initial;
+  if (!url) return fallback;
+  return `<img src="${escapeHtml(url)}" alt="" referrerpolicy="no-referrer" style="width:100%;height:100%;object-fit:cover;"`
+       + ` data-initial="${initial}" data-fallback-style="${escapeHtml(fallbackStyle || '')}" onerror="spAvatarFallback(this)" />`;
+}
+
+/** onerror handler for avatar images: replace the image with the initial. */
+function spAvatarFallback(img) {
+  const parent = img && img.parentElement;
+  if (!parent) return;
+  const span = document.createElement('span');
+  const style = img.getAttribute('data-fallback-style');
+  if (style) span.setAttribute('style', style);
+  span.textContent = img.getAttribute('data-initial') || '?';
+  parent.replaceChildren(span);
+}
+
+// ── NICKNAME HELPERS ─────────────────────────────────────────────────────────
+// Public names are nicknames chosen by the user (never the Google name). The same
+// rules are enforced server-side in firestore.rules (validNickname) and in
+// scripts/lib/nickname.js; keep the three in sync.
+
+const SP_NICK_RESERVED_PART  = /(strangepin|admin|moderator|official|support|staff|firebase)/;
+const SP_NICK_RESERVED_EXACT = /^(mod|mods|team|system|root|owner|help|security|google|anonymous|null|undefined)$/;
+
+/** Normalised comparison key: lower case, only a-z0-9, digit look-alikes mapped. */
+function spNicknameKey(nick, one) {
+  return String(nick || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    .replace(/0/g, 'o').replace(/3/g, 'e').replace(/4/g, 'a')
+    .replace(/5/g, 's').replace(/7/g, 't').replace(/1/g, one || 'i');
+}
+
+/** '' if the nickname is acceptable, otherwise a short user-facing reason. */
+function spNicknameProblem(nick) {
+  if (typeof nick !== 'string') return 'Please enter a nickname.';
+  if (nick.length < 3 || nick.length > 24) return 'Nicknames must be 3 to 24 characters long.';
+  if (!/^[A-Za-z0-9]([A-Za-z0-9]|[ ._-][A-Za-z0-9])*$/.test(nick))
+    return 'Use letters and numbers, with single spaces, dots, dashes or underscores between them.';
+  for (const one of ['i', 'l']) {
+    const k = spNicknameKey(nick, one);
+    if (SP_NICK_RESERVED_PART.test(k) || SP_NICK_RESERVED_EXACT.test(k))
+      return 'That nickname is reserved. Please choose another one.';
+  }
+  return '';
+}
+
+/** Default nickname derived from the uid (FNV-1a), e.g. "Explorer-K3F9". Not personal data. */
+function spDefaultNickname(uid) {
+  let h = 0x811c9dc5;
+  for (const ch of String(uid || '')) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
+  return 'Explorer-' + h.toString(36).toUpperCase().padStart(4, '0').slice(-4);
+}
+
+// Uploads go to Cloudinary only if they are a JPG, PNG or WEBP image of at most 10 MB.
+const SP_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const SP_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+const SP_CLOUDINARY_PREFIX = 'https://res.cloudinary.com/dz9p5t4sj/image/upload/';
+/** '' if the (optional) photo may be uploaded, otherwise a user-facing reason. */
+function spImageProblem(file) {
+  if (!file) return '';
+  if (!SP_IMAGE_TYPES.includes(file.type)) return 'Photos must be JPG, PNG or WEBP images.';
+  if (!(file.size > 0) || file.size > SP_IMAGE_MAX_BYTES) return 'Photos must be smaller than 10 MB.';
+  return '';
+}
+
+/** Map a Firebase error to a calm, user-facing sentence. */
+function spFriendlyError(e, action) {
+  const code = (e && e.code) || '';
+  if (code === 'permission-denied') return `We couldn't ${action} right now. Please sign in again or try later.`;
+  if (code === 'unavailable' || code === 'deadline-exceeded' || code === 'timeout') return `We couldn't ${action}: the connection seems to be offline. Please try again.`;
+  return `We couldn't ${action}. Please try again in a moment.`;
+}
+
+/** Small non-blocking notice at the bottom of the screen (text only, never HTML). */
+function spToast(message, kind) {
+  if (typeof document === 'undefined') return;
+  const el = document.createElement('div');
+  el.className = 'sp-toast';
+  el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+  el.textContent = String(message || '');
+  el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:90vw;z-index:9999;padding:10px 18px;border-radius:10px;font-size:.85rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);'
+    + (kind === 'error' ? 'background:#3b1219;color:#fecaca;border:1px solid #7f1d1d;' : 'background:#0f2a1f;color:#bbf7d0;border:1px solid #166534;');
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
+/** Reject if the promise does not settle within ms (used for UI fallbacks). */
+function spWithTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), ms))]);
+}
+
+// ── TEXT HELPERS ─────────────────────────────────────────────────────────────
+
+/** Shorten text to at most `max` characters, cutting on a word boundary, adding "…". */
+function truncateAtWord(text, max) {
+  const t = String(text || '').trim();
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max + 1);
+  let idx = cut.lastIndexOf(' ');
+  if (idx < max * 0.6) idx = max; // no sensible space: hard cut
+  return cut.slice(0, idx).replace(/[\s,;:.\-—–]+$/, '') + '…';
+}
+
+/**
+ * Display preview for a pin. Some stored shortPreview values were cut at
+ * exactly 200 characters mid-word; when fullStory continues that text we
+ * re-derive the preview from fullStory. Stored data is never modified.
+ */
+function previewText(loc, max) {
+  const limit = max || 200;
+  const sp = (loc && loc.shortPreview) || '';
+  const full = (loc && loc.fullStory) || '';
+  const source = (full.length > sp.length && full.startsWith(sp)) ? full : (sp || full);
+  return truncateAtWord(source, limit);
+}
+
+// ── BASEMAP CONFIG ───────────────────────────────────────────────────────────
+// Owner decision (docs/map-providers.md): OpenFreeMap "dark" is the primary basemap.
+// Fallback chain, tried in order until one works (each step is detected, not assumed):
+//   1. 'openfreemap-dark'  OpenFreeMap vector style via MapLibre GL (no key, no account).
+//                          Needs WebGL, the MapLibre libraries (unpkg) and tiles.openfreemap.org.
+//   2. 'carto-key'         CARTO Dark Matter raster, ONLY if SP_CARTO_KEY is set (owner-requested key).
+//   3. 'osm-dark'          OpenStreetMap Standard raster from tile.openstreetmap.org, darkened with a
+//                          CSS filter. Allowed for normal interactive viewing on public sites under the
+//                          OSMF Tile Usage Policy (visible attribution, browser Referer, no prefetch or
+//                          offline caching: sw.js never caches cross-origin tiles). Best-effort, no SLA.
+//   4. none                a friendly English overlay on the map ("Map tiles are unavailable"); pins stay
+//                          clickable in the list views.
+// The keyless CARTO URL ('carto-legacy') was removed from the chain: CARTO serves
+// "API KEY REQUIRED" images for it, which load successfully and cannot be detected as a failure.
+const SP_BASEMAP   = 'openfreemap-dark';
+const SP_CARTO_KEY = '';
+const SP_BASEMAP_TIMEOUT_MS = 10000;
+const SP_MAPLIBRE = {
+  js:     { src: 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js',
+            integrity: 'sha384-5+cfbwT0iiub6VsQAdn6yz16nr6sDiQoHx6tm4O8OVYXHYOxcffFmCJBL0dgdvGp' },
+  css:    { href: 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css',
+            integrity: 'sha384-uTttxo/aOKbdE5RlD/SPzSDoDmNvGlUYPjONi2MN/b7c9HPSvW07OIuyP7uL6jxK' },
+  plugin: { src: 'https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js',
+            integrity: 'sha384-tXYNKOHx4T02jMP7YYCtBxPIv1B5gaA5mcVPBzqMp6d7VzWzxJgI2aWF/nJLrQdS' },
+};
+
+/** Fallback order starting at the configured basemap. On localhost only, ?basemap=<id> picks the start (testing). */
+function spBasemapChain() {
+  const chain = ['openfreemap-dark', 'carto-key', 'osm-dark'];
+  let start = SP_BASEMAP;
+  if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+    const q = new URLSearchParams(window.location.search).get('basemap');
+    if (chain.includes(q)) start = q;
+  }
+  const i = Math.max(0, chain.indexOf(start));
+  return chain.slice(i).filter(id => id !== 'carto-key' || SP_CARTO_KEY);
+}
+/** Back-compat helper (first basemap that would be tried). */
+function spBasemapChoice() { return spBasemapChain()[0] || 'none'; }
+
+function spHasWebGL() {
+  try {
+    const c = document.createElement('canvas');
+    return !!(window.WebGLRenderingContext && (c.getContext('webgl2') || c.getContext('webgl')));
+  } catch (e) { return false; }
+}
+
+const _spAssetPromises = {};
+function spLoadAsset(kind, attrs) {
+  const key = attrs.src || attrs.href;
+  if (_spAssetPromises[key]) return _spAssetPromises[key];
+  _spAssetPromises[key] = new Promise((resolve, reject) => {
+    const el = document.createElement(kind === 'css' ? 'link' : 'script');
+    if (kind === 'css') { el.rel = 'stylesheet'; el.href = attrs.href; } else { el.src = attrs.src; }
+    el.integrity = attrs.integrity;
+    el.crossOrigin = 'anonymous';
+    el.onload = () => resolve();
+    el.onerror = () => reject(new Error('failed to load ' + key));
+    document.head.appendChild(el);
+  });
+  return _spAssetPromises[key];
+}
+
+const SP_OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+
+/** Vector basemap: resolves when the style has loaded, rejects on any failure or timeout. */
+async function spTryOpenFreeMap(map) {
+  if (!spHasWebGL()) throw new Error('WebGL unavailable');
+  await Promise.all([spLoadAsset('css', SP_MAPLIBRE.css), spLoadAsset('js', SP_MAPLIBRE.js)]);
+  await spLoadAsset('js', SP_MAPLIBRE.plugin);
+  const layer = L.maplibreGL({
+    style: 'https://tiles.openfreemap.org/styles/dark',
+    attribution: '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> '
+      + '&copy; <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> ' + SP_OSM_ATTR,
+  });
+  try {
+    layer.addTo(map);
+    const gl = layer.getMaplibreMap && layer.getMaplibreMap();
+    if (!gl) throw new Error('MapLibre map not created');
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('style load timeout')), SP_BASEMAP_TIMEOUT_MS);
+      if (gl.isStyleLoaded && gl.isStyleLoaded()) { clearTimeout(t); return resolve(); }
+      gl.once('load', () => { clearTimeout(t); resolve(); });
+      gl.on('error', (e) => {
+        // Style/source failures before 'load' are fatal; later tile errors are not.
+        if (!gl.isStyleLoaded || !gl.isStyleLoaded()) { clearTimeout(t); reject((e && e.error) || new Error('style error')); }
+      });
+    });
+    return layer;
+  } catch (e) {
+    try { map.removeLayer(layer); } catch (_) {}
+    throw e;
+  }
+}
+
+/** Raster basemap: resolves after the first tile loads; rejects if only errors arrive or on timeout. */
+function spTryRaster(map, url, opts) {
+  return new Promise((resolve, reject) => {
+    const layer = L.tileLayer(url, opts);
+    let errors = 0, done = false;
+    const finish = (ok, err) => {
+      if (done) return; done = true; clearTimeout(t);
+      if (ok) resolve(layer); else { try { map.removeLayer(layer); } catch (_) {} reject(err); }
+    };
+    const t = setTimeout(() => finish(false, new Error('tile timeout')), SP_BASEMAP_TIMEOUT_MS);
+    layer.on('tileload', () => finish(true));
+    layer.on('tileerror', () => { if (++errors >= 4) finish(false, new Error('tile errors')); });
+    layer.addTo(map);
+  });
+}
+
+function spShowMapError(map) {
+  const el = map.getContainer();
+  if (el.querySelector('.sp-map-error')) return;
+  const box = document.createElement('div');
+  box.className = 'sp-map-error';
+  box.setAttribute('role', 'alert');
+  box.innerHTML = '<div class="sp-map-error-card"><div class="sp-map-error-icon" aria-hidden="true">🗺️</div>'
+    + '<strong>Map tiles are unavailable right now.</strong>'
+    + '<p>The map background could not be loaded (network, browser or provider issue). '
+    + 'Pins are still listed on the Home and Nearby pages. Please try again later.</p>'
+    + '<button type="button" class="sp-map-error-retry">Try again</button></div>';
+  box.querySelector('button').addEventListener('click', () => location.reload());
+  el.appendChild(box);
+}
+
+/** Add the first working basemap in the fallback chain. Resolves to its id, or 'none'. */
+async function addBasemap(map) {
+  for (const id of spBasemapChain()) {
+    try {
+      if (id === 'openfreemap-dark') {
+        await spTryOpenFreeMap(map);
+      } else if (id === 'carto-key') {
+        await spTryRaster(map, 'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(SP_CARTO_KEY), {
+          attribution: SP_OSM_ATTR + ', &copy; <a href="https://carto.com/attributions/" target="_blank" rel="noopener">CARTO</a>', maxZoom: 19 });
+      } else if (id === 'osm-dark') {
+        await spTryRaster(map, 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: SP_OSM_ATTR, maxZoom: 19, className: 'sp-osm-dark' });
+      }
+      map.getContainer().dataset.basemap = id;
+      return id;
+    } catch (e) {
+      console.warn('StrangePin: basemap "' + id + '" unavailable, trying the next one.', e && e.message ? e.message : e);
+    }
+  }
+  map.getContainer().dataset.basemap = 'none';
+  spShowMapError(map);
+  return 'none';
+}
+
 // ── DATA ──────────────────────────────────────────────────────────────────────
 const LOCATIONS = [
   {
@@ -1283,10 +2034,8 @@ const LOCATIONS = [
     connections:{relatedPinIds:["008","017","003"],relatedTopics:["Cold War secrecy","UFO phenomena","Black budget programmes"],relatedPeople:["Bob Lazar","Annie Jacobsen"],relatedEvents:["Roswell Incident (1947)","CIA Declassification (2013)"]},
     media:{heroImageUrl:"", gallery:[]},
     stories:[], dateAdded:"2026-06-04",
-    // ── SP-001 Schema Extension (Sprint 1) ── stub
-    difficulty:null, tags:[], era:"", timeline:[], sources:[],
-    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
-    media:{ heroImageUrl:"", gallery:[] },
+    // SP-001 schema fields are authored above; no placeholder stub here
+    // (a stub after them would override the authored values).
     pinPos:{left:"50%",top:"50%"}
   },
   {
@@ -1313,10 +2062,8 @@ const LOCATIONS = [
     connections:{relatedPinIds:["007","009","016"],relatedTopics:["Japanese folklore","Magnetic anomalies","Forest mysteries"],relatedPeople:["Seicho Matsumoto"],relatedEvents:["Publication of Nami no To (1960)"]},
     media:{heroImageUrl:"", gallery:[]},
     stories:[], dateAdded:"2026-06-04",
-    // ── SP-001 Schema Extension (Sprint 1) ── stub
-    difficulty:null, tags:[], era:"", timeline:[], sources:[],
-    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
-    media:{ heroImageUrl:"", gallery:[] },
+    // SP-001 schema fields are authored above; no placeholder stub here
+    // (a stub after them would override the authored values).
     pinPos:{left:"50%",top:"50%"}
   },
   {
@@ -1343,10 +2090,8 @@ const LOCATIONS = [
     connections:{relatedPinIds:["001","005","008"],relatedTopics:["Maritime disappearances","Aviation mysteries","Disputed phenomena"],relatedPeople:["Vincent Gaddis","Charles Taylor"],relatedEvents:["Loss of USS Cyclops (1918)","Flight 19 Disappearance (1945)"]},
     media:{heroImageUrl:"", gallery:[]},
     stories:[], dateAdded:"2026-06-04",
-    // ── SP-001 Schema Extension (Sprint 1) ── stub
-    difficulty:null, tags:[], era:"", timeline:[], sources:[],
-    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
-    media:{ heroImageUrl:"", gallery:[] },
+    // SP-001 schema fields are authored above; no placeholder stub here
+    // (a stub after them would override the authored values).
     pinPos:{left:"50%",top:"50%"}
   },
   {
@@ -1373,10 +2118,8 @@ const LOCATIONS = [
     connections:{relatedPinIds:["005","006","010"],relatedTopics:["Megalithic architecture","Archaeoastronomy","Ancient engineering"],relatedPeople:["Mike Parker Pearson"],relatedEvents:["Bronze Age Britain","UNESCO designation (1986)"]},
     media:{heroImageUrl:"", gallery:[]},
     stories:[], dateAdded:"2026-06-04",
-    // ── SP-001 Schema Extension (Sprint 1) ── stub
-    difficulty:null, tags:[], era:"", timeline:[], sources:[],
-    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
-    media:{ heroImageUrl:"", gallery:[] },
+    // SP-001 schema fields are authored above; no placeholder stub here
+    // (a stub after them would override the authored values).
     pinPos:{left:"50%",top:"50%"}
   },
   {
@@ -1403,10 +2146,8 @@ const LOCATIONS = [
     connections:{relatedPinIds:["004","006","010"],relatedTopics:["Ancient geoglyphs","Pre-Columbian cultures","Archaeoastronomy"],relatedPeople:["Paul Kosok","Maria Reiche"],relatedEvents:["UNESCO designation (1994)"]},
     media:{heroImageUrl:"", gallery:[]},
     stories:[], dateAdded:"2026-06-04",
-    // ── SP-001 Schema Extension (Sprint 1) ── stub
-    difficulty:null, tags:[], era:"", timeline:[], sources:[],
-    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
-    media:{ heroImageUrl:"", gallery:[] },
+    // SP-001 schema fields are authored above; no placeholder stub here
+    // (a stub after them would override the authored values).
     pinPos:{left:"50%",top:"50%"}
   },
   {
@@ -1433,10 +2174,8 @@ const LOCATIONS = [
     connections:{relatedPinIds:["004","005","010"],relatedTopics:["Civilisation collapse","Megalithic sculpture","Pacific prehistory"],relatedPeople:["Jacob Roggeveen","Jared Diamond"],relatedEvents:["First European contact (1722)","UNESCO designation (1995)"]},
     media:{heroImageUrl:"", gallery:[]},
     stories:[], dateAdded:"2026-06-04",
-    // ── SP-001 Schema Extension (Sprint 1) ── stub
-    difficulty:null, tags:[], era:"", timeline:[], sources:[],
-    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
-    media:{ heroImageUrl:"", gallery:[] },
+    // SP-001 schema fields are authored above; no placeholder stub here
+    // (a stub after them would override the authored values).
     pinPos:{left:"50%",top:"50%"}
   },
   {
@@ -1463,10 +2202,8 @@ const LOCATIONS = [
     connections:{relatedPinIds:["002","009","016"],relatedTopics:["Haunted forests","Electronic anomalies","Eastern European folklore"],relatedPeople:["Alexandru Sift"],relatedEvents:["Sift photograph (1968)"]},
     media:{heroImageUrl:"", gallery:[]},
     stories:[], dateAdded:"2026-06-04",
-    // ── SP-001 Schema Extension (Sprint 1) ── stub
-    difficulty:null, tags:[], era:"", timeline:[], sources:[],
-    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
-    media:{ heroImageUrl:"", gallery:[] },
+    // SP-001 schema fields are authored above; no placeholder stub here
+    // (a stub after them would override the authored values).
     pinPos:{left:"50%",top:"50%"}
   },
   {
@@ -1493,10 +2230,8 @@ const LOCATIONS = [
     connections:{relatedPinIds:["001","017","014"],relatedTopics:["Magnetic anomalies","Radio interference","Desert mysteries"],relatedPeople:["Harry de la Pena"],relatedEvents:["Athena Rocket Crash (1970)"]},
     media:{heroImageUrl:"", gallery:[]},
     stories:[], dateAdded:"2026-06-04",
-    // ── SP-001 Schema Extension (Sprint 1) ── stub
-    difficulty:null, tags:[], era:"", timeline:[], sources:[],
-    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
-    media:{ heroImageUrl:"", gallery:[] },
+    // SP-001 schema fields are authored above; no placeholder stub here
+    // (a stub after them would override the authored values).
     pinPos:{left:"50%",top:"50%"}
   },
   {
@@ -1523,10 +2258,8 @@ const LOCATIONS = [
     connections:{relatedPinIds:["018","007","016"],relatedTopics:["Nuclear disasters","Soviet history","Abandoned places"],relatedPeople:["Svetlana Alexievich","Valery Legasov"],relatedEvents:["Soviet nuclear programme","New Safe Confinement (2016)"]},
     media:{heroImageUrl:"", gallery:[]},
     stories:[], dateAdded:"2026-06-04",
-    // ── SP-001 Schema Extension (Sprint 1) ── stub
-    difficulty:null, tags:[], era:"", timeline:[], sources:[],
-    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
-    media:{ heroImageUrl:"", gallery:[] },
+    // SP-001 schema fields are authored above; no placeholder stub here
+    // (a stub after them would override the authored values).
     pinPos:{left:"50%",top:"50%"}
   },
   {
@@ -1552,19 +2285,9 @@ const LOCATIONS = [
     sources:[{type:"Academic Paper",title:"ScanPyramids — Muon Tomography Results (Nature, 2017)",url:"https://www.nature.com/articles/nature24647"},{type:"Government Document",title:"UNESCO — Memphis and its Necropolis",url:"https://whc.unesco.org/en/list/86/"}],
     connections:{relatedPinIds:["004","005","006"],relatedTopics:["Ancient engineering","Egyptian archaeology","Archaeoastronomy"],relatedPeople:["Pharaoh Khufu","Flinders Petrie"],relatedEvents:["ScanPyramids discovery (2017)"]},
     media:{heroImageUrl:"", gallery:[]},
-        // ── SP-001 Schema Extension (Sprint 1) ──
-    difficulty:"Deep",
-    tags:["Egypt","pyramid","ancient engineering","Giza","pharaoh","archaeology","UNESCO"],
-    era:"2560 BCE – present",
-    timeline:[{date:"~2560 BCE",event:"Construction begins under Pharaoh Khufu."},{date:"~2540 BCE",event:"Construction complete. Tallest human structure for 3,800 years."},{date:"820 CE",event:"Caliph al-Ma'mun tunnels into the pyramid."},{date:"2017",event:"Thermal imaging reveals a previously unknown void above the Grand Gallery."}],
-    sources:[{type:"Academic Paper",title:"ScanPyramids — Muon Tomography Results (Nature, 2017)",url:"https://www.nature.com/articles/nature24647"},{type:"Government Document",title:"UNESCO — Memphis and its Necropolis",url:"https://whc.unesco.org/en/list/86/"}],
-    connections:{relatedPinIds:["004","005","006"],relatedTopics:["Ancient engineering","Egyptian archaeology","Archaeoastronomy"],relatedPeople:["Pharaoh Khufu","Flinders Petrie"],relatedEvents:["ScanPyramids discovery (2017)"]},
-    media:{heroImageUrl:"", gallery:[]},
     stories:[], dateAdded:"2026-06-04",
-    // ── SP-001 Schema Extension (Sprint 1) ── stub
-    difficulty:null, tags:[], era:"", timeline:[], sources:[],
-    connections:{ relatedPinIds:[], relatedTopics:[], relatedPeople:[], relatedEvents:[] },
-    media:{ heroImageUrl:"", gallery:[] },
+    // SP-001 schema fields are authored above; no placeholder stub here
+    // (a stub after them would override the authored values).
     pinPos:{left:"50%",top:"50%"}
   },
   {
@@ -3590,6 +4313,8 @@ let mapSearch = '';
 let submitCategory = '';
 let submitIntensity = 5;
 let submitted = false;
+let lastSubmission = null; // { id, tracked, photoNote } after a successful submission
+const SP_SUBMIT_COOLDOWN_MS = 60 * 1000;
 let showTranslations = {};
 let lbUnsubscribe = null;
 let savedPins = JSON.parse(localStorage.getItem('sp_saved') || '[]');
@@ -3663,7 +4388,9 @@ function translatePage(langCode, flag, name) {
   if (document.querySelector('.goog-te-combo')) {
     tryTranslate();
   } else {
-    setTimeout(tryTranslate, 800);
+    // Cookie is already set, so a reload (the old fallback) still translates via the
+    // saved-preference path in initApp if the widget cannot be loaded in time.
+    window.spLoadTranslate().then(tryTranslate, () => location.reload());
   }
 }
 
@@ -3705,7 +4432,10 @@ function setLang(code, flag, name) {
   const codeMap = { 'zh_TW':'zh-TW', 'zh_CN':'zh-CN', 'en':'en', 'ja':'ja', 'ko':'ko', 'es':'es' };
   translatePage(codeMap[code] || code, flag, name);
 }
-function toggleLang() { document.getElementById('langDropdown').classList.toggle('open'); }
+function toggleLang() {
+  document.getElementById('langDropdown').classList.toggle('open');
+  if (window.spLoadTranslate) window.spLoadTranslate().catch(() => {}); // warm up on interaction
+}
 document.addEventListener('click', e => { if (!e.target.closest('#langBtn') && !e.target.closest('#langDropdown')) document.getElementById('langDropdown').classList.remove('open'); });
 function t(key) { return (LANGS[currentLang] || LANGS.en)[key] || key; }
 
@@ -3721,7 +4451,7 @@ function updateSEO(page, data) {
     desc  = 'Explore 99+ mysterious locations on an interactive world map. Filter by haunted places, UFO sightings, ancient mysteries, energy spots, and more.';
   } else if (page === 'detail' && data) {
     title = `${data.nameEn || data.name} — ${data.category} Mystery | StrangePin`;
-    desc  = (data.shortPreview || data.desc || baseDesc).substring(0, 160);
+    desc  = (data.shortPreview || data.fullStory) ? previewText(data, 160) : truncateAtWord(data.desc || baseDesc, 160);
   } else if (page === 'submit') {
     title = 'Pin a Mystery Location | StrangePin';
     desc  = 'Submit a strange or unexplained location to the StrangePin world map. Share your experience in any language.';
@@ -3744,6 +4474,15 @@ function updateSEO(page, data) {
   if (twTitle) twTitle.setAttribute('content', title);
   const twDesc  = document.querySelector('meta[name="twitter:description"]');
   if (twDesc)  twDesc.setAttribute('content', desc);
+  // SEO: the crawlable static page /pins/<slug>/ (built by scripts/build-pins.js on Netlify)
+  // is canonical for a pin; everything else in the SPA is canonical to the homepage.
+  // A #detail/NNN URL cannot be redirected server-side (the fragment never reaches the
+  // server); users keep the in-app view, crawlers that run JS see this canonical.
+  const canon = document.querySelector('link[rel="canonical"]');
+  if (canon) {
+    const slug = page === 'detail' && data && /^[a-z0-9-]+$/.test(data.slug || '') ? data.slug : '';
+    canon.setAttribute('href', slug ? 'https://strangepin.com/pins/' + slug + '/' : 'https://strangepin.com/');
+  }
 }
 
 function showPage(page, data) {
@@ -3766,16 +4505,45 @@ function showPage(page, data) {
 }
 
 // Handle browser back / forward buttons
+// ── HASH ROUTES ──────────────────────────────────────────────────────────────
+// Supported deep links: #home, #map, #map?q=term, #submit, #nearby,
+// #leaderboard, #about, #profile, #detail/<id> (e.g. #detail/001) and
+// #detail/<slug> (e.g. #detail/area-51). Unknown routes fall back to home.
+const SP_ROUTE_PAGES = ['home','map','submit','detail','leaderboard','about','profile','nearby'];
+
+function parseHashRoute(hash) {
+  const raw = String(hash || '').replace(/^#\/?/, '');
+  const [pathPart, queryPart] = raw.split('?');
+  const [pageRaw, idRaw] = pathPart.split('/');
+  const page = (pageRaw || 'home').toLowerCase();
+  if (!SP_ROUTE_PAGES.includes(page)) return { page: 'home', detail: null, query: '' };
+  let query = '';
+  if (queryPart) {
+    try { query = new URLSearchParams(queryPart).get('q') || ''; } catch (e) { query = ''; }
+  }
+  if (page === 'detail') {
+    let key = '';
+    try { key = decodeURIComponent(idRaw || ''); } catch (e) { key = ''; }
+    const detail = LOCATIONS.find(l => l.id === key || l.slug === key) || null;
+    return detail ? { page: 'detail', detail, query: '' } : { page: 'home', detail: null, query: '' };
+  }
+  return { page, detail: null, query };
+}
+
 window.addEventListener('popstate', function(e) {
-  if (e.state) {
+  if (!e.state) {
+    // Manually edited hash or the initial entry: derive the page from the URL.
+    const route = parseHashRoute(window.location.hash);
+    currentPage = route.page;
+    if (route.detail) currentDetail = route.detail;
+    if (route.query) mapSearch = route.query;
+    if (typeof updateSEO === 'function') updateSEO(currentPage, currentDetail);
+  } else {
     const { page, detailId } = e.state;
     currentPage = page || 'home';
     if (detailId) {
       currentDetail = LOCATIONS.find(l => l.id === detailId) || currentDetail;
     }
-  } else {
-    // No state = went back to the very beginning
-    currentPage = 'home';
   }
   document.querySelectorAll('.nav-link, .mobile-nav-link').forEach(el => {
     el.classList.toggle('active', el.dataset.page === currentPage);
@@ -3796,7 +4564,8 @@ async function loadHomeStats() {
   try {
     if (!window._db) return;
     const [usersSnap, pinsSnap] = await Promise.all([
-      window._db.collection('users').get(),
+      // publicProfiles is the world-readable mirror; users/{uid} is private (firestore.rules)
+      window._db.collection('publicProfiles').orderBy('points','desc').limit(50).get(),
       window._db.collection('pins').get(),
     ]);
     const pinners   = usersSnap.size;
@@ -3816,7 +4585,7 @@ async function loadHomeStats() {
     if (usersSnap.size > 0) {
       const liveUsers = usersSnap.docs
         .map(d => d.data())
-        .filter(u => u.displayName || u.email)
+        .filter(u => typeof u.nickname === 'string' && u.nickname)
         .sort((a,b) => (b.points||0) - (a.points||0))
         .slice(0,4);
       const getLvl = window.getLevelInfo || (pts => ({ name:'Curious', icon:'🔍', color:'#8888aa' }));
@@ -3824,16 +4593,16 @@ async function loadHomeStats() {
       if (listEl && liveUsers.length > 0) {
         listEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">
           ${liveUsers.map(u => {
-            const name  = getSafeName(u) || 'Explorer';
+            const name  = u.nickname;   // public nickname only (never the Google name)
             const pts   = (typeof u.points === 'number') ? u.points : 0;
             const pins  = (typeof u.pins   === 'number') ? u.pins   : 0;
             const lv    = getLvl(pts);
-            const photo = u.photoURL || '';
+            const photo = '';           // no profile photos are published
             return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;">
               <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:1rem;margin:0 auto 8px;">
-                ${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.textContent='${name[0].toUpperCase()}'" />` : name[0].toUpperCase()}
+                ${avatarHtml(photo, name)}
               </div>
-              <div style="font-size:0.82rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+              <div style="font-size:0.82rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
               <div style="font-size:0.72rem;color:${lv.color};font-weight:600;margin:3px 0;">${lv.icon} ${lv.name}</div>
               <div style="font-size:0.7rem;color:var(--text-dim);">${pins} pins · ${pts} pts</div>
             </div>`;
@@ -3856,8 +4625,8 @@ async function loadHomeStats() {
           return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid rgba(232,98,26,0.2);border-radius:10px;margin-top:8px;">
             <span style="font-size:1.1rem;">${catIcons2[pin.category]||'📍'}</span>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:0.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pin.name||'Unknown'}</div>
-              <div style="font-size:0.72rem;color:var(--text-dim);">📍 ${[pin.city,pin.country].filter(Boolean).join(', ')||'Unknown'}</div>
+              <div style="font-size:0.85rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(pin.name||'Unknown')}</div>
+              <div style="font-size:0.72rem;color:var(--text-dim);">📍 ${escapeHtml([pin.city,pin.country].filter(Boolean).join(', ')||'Unknown')}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
               <div style="font-size:0.68rem;color:var(--orange-glow);font-weight:600;">🆕 NEW</div>
@@ -3884,24 +4653,32 @@ function getMyReaction(pinId) {
 }
 
 async function toggleReaction(pinId, reactionId) {
-  const current = getMyReaction(pinId);
-  const isSame  = current === reactionId;
-  if (isSame) {
-    delete pinReactions[pinId];
-  } else {
-    pinReactions[pinId] = reactionId;
-  }
-  localStorage.setItem('sp_reactions', JSON.stringify(pinReactions));
-  // Save to Firestore if logged in
+  const previous = getMyReaction(pinId);
+  const isSame   = previous === reactionId;
+  const setLocal = value => {
+    if (value) pinReactions[pinId] = value; else delete pinReactions[pinId];
+    try { localStorage.setItem('sp_reactions', JSON.stringify(pinReactions)); } catch(e) {}
+  };
+  setLocal(isSame ? null : reactionId);            // optimistic
+  updateReactionsUI(pinId, reactionCountsCache[pinId] || {});
+  // Signed-in users: store it; roll back and explain if the write fails.
   if (window.currentUser && window._db) {
     const ref = window._db.collection('pins').doc(pinId).collection('reactions').doc(window.currentUser.uid);
-    if (isSame) { await ref.delete().catch(()=>{}); }
-    else { await ref.set({ type: reactionId, uid: window.currentUser.uid, at: new Date() }); }
+    try {
+      if (isSame) await ref.delete();
+      else await ref.set({ type: reactionId, uid: window.currentUser.uid, at: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch(e) {
+      console.warn('reaction not saved:', e && e.code);
+      setLocal(previous);
+      updateReactionsUI(pinId, reactionCountsCache[pinId] || {});
+      spToast(spFriendlyError(e, 'save your reaction'), 'error');
+      return;
+    }
   }
-  // Update UI without full re-render
   loadPinData(pinId);
 }
 
+const reactionCountsCache = {};
 async function loadPinData(pinId) {
   if (!pinId) return;
   // Load reactions
@@ -3915,6 +4692,7 @@ async function loadPinData(pinId) {
       });
     }
   } catch(e) {}
+  reactionCountsCache[pinId] = reactionCounts;
   updateReactionsUI(pinId, reactionCounts);
   loadComments(pinId);
   loadSavedCount(pinId);
@@ -3925,7 +4703,7 @@ function updateReactionsUI(pinId, counts) {
   if (!bar) return;
   const myR = getMyReaction(pinId);
   bar.innerHTML = REACTION_TYPES.map(r => `
-    <button class="reaction-btn ${myR===r.id?'active':''}" onclick="toggleReaction('${pinId}','${r.id}')">
+    <button class="reaction-btn ${myR===r.id?'active':''}" onclick="toggleReaction('${safeDocId(pinId)}','${r.id}')">
       <span>${r.icon}</span>
       <span>${r.label}</span>
       ${(counts[r.id]||0) > 0 ? `<span class="reaction-count">${counts[r.id]}</span>` : ''}
@@ -3935,14 +4713,22 @@ function updateReactionsUI(pinId, counts) {
 // ── COMMENTS ─────────────────────────────────────────────────────────────────
 async function loadComments(pinId) {
   const el = document.getElementById('commentsList');
-  if (!el || !window._db) return;
+  if (!el) return;
+  if (!window._db) {
+    el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;padding:12px 0;">Comments are unavailable right now.</p>`;
+    return;
+  }
   try {
-    const snap = await window._db.collection('pins').doc(pinId)
-      .collection('comments').orderBy('at','desc').limit(20).get();
+    const snap = await spWithTimeout(window._db.collection('pins').doc(pinId)
+      .collection('comments').orderBy('at','desc').limit(20).get(), 10000);
     const comments = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     pinComments[pinId] = comments;
     renderCommentsList(pinId);
-  } catch(e) {}
+  } catch(e) {
+    console.warn('comments unavailable:', e && e.code);
+    el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;padding:12px 0;">Comments are unavailable right now.
+      <button class="btn-secondary btn-sm" style="margin-left:8px;" onclick="loadComments('${safeDocId(pinId)}')">Try again</button></p>`;
+  }
 }
 
 function renderCommentsList(pinId) {
@@ -3953,76 +4739,123 @@ function renderCommentsList(pinId) {
     el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;padding:12px 0;">No comments yet. Be the first!</p>`;
     return;
   }
-  el.innerHTML = comments.map(c => `
+  el.innerHTML = comments.map(c => {
+    // Public nickname only. Older comments without one are shown as "Explorer" so that no
+    // Google account name is displayed publicly.
+    const author = (typeof c.authorName === 'string' && c.authorName.trim()) ? c.authorName.trim() : 'Explorer';
+    return `
     <div class="comment-card">
       <div style="display:flex;align-items:flex-start;gap:10px;">
-        <div class="comment-avatar">${(c.displayName||'?')[0].toUpperCase()}</div>
+        <div class="comment-avatar">${avatarInitial(author)}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-            <span style="font-size:0.85rem;font-weight:600;color:var(--text);">${c.displayName||'Anonymous'}</span>
+            <span style="font-size:0.85rem;font-weight:600;color:var(--text);">${escapeHtml(author)}</span>
             <span style="font-size:0.72rem;color:var(--text-dim);">${c.at?.toDate ? c.at.toDate().toLocaleDateString() : 'Just now'}</span>
           </div>
-          <p style="font-size:0.875rem;color:var(--text-muted);line-height:1.6;margin:0;">${c.text}</p>
+          <p style="font-size:0.875rem;color:var(--text-muted);line-height:1.6;margin:0;">${escapeHtml(c.text)}</p>
           <div style="margin-top:6px;">
-            <button class="comment-like-btn" onclick="likeComment('${pinId}','${c.id}')">
-              👍 ${c.likes||0}
+            <button class="comment-like-btn" onclick="likeComment('${safeDocId(pinId)}','${safeDocId(c.id)}')">
+              👍 ${Number(c.likes)||0}
             </button>
           </div>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+const SP_COMMENT_MAX = 1000; // keep in sync with firestore.rules
+
+function setCommentStatus(message, kind) {
+  const el = document.getElementById('commentStatus');
+  if (!el) { if (message) spToast(message, kind); return; }
+  el.textContent = message || '';
+  el.style.color = kind === 'error' ? '#fca5a5' : 'var(--text-dim)';
 }
 
 async function submitComment(pinId) {
-  if (!window.currentUser) { alert('Please sign in to comment.'); return; }
   const input = document.getElementById('commentInput');
-  const text  = input?.value?.trim();
+  if (!window.currentUser) { setCommentStatus('Please sign in to comment.', 'error'); return; }
+  if (!window._db) { setCommentStatus("Comments are unavailable right now. Your text is still in the box.", 'error'); return; }
+  if (!window.currentUser.nickname) {
+    setCommentStatus('Please choose a public nickname in your profile before commenting. Your text is still in the box.', 'error');
+    return;
+  }
+  const text = input?.value?.trim();
   if (!text) return;
-  input.value = '';
+  if (text.length > SP_COMMENT_MAX) { setCommentStatus(`Comments can be at most ${SP_COMMENT_MAX} characters.`, 'error'); return; }
   input.disabled = true;
+  setCommentStatus('Posting…');
   try {
-    await window._db.collection('pins').doc(pinId).collection('comments').add({
-      uid:         window.currentUser.uid,
-      displayName: window.currentUser.displayName || 'Anonymous',
-      photoURL:    window.currentUser.photoURL || '',
-      text,
-      likes: 0,
-      at:   firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    // One batch: the comment (author name = public nickname) and the author's lastCommentAt
+    // stamp, which firestore.rules uses to allow at most one comment every 15 seconds.
+    const ts = firebase.firestore.FieldValue.serverTimestamp();
+    const ref = window._db.collection('pins').doc(pinId).collection('comments').doc();
+    const batch = window._db.batch();
+    batch.set(ref, { uid: window.currentUser.uid, authorName: window.currentUser.nickname, text, likes: 0, at: ts });
+    batch.update(window._db.collection('users').doc(window.currentUser.uid), { lastCommentAt: ts });
+    await batch.commit();
+    input.value = '';                    // cleared only after the comment was saved
+    setCommentStatus('Your comment was posted.');
     await loadComments(pinId);
-  } catch(e) { console.error(e); }
+  } catch(e) {
+    console.warn('comment not posted:', e && e.code);
+    const hint = (e && e.code === 'permission-denied') ? ' If you just posted, please wait a few seconds.' : '';
+    setCommentStatus(spFriendlyError(e, 'post your comment') + hint + ' Your text is still in the box.', 'error');
+  }
   input.disabled = false;
   input.focus();
 }
 
 async function likeComment(pinId, commentId) {
-  if (!window._db) return;
+  if (!window._db || !commentId) return;
+  if (!window.currentUser) { spToast('Please sign in to like comments.', 'error'); return; }
   try {
-    await window._db.collection('pins').doc(pinId).collection('comments').doc(commentId)
-      .update({ likes: firebase.firestore.FieldValue.increment(1) });
-    await loadComments(pinId);
-  } catch(e) {}
+    // One like per user: create likes/{uid} marker and increment in a single batch.
+    const commentRef = window._db.collection('pins').doc(pinId).collection('comments').doc(commentId);
+    const batch = window._db.batch();
+    batch.set(commentRef.collection('likes').doc(window.currentUser.uid),
+              { at: firebase.firestore.FieldValue.serverTimestamp() });
+    batch.update(commentRef, { likes: firebase.firestore.FieldValue.increment(1) });
+    await batch.commit();
+  } catch(e) {
+    console.warn('like not saved:', e && e.code);
+    spToast(e && e.code === 'permission-denied'
+      ? "Your like wasn't added. You may have liked this comment already."
+      : spFriendlyError(e, 'add your like'), 'error');
+  }
+  await loadComments(pinId);
 }
 
 // ── SAVE / FAVOURITE ──────────────────────────────────────────────────────────
 function isSaved(pinId) { return savedPins.includes(String(pinId)); }
 
+function spSetSavedLocal(id, saved) {
+  savedPins = savedPins.filter(p => p !== id);
+  if (saved) savedPins.push(id);
+  try { localStorage.setItem('sp_saved', JSON.stringify(savedPins)); } catch(e) {}
+  const btn = document.getElementById('saveBtn_'+id);
+  if (btn) {
+    btn.className = `save-btn ${saved?'saved':''}`;
+    btn.innerHTML = saved ? '⭐ Saved' : '☆ Save Pin';
+  }
+}
+
 async function toggleSave(pinId) {
   const id = String(pinId);
   const wasSaved = isSaved(id);
-  if (wasSaved) { savedPins = savedPins.filter(p => p !== id); }
-  else          { savedPins.push(id); }
-  localStorage.setItem('sp_saved', JSON.stringify(savedPins));
+  spSetSavedLocal(id, !wasSaved);                 // optimistic
   if (window.currentUser && window._db) {
-    const ref = window._db.collection('users').doc(window.currentUser.uid)
-                  .collection('saved').doc(id);
-    if (wasSaved) { await ref.delete().catch(()=>{}); }
-    else          { await ref.set({ pinId: id, at: new Date() }); }
-  }
-  const btn = document.getElementById('saveBtn_'+id);
-  if (btn) {
-    btn.className = `save-btn ${isSaved(id)?'saved':''}`;
-    btn.innerHTML = isSaved(id) ? '⭐ Saved' : '☆ Save Pin';
+    const ref = window._db.collection('users').doc(window.currentUser.uid).collection('saved').doc(id);
+    try {
+      if (wasSaved) await ref.delete();
+      else await ref.set({ pinId: id, at: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch(e) {
+      console.warn('save not stored:', e && e.code);
+      spSetSavedLocal(id, wasSaved);              // roll back
+      spToast(spFriendlyError(e, wasSaved ? 'remove this pin from your saved list' : 'save this pin'), 'error');
+      return;
+    }
   }
   loadSavedCount(id);
 }
@@ -4030,12 +4863,8 @@ async function toggleSave(pinId) {
 async function loadSavedCount(pinId) {
   const el = document.getElementById('savedCount_'+pinId);
   if (!el || !window._db) return;
-  try {
-    const snap = await window._db.collection('users')
-      .where('savedPins', 'array-contains', pinId).get().catch(()=>null);
-    // Fallback: count from saved subcollections not possible without extra query
-    // Just show local saved state
-  } catch(e) {}
+  // A public "saved by N" count needs a server-maintained counter; reading other
+  // users' documents is not allowed by firestore.rules. Show local state only.
 }
 
 // ── MYSTERY SCORE ─────────────────────────────────────────────────────────────
@@ -4398,7 +5227,7 @@ function renderNearby() {
             </div>
             <p style="font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:10px;
               overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">
-              ${loc.shortPreview || loc.fullStory || ''}
+              ${previewText(loc)}
             </p>
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
               <span class="distance-badge">${dist}</span>
@@ -4566,21 +5395,19 @@ function renderProfile() {
     <button class="btn-primary" onclick="window.fbSignIn&&window.fbSignIn()">🔑 Sign In with Google</button>
   </div>`;
 
-  const name  = getSafeName(user);
+  const name  = user.nickname || 'Explorer';   // public nickname (what others see)
   const pts   = getSafePoints(user);
   const pins  = getSafePins(user);
   const level = window.getLevelInfo ? window.getLevelInfo(pts) : { name:'Curious', icon:'🔍', color:'#8888aa', progress:0, next:{ name:'Witness', min:50 } };
   const nextPts = level.next ? level.next.min : pts;
   const needed  = level.next ? Math.max(0, nextPts - pts) : 0;
   const mySaved = LOCATIONS.filter(l => isSaved(l.id));
-  const photo   = user.photoURL || '';
+  const photo   = '';   // no Google photo, so the profile looks the way others see it
 
   // Points breakdown card
   const pointsActions = [
-    { icon:'📍', label:'Pin a location',  pts:10, done: pins > 0 },
-    { icon:'📸', label:'Add a photo',     pts:5,  done: pts >= 5 },
-    { icon:'🎥', label:'Add a video',     pts:20, done: pts >= 20 },
-    { icon:'✅', label:'Get verified',    pts:5,  done: false },
+    { icon:'📍', label:'Have a location approved',          pts:10, done: pins > 0 },
+    { icon:'📸', label:'Include a photo with an approved location', pts:5, done: false },
   ];
 
   return `<div class="profile-wrap">
@@ -4590,15 +5417,12 @@ function renderProfile() {
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
         <div style="position:relative;flex-shrink:0;">
           <div style="width:64px;height:64px;border-radius:50%;border:3px solid var(--orange);overflow:hidden;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;">
-            ${photo
-              ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=font-size:1.5rem;color:white;font-weight:700>${name[0].toUpperCase()}</span>'" />`
-              : `<span style="font-size:1.5rem;color:white;font-weight:700;">${name[0].toUpperCase()}</span>`
-            }
+            ${avatarHtml(photo, name, 'font-size:1.5rem;color:white;font-weight:700;')}
           </div>
           <div style="position:absolute;bottom:-2px;right:-2px;background:var(--card);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.8rem;border:2px solid var(--border);">${level.icon}</div>
         </div>
         <div style="flex:1;min-width:0;">
-          <h1 class="font-display" style="font-size:1.5rem;font-weight:800;margin-bottom:2px;">Welcome, ${name} 👋</h1>
+          <h1 class="font-display" style="font-size:1.5rem;font-weight:800;margin-bottom:2px;">Welcome, ${escapeHtml(name)} 👋</h1>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span style="color:${level.color};font-weight:700;font-size:0.875rem;">${level.icon} ${level.name} Explorer</span>
             <span style="color:var(--text-dim);font-size:0.8rem;">·</span>
@@ -4653,13 +5477,14 @@ function renderProfile() {
     <div style="background:linear-gradient(135deg,rgba(232,98,26,0.08),rgba(109,40,217,0.08));border:1px dashed rgba(232,98,26,0.3);border-radius:14px;padding:28px;text-align:center;margin-bottom:24px;">
       <div style="font-size:2.5rem;margin-bottom:12px;">🚀</div>
       <h3 class="font-display" style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">Start Your Journey</h3>
-      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:16px;line-height:1.6;">Pin your first mysterious location and begin earning points.<br>Your first pin earns you <strong style="color:var(--orange-glow);">+10 pts</strong> towards Witness rank.</p>
+      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:16px;line-height:1.6;">Submit your first mysterious location.<br>If the StrangePin team approves it, you earn <strong style="color:var(--orange-glow);">+10 pts</strong> towards Witness rank.</p>
       <button class="btn-primary" onclick="showPage('submit')">📍 Pin a Location</button>
     </div>` : ''}
 
     <!-- How to earn more points -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:24px;">
-      <p style="font-size:0.78rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:14px;">Ways to Earn Points</p>
+      <p style="font-size:0.78rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Ways to Earn Points</p>
+      <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:14px;">Points are added by the StrangePin team after your submission has been reviewed.</p>
       <div style="display:flex;flex-direction:column;gap:10px;">
         ${pointsActions.map(a=>`
           <div style="display:flex;align-items:center;gap:12px;opacity:${a.done?'0.5':'1'};">
@@ -4669,6 +5494,21 @@ function renderProfile() {
           </div>`).join('')}
       </div>
     </div>
+
+    <!-- Public nickname -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:24px;">
+      <h2 class="font-display" style="font-size:1.05rem;font-weight:700;margin-bottom:6px;">Your public nickname</h2>
+      <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px;">This is the only name other people see, on comments and in the rankings. Your Google name, e-mail and photo are never shown publicly.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input id="profileNickname" maxlength="24" value="${escapeHtml(user.nickname || '')}" aria-label="Public nickname" style="flex:1;min-width:180px;" />
+        <button class="btn-primary btn-sm" onclick="saveNickname()">Save nickname</button>
+      </div>
+      <p id="nicknameStatus" role="status" aria-live="polite" style="font-size:0.8rem;margin-top:8px;min-height:1em;color:var(--text-dim);">3–24 characters: letters, numbers, and single spaces, dots, dashes or underscores.</p>
+    </div>
+
+    <!-- My submissions -->
+    <h2 class="font-display" style="font-size:1.1rem;font-weight:700;margin-bottom:14px;">📨 My submissions</h2>
+    <div id="mySubmissions" style="margin-bottom:24px;"><p style="color:var(--text-dim);font-size:0.85rem;">Loading…</p></div>
 
     <!-- Saved pins -->
     <h2 class="font-display" style="font-size:1.1rem;font-weight:700;margin-bottom:14px;">⭐ Saved Pins (${mySaved.length})</h2>
@@ -4680,7 +5520,80 @@ function renderProfile() {
          </div>`
       : `<div class="grid-3" style="margin-bottom:24px;">${mySaved.map(l=>locationCard(l,true)).join('')}</div>`
     }
+
+    <!-- Privacy & account -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:24px;">
+      <h2 class="font-display" style="font-size:1.05rem;font-weight:700;margin-bottom:6px;">Privacy &amp; account</h2>
+      <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px;">You can ask us to delete your StrangePin account and data (your profile, nickname, points, saved pins and submissions). We handle requests by hand, usually within 30 days, and confirm by e-mail. You can also write to <a href="mailto:thestrangepin@gmail.com?subject=Account%20deletion%20request" style="color:var(--orange-glow);">thestrangepin@gmail.com</a>.</p>
+      <div id="deletionArea"><button class="btn-secondary btn-sm" onclick="requestAccountDeletion()">Request account deletion</button></div>
+    </div>
   </div>`;
+}
+
+const SP_SUBMISSION_STATUS = { pending: 'Pending review', approved: 'Approved', rejected: 'Not approved' };
+
+async function loadMySubmissions() {
+  const el = document.getElementById('mySubmissions');
+  if (!el) return;
+  if (!window.fbMySubmissions) { el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;">Your submissions can't be shown right now.</p>`; return; }
+  try {
+    const list = await spWithTimeout(window.fbMySubmissions(), 10000);
+    if (!list.length) {
+      el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;">No submissions yet. <a href="#submit" onclick="showPage('submit');return false;" style="color:var(--orange-glow);">Pin a location</a> while signed in to follow its review here.</p>`;
+      return;
+    }
+    el.innerHTML = list.map(x => {
+      const status = SP_SUBMISSION_STATUS[x.status] || 'Pending review';
+      const color = x.status === 'approved' ? '#4ade80' : x.status === 'rejected' ? '#f87171' : '#fbbf24';
+      const pts = x.status === 'approved' && Number.isInteger(x.pointsAwarded) && x.pointsAwarded > 0 ? ` · +${x.pointsAwarded} pts` : '';
+      return `<div class="sp-submission" style="display:flex;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+        <div style="min-width:0;"><div style="font-weight:600;font-size:0.875rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(x.name || 'Untitled')}</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);">${escapeHtml(x.country || '')} · ${timeAgo(x.createdAt)}</div></div>
+        <div class="sp-submission-status" style="font-size:0.78rem;font-weight:700;color:${color};white-space:nowrap;">${status}${pts}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    console.warn('submissions unavailable:', e && e.code);
+    el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;">Your submissions can't be shown right now. <button class="btn-secondary btn-sm" onclick="loadMySubmissions()">Try again</button></p>`;
+  }
+}
+
+async function saveNickname() {
+  const input = document.getElementById('profileNickname');
+  const status = document.getElementById('nicknameStatus');
+  const nick = (input && input.value || '').trim();
+  const say = (msg, err) => { if (status) { status.textContent = msg; status.style.color = err ? '#fca5a5' : '#86efac'; } };
+  const problem = spNicknameProblem(nick);
+  if (problem) { say(problem, true); return; }
+  try {
+    await window.fbSetNickname(nick);
+    say('Saved. Your new nickname is shown on new comments and in the rankings.');
+    window.updateNavAuth && window.updateNavAuth();
+  } catch(e) {
+    console.warn('nickname not saved:', e && e.code);
+    say(e && e.code === 'invalid-nickname' ? e.message : spFriendlyError(e, 'save your nickname'), true);
+  }
+}
+
+async function loadDeletionStatus() {
+  const area = document.getElementById('deletionArea');
+  if (!area || !window.fbMyDeletionRequest) return;
+  try {
+    const req = await window.fbMyDeletionRequest();
+    if (req) area.innerHTML = `<p style="font-size:0.85rem;color:#fbbf24;">Your deletion request was received. We'll confirm by e-mail once it has been processed.</p>`;
+  } catch(e) { /* keep the button */ }
+}
+
+async function requestAccountDeletion() {
+  if (!window.fbRequestDeletion) { spToast("This isn't available right now. Please e-mail thestrangepin@gmail.com instead.", 'error'); return; }
+  if (!confirm('Ask the StrangePin team to delete your account and data? This cannot be undone once processed.')) return;
+  try {
+    await window.fbRequestDeletion('');
+    await loadDeletionStatus();
+  } catch(e) {
+    console.warn('deletion request not stored:', e && e.code);
+    spToast(spFriendlyError(e, 'send your request') + ' You can also e-mail thestrangepin@gmail.com.', 'error');
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -4736,7 +5649,7 @@ function locationCard(loc, compact=false) {
         <span>${[loc.city,loc.country].filter(Boolean).join(', ')}</span>
       </div>
       ${loc.hook && !compact ? `<p style="font-size:0.88rem;color:var(--text-muted);font-style:italic;line-height:1.55;margin-bottom:12px;">"${loc.hook}"</p>` : ''}
-      ${!compact && !loc.hook ? `<div class="loc-preview">${loc.shortPreview||''}</div>` : ''}
+      ${!compact && !loc.hook ? `<div class="loc-preview">${previewText(loc)}</div>` : ''}
       <div class="loc-footer">
         <div style="display:flex;align-items:center;gap:8px;">
           ${loc.status ? `<span class="badge ${statusMap[loc.status]||'badge-muted'}" style="font-size:0.68rem;">${loc.status}</span>` : ''}
@@ -4812,6 +5725,52 @@ function SP_QuickFact(icon, label, value) {
  * @param {object} loc - A LOCATIONS entry
  */
 // Sprint 1: SP_QuickFacts extended with Era, Reading Time, Difficulty, Maps link
+/**
+ * Timeline section for featured pins. All values are escaped; entries
+ * without an event text are skipped.
+ */
+function SP_Timeline(loc) {
+  const items = (Array.isArray(loc.timeline) ? loc.timeline : [])
+    .filter(t => t && typeof t.event === 'string' && t.event.trim());
+  if (!items.length) return '';
+  return `
+    <div class="story-section" data-section="timeline">
+      <div class="story-section-label" style="color:var(--amber);">Timeline</div>
+      <ol style="list-style:none;margin:0;padding:0;border-left:2px solid var(--border);">
+        ${items.map(t => `
+        <li style="position:relative;padding:0 0 14px 18px;">
+          <span aria-hidden="true" style="position:absolute;left:-6px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--amber);"></span>
+          <span class="font-mono" style="display:block;font-size:0.78rem;color:var(--text-dim);">${escapeHtml(t.date || '')}</span>
+          <span style="font-size:0.9rem;color:var(--text-muted);line-height:1.6;">${escapeHtml(t.event)}</span>
+        </li>`).join('')}
+      </ol>
+    </div>`;
+}
+
+/**
+ * Sources section. Only https URLs become links (new tab, rel="noopener nofollow");
+ * sources without a valid URL are shown as plain text.
+ */
+function SP_Sources(loc) {
+  const items = (Array.isArray(loc.sources) ? loc.sources : [])
+    .filter(s => s && typeof s.title === 'string' && s.title.trim());
+  if (!items.length) return '';
+  return `
+    <div class="story-section" data-section="sources">
+      <div class="story-section-label" style="color:var(--teal);">Sources</div>
+      <ul style="margin:0;padding-left:18px;font-size:0.875rem;color:var(--text-muted);line-height:1.7;">
+        ${items.map(s => {
+          const url = safeHttpsUrl(s.url);
+          const title = escapeHtml(s.title);
+          const type = s.type ? `<span class="badge badge-muted" style="margin-left:6px;">${escapeHtml(s.type)}</span>` : '';
+          return `<li>${url
+            ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener nofollow" style="color:var(--teal);">${title}</a>`
+            : `<span>${title}</span>`}${type}</li>`;
+        }).join('')}
+      </ul>
+    </div>`;
+}
+
 function SP_QuickFacts(loc) {
   // Reading time from fullStory word count at 200 wpm
   const text = loc.fullStory || loc.shortPreview || '';
@@ -4889,7 +5848,7 @@ function SP_PinHero(loc, saved) {
     .join('');
 
   // The display text — prefer hook as pull-quote; fall back to shortPreview
-  const summaryText = loc.hook || loc.shortPreview || '';
+  const summaryText = loc.hook || previewText(loc);
 
   return `
   <div class="pin-hero">
@@ -4994,11 +5953,22 @@ function SP_PinHero(loc, saved) {
 function renderPage() {
   const lang = LANGS[currentLang] || LANGS.en;
   const el = document.getElementById('mainContent');
-  el.className = 'main page';
-  if (currentPage !== 'leaderboard' && lbUnsubscribe) { lbUnsubscribe(); lbUnsubscribe = null; }
+  // perf/lcp: no fade-in on the very first render, so the hero is visible (and counted
+  // as LCP) at first paint; later page changes keep the fadeUp transition.
+  const _spWasRendered = !!window._spFirstRenderDone;
+  el.className = _spWasRendered ? 'main page' : 'main';
+  window._spFirstRenderDone = true;
+  if (currentPage !== 'leaderboard') stopLiveLeaderboard();
   if (currentPage !== 'map'    && leafletMap)  { leafletMap.remove();  leafletMap  = null; }
   if (currentPage !== 'submit' && submitMap)   { submitMap.remove();   submitMap   = null; }
-  if (currentPage === 'home')        el.innerHTML = renderHome(lang);
+  // perf: on the first render of #home, keep the static hero node that was painted
+  // first (replacing it would discard it as the LCP candidate) and append the rest.
+  const staticHero = !_spWasRendered && currentPage === 'home' && el.firstElementChild && el.firstElementChild.matches('section.hero');
+  if (staticHero) {
+    while (el.lastChild && el.lastChild !== el.firstElementChild) el.removeChild(el.lastChild);
+    el.insertAdjacentHTML('beforeend', renderHome(lang, { skipHero: true }));
+  }
+  else if (currentPage === 'home')   el.innerHTML = renderHome(lang);
   else if (currentPage === 'map')    el.innerHTML = renderMap(lang);
   else if (currentPage === 'submit') el.innerHTML = renderSubmit(lang);
   else if (currentPage === 'detail') el.innerHTML = renderDetail(lang);
@@ -5011,6 +5981,7 @@ function renderPage() {
   if (currentPage === 'leaderboard') setTimeout(startLiveLeaderboard, 100);
   if (currentPage === 'home')        setTimeout(loadHomeStats, 500);
   if (currentPage === 'detail')      setTimeout(() => loadPinData(currentDetail?.id), 200);
+  if (currentPage === 'profile' && window.currentUser) setTimeout(() => { loadMySubmissions(); loadDeletionStatus(); }, 100);
   window.currentPage = currentPage;
   // Update nav active states
   document.querySelectorAll('.nav-link,.mobile-nav-link').forEach(b => {
@@ -5018,10 +5989,12 @@ function renderPage() {
   });
 }
 
-// ── HOME ──────────────────────────────────────────────────────────────────────
-function renderHome(lang) {
-  const featured = LOCATIONS.filter(l => l.featured);
-  const user = window.currentUser;
+// ── HOME HERO ────────────────────────────────────────────────────────────────
+// perf: index.html ships a static copy of this markup inside #mainContent (between
+// SP-STATIC-HERO markers) so the hero, the LCP element, is in the very first paint,
+// before the large inline app script is parsed. tests/static-hero.js asserts that the
+// static copy equals renderHomeHero(); regenerate it with `node scripts/sync-static-hero.js`.
+function renderHomeHero() {
   const pills = [
     {id:'Haunted',           icon:'👻', label:'Haunted',       cls:'badge-purple'},
     {id:'UFO',               icon:'🛸', label:'UFO',           cls:'badge-teal'},
@@ -5030,23 +6003,6 @@ function renderHome(lang) {
     {id:'Abandoned Place',   icon:'🏚️', label:'Abandoned',     cls:'badge-amber'},
     {id:'Strange Experience',icon:'🌀', label:'Strange',       cls:'badge-purple'},
   ];
-
-  // Trending: sort by reports
-  const trending = [...LOCATIONS].sort((a,b) => b.reports - a.reports).slice(0,3);
-
-  // Latest: sort by dateAdded (most recent first)
-  const latest = [...LOCATIONS].sort((a,b) => new Date(b.dateAdded) - new Date(a.dateAdded)).slice(0,4);
-
-  const catIcons = {Haunted:'👻',UFO:'🛸','Energy Spot':'⚡','Urban Legend':'📖','Abandoned Place':'🏚️','Strange Experience':'🌀',Other:'❓'};
-
-  // Simulated activity feed (will be replaced by Firebase data when available)
-  const activityFeed = [
-    { icon:'📍', text:'fujisan_hiker pinned <strong>Aokigahara — Sea of Trees</strong>', time:'2 hr ago', country:'🇯🇵' },
-    { icon:'👻', text:'cluj_cercetator reported a strange experience in <strong>Hoia-Baciu Forest</strong>', time:'5 hr ago', country:'🇷🇴' },
-    { icon:'🛸', text:'desierto_viajero uploaded a new photo in <strong>Zona del Silencio</strong>', time:'1 day ago', country:'🇲🇽' },
-    { icon:'⭐', text:'shanxi_lüke saved <strong>Pingyao Underground Chambers</strong>', time:'2 days ago', country:'🇨🇳' },
-  ];
-
   return `
   <!-- Hero -->
   <section class="hero">
@@ -5066,6 +6022,33 @@ function renderHome(lang) {
       </div>
     </div>
   </section>
+`;
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function renderHome(lang, opts) {
+  const skipHero = !!(opts && opts.skipHero);
+  const featured = LOCATIONS.filter(l => l.featured);
+  const user = window.currentUser;
+
+  // Trending: sort by reports
+  const trending = [...LOCATIONS].sort((a,b) => b.reports - a.reports).slice(0,3);
+
+  // Latest: sort by dateAdded (most recent first)
+  const latest = [...LOCATIONS].sort((a,b) => new Date(b.dateAdded) - new Date(a.dateAdded)).slice(0,4);
+
+  const catIcons = {Haunted:'👻',UFO:'🛸','Energy Spot':'⚡','Urban Legend':'📖','Abandoned Place':'🏚️','Strange Experience':'🌀',Other:'❓'};
+
+  // Simulated activity feed (will be replaced by Firebase data when available)
+  const activityFeed = [
+    { icon:'📍', text:'fujisan_hiker pinned <strong>Aokigahara — Sea of Trees</strong>', time:'2 hr ago', country:'🇯🇵' },
+    { icon:'👻', text:'cluj_cercetator reported a strange experience in <strong>Hoia-Baciu Forest</strong>', time:'5 hr ago', country:'🇷🇴' },
+    { icon:'🛸', text:'desierto_viajero uploaded a new photo in <strong>Zona del Silencio</strong>', time:'1 day ago', country:'🇲🇽' },
+    { icon:'⭐', text:'shanxi_lüke saved <strong>Pingyao Underground Chambers</strong>', time:'2 days ago', country:'🇨🇳' },
+  ];
+
+  return `
+  ${skipHero ? '' : renderHomeHero()}
 
   <!-- Live stats bar -->
   <section class="stats-bar">
@@ -5073,7 +6056,7 @@ function renderHome(lang) {
       <div id="homeStats">
         <div style="text-align:center;padding:8px 0;">
           <span style="font-size:0.8rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;">
-            🌍 Worldwide · <span id="statPins">—</span> pins · <span id="statPinners">—</span> explorers · <span id="statCountries">—</span> countries
+            🌍 Worldwide · <span id="statPins">${LOCATIONS.length}</span> pins · <span id="statPinners">—</span> explorers · <span id="statCountries">${new Set(LOCATIONS.map(l => l.country)).size}</span> countries
           </span>
         </div>
       </div>
@@ -5280,7 +6263,7 @@ function renderMap(lang) {
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:20px;">
       <div style="position:relative;flex:1;min-width:220px;max-width:360px;">
         <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-dim);">🔍</span>
-        <input id="mapSearchInput" value="${mapSearch}" oninput="mapSearch=this.value;refreshMapPins()" placeholder="Search strange places..." style="padding-left:36px;" />
+        <input id="mapSearchInput" aria-label="Search strange places" value="${escapeHtml(mapSearch)}" oninput="mapSearch=this.value;refreshMapPins()" placeholder="Search strange places..." style="padding-left:36px;" />
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">${catBtns}</div>
     </div>
@@ -5309,18 +6292,36 @@ function renderMap(lang) {
   return html;
 }
 
+function spLeafletCssReady() {
+  if (window._spLeafletCssReady) return true;
+  const l = document.getElementById('leafletCss');
+  return !!(l && l.sheet); // the link is created after the first paint (spLoadDeferredAssets)
+}
+/** Resolve when Leaflet JS (deferred) and Leaflet CSS (non-blocking) are both ready. */
+function spWhenLeafletReady() {
+  return new Promise(resolve => {
+    const t0 = Date.now();
+    (function check() {
+      const css = spLeafletCssReady();
+      if (typeof window.L !== 'undefined' && css) return resolve(true);
+      if (Date.now() - t0 > 20000) return resolve(typeof window.L !== 'undefined');
+      setTimeout(check, 50);
+    })();
+  });
+}
+
 function initLeafletMap() {
   const el = document.getElementById('leafletMap');
   if (!el || leafletMap) return;
+  if (typeof window.L === 'undefined' || !spLeafletCssReady()) {
+    spWhenLeafletReady().then(ok => { if (ok && currentPage === 'map') initLeafletMap(); });
+    return;
+  }
 
-  // Dark tile layer from CartoDB
+  // Basemap: OpenFreeMap dark with a detected fallback chain (see BASEMAP CONFIG)
   leafletMap = L.map('leafletMap', { zoomControl: true, scrollWheelZoom: true, worldCopyJump: true }).setView([20, -20], 2);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19
-  }).addTo(leafletMap);
+  addBasemap(leafletMap).then(id => { window._spBasemapUsed = id; });
 
   // Force Leaflet to recalculate container size (fixes grey/white areas)
   setTimeout(() => {
@@ -5371,11 +6372,11 @@ function addMarkersToMap(locations) {
       maxWidth: 260,
       className: 'sp-popup',
     }).setContent(`
-      <div style="font-family:'DM Sans',sans-serif;padding:4px;">
+      <div style="font-family:'DM Sans','DM Sans Fallback',sans-serif;padding:4px;">
         <div style="font-size:0.72rem;color:${color};font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">${loc.category}</div>
         <div style="font-size:0.95rem;font-weight:700;color:#111;margin-bottom:4px;line-height:1.3;">${loc.nameEn||loc.name}</div>
         <div style="font-size:0.78rem;color:#666;margin-bottom:8px;">📍 ${[loc.city,loc.country].filter(Boolean).join(', ')}</div>
-        <div style="font-size:0.78rem;color:#444;line-height:1.5;margin-bottom:10px;">${loc.shortPreview.substring(0,100)}…</div>
+        <div style="font-size:0.78rem;color:#444;line-height:1.5;margin-bottom:10px;">${previewText(loc, 100)}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <span style="font-size:0.72rem;color:#888;">📋 ${loc.reports} reports · ⚡ ${loc.mysteryScore}/10</span>
           <button onclick="showPage('detail',LOCATIONS.find(l=>l.id==='${loc.id}'))" 
@@ -5432,12 +6433,19 @@ function refreshMapPins() {
 
 // ── SUBMIT ────────────────────────────────────────────────────────────────────
 function renderSubmit(lang) {
-  if (submitted) return `<div class="success-wrap">
+  if (submitted) {
+    const tracked = lastSubmission && lastSubmission.tracked;
+    return `<div class="success-wrap" id="submitSuccess">
     <div class="success-icon">📍</div>
-    <h2 class="font-display" style="font-size:2rem;font-weight:800;margin-bottom:12px;">${lang.success||'Pin Dropped!'}</h2>
-    <p style="color:var(--text-muted);margin-bottom:32px;">Thank you for contributing to StrangePin. Your report will be reviewed and added to the map.</p>
-    <button class="btn-primary" onclick="submitted=false;submitCategory='';submitIntensity=5;submitLat=null;submitLng=null;renderPage()">Pin Another</button>
+    <h2 class="font-display" style="font-size:2rem;font-weight:800;margin-bottom:12px;">Thanks! Your location is pending review</h2>
+    <p style="color:var(--text-muted);margin-bottom:12px;">Every submission is checked by the StrangePin team before it appears on the map. This can take a few days.</p>
+    ${tracked
+      ? `<p style="color:var(--text-muted);margin-bottom:24px;">You can follow its status under <a href="#profile" onclick="showPage('profile');return false;" style="color:var(--orange-glow);">My submissions</a> in your profile.</p>`
+      : `<p style="color:var(--text-muted);margin-bottom:24px;">Tip: sign in before you submit next time, so you can follow the review status in your profile.</p>`}
+    ${lastSubmission && lastSubmission.photoNote ? `<p style="color:#fbbf24;font-size:0.85rem;margin-bottom:24px;">${escapeHtml(lastSubmission.photoNote)}</p>` : ''}
+    <button class="btn-primary" onclick="submitted=false;lastSubmission=null;submitCategory='';submitIntensity=5;submitLat=null;submitLng=null;renderPage()">Pin Another</button>
   </div>`;
+  }
 
   const catBtns = CATEGORIES.map(c => `
     <button class="cat-btn ${submitCategory===c.id?'selected':''}" id="cat_${c.id}" onclick="selectCategory('${c.id}')">
@@ -5480,22 +6488,22 @@ function renderSubmit(lang) {
       </div>
 
       <!-- ② LOCATION DETAILS (auto-filled from reverse geocode) -->
-      <div class="form-group"><label>Location Name <span style="color:#f87171;">*</span></label><input id="f_name" placeholder="e.g. The Whispering Bridge of Kyoto" /></div>
+      <div class="form-group"><label for="f_name">Location Name <span style="color:#f87171;">*</span></label><input id="f_name" placeholder="e.g. The Whispering Bridge of Kyoto" /></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="form-group">
-        <div><label>Country <span style="color:#f87171;">*</span></label><input id="f_country" placeholder="Auto-filled from pin" /></div>
-        <div><label>City / Region</label><input id="f_city" placeholder="Auto-filled from pin" /></div>
+        <div><label for="f_country">Country <span style="color:#f87171;">*</span></label><input id="f_country" placeholder="Auto-filled from pin" /></div>
+        <div><label for="f_city">City / Region</label><input id="f_city" placeholder="Auto-filled from pin" /></div>
       </div>
-      <div class="form-group"><label>Address or Landmark</label><input id="f_address" placeholder="Street address, landmark, or description" /></div>
+      <div class="form-group"><label for="f_address">Address or Landmark</label><input id="f_address" placeholder="Street address, landmark, or description" /></div>
 
       <!-- ③ CATEGORY -->
       <div class="form-group"><label>Category <span style="color:#f87171;">*</span></label><div class="category-grid">${catBtns}</div></div>
 
       <!-- ④ STORY -->
       <div class="form-group">
-        <label>Your Story <span style="color:#f87171;">*</span></label>
+        <label for="f_story">Your Story <span style="color:#f87171;">*</span></label>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
           <span style="font-size:0.8rem;color:var(--text-dim);">🌐 Story language:</span>
-          <select id="f_lang" style="width:auto;padding:4px 8px;font-size:0.8rem;">
+          <select id="f_lang" aria-label="Story language" style="width:auto;padding:4px 8px;font-size:0.8rem;">
             ${storyLangs.map(([code,name])=>`<option value="${code}" ${code===currentLang?'selected':''}>${name}</option>`).join('')}
           </select>
         </div>
@@ -5504,11 +6512,11 @@ function renderSubmit(lang) {
       </div>
 
       <!-- ⑤ DATE + INTENSITY -->
-      <div class="form-group"><label>Date / Time of Experience</label><input id="f_date" type="datetime-local" /></div>
+      <div class="form-group"><label for="f_date">Date / Time of Experience</label><input id="f_date" type="datetime-local" /></div>
       <div class="form-group">
-        <label>Strangeness Score — <span id="intensityLabel">5 — Clearly unusual</span></label>
+        <label for="f_intensity">Strangeness Score — <span id="intensityLabel">5 — Clearly unusual</span></label>
         <div class="intensity-row">
-          <input type="range" min="1" max="10" value="${submitIntensity}" oninput="submitIntensity=+this.value;updateIntensity(this.value)" />
+          <input id="f_intensity" type="range" min="1" max="10" value="${submitIntensity}" oninput="submitIntensity=+this.value;updateIntensity(this.value)" />
           <span class="intensity-val" id="intensityVal">${submitIntensity}</span>
         </div>
         <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-dim);margin-top:4px;"><span>1</span><span>5</span><span>10</span></div>
@@ -5516,12 +6524,12 @@ function renderSubmit(lang) {
 
       <!-- ⑥ PHOTO -->
       <div class="form-group">
-        <label>Photo (optional)</label>
+        <label for="f_image">Photo (optional)</label>
         <div id="imageUploadArea" style="border:2px dashed var(--border);border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.2s;position:relative;"
              onmouseover="this.style.borderColor='rgba(232,98,26,0.4)'"
              onmouseout="this.style.borderColor='var(--border)'"
              onclick="document.getElementById('f_image').click()">
-          <input type="file" id="f_image" accept="image/*" style="display:none;" onchange="previewImage(this)" />
+          <input type="file" id="f_image" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="previewImage(this)" />
           <div id="imagePreview" style="display:none;margin-bottom:12px;">
             <img id="previewImg" style="max-width:100%;max-height:200px;border-radius:6px;object-fit:cover;" />
           </div>
@@ -5535,7 +6543,12 @@ function renderSubmit(lang) {
       </div>
 
       <!-- ⑦ USERNAME -->
-      <div class="form-group"><label>Your Username <span style="color:#f87171;">*</span></label><input id="f_username" placeholder="Your Pinner name" /></div>
+      <div class="form-group"><label for="f_username">Your Username <span style="color:#f87171;">*</span></label><input id="f_username" maxlength="60" placeholder="Your Pinner name" value="${escapeHtml((window.currentUser && window.currentUser.nickname) || '')}" /></div>
+      <!-- Bot trap: hidden from people and screen readers; bots that fill every field are ignored. -->
+      <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+        <label for="f_website">Leave this field empty</label><input id="f_website" name="website" tabindex="-1" autocomplete="off" />
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-dim);margin-bottom:12px;">Submissions are reviewed by the StrangePin team before they appear on the map.${window.currentUser ? '' : ' Sign in first if you want to follow the review status.'}</p>
 
       <button id="submitBtn" class="btn-primary" style="width:100%;justify-content:center;font-size:1rem;padding:14px;" onclick="handleSubmit()">
         📍 Drop the Pin
@@ -5557,13 +6570,14 @@ function updateIntensity(val) {
 function initSubmitMap() {
   const el = document.getElementById('submitMap');
   if (!el || submitMap) return;
+  if (typeof window.L === 'undefined') {
+    spWhenLeafletReady().then(ok => { if (ok && currentPage === 'submit') initSubmitMap(); });
+    return;
+  }
 
   submitMap = L.map('submitMap', { zoomControl: true, scrollWheelZoom: true, worldCopyJump: true }).setView([20, 0], 2);
 
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap contributors © CARTO',
-    subdomains: 'abcd', maxZoom: 19
-  }).addTo(submitMap);
+  addBasemap(submitMap);
 
   // Fix grey areas
   setTimeout(() => { submitMap.invalidateSize(); }, 100);
@@ -5660,6 +6674,13 @@ function selectCategory(id) {
 function previewImage(input) {
   const file = input.files[0];
   if (!file) return;
+  const problem = spImageProblem(file);
+  if (problem) {
+    input.value = '';
+    const errEl = document.getElementById('submitErrors');
+    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ ${escapeHtml(problem)}</p>`;
+    return;
+  }
   const reader = new FileReader();
   reader.onload = function(e) {
     const preview = document.getElementById('imagePreview');
@@ -5667,7 +6688,7 @@ function previewImage(input) {
     const prompt  = document.getElementById('uploadPrompt');
     if (img)     img.src = e.target.result;
     if (preview) preview.style.display = 'block';
-    if (prompt)  prompt.innerHTML = `<p style="font-size:0.8rem;color:var(--orange-glow);">✅ ${file.name}</p><p style="font-size:0.72rem;color:var(--text-dim);margin-top:2px;">Click to change</p>`;
+    if (prompt)  prompt.innerHTML = `<p style="font-size:0.8rem;color:var(--orange-glow);">✅ ${escapeHtml(file.name)}</p><p style="font-size:0.72rem;color:var(--text-dim);margin-top:2px;">Click to change</p>`;
   };
   reader.readAsDataURL(file);
 }
@@ -5692,8 +6713,27 @@ async function handleSubmit() {
   if (!submitCategory) errs.push('Please select a Category');
   if (!story)          errs.push('Your Story is required');
   if (!username)       errs.push('Username is required');
+  if (story && story.length > 5000)  errs.push('Please keep your story under 5,000 characters');
+  if (name && name.length > 150)     errs.push('Please shorten the location name (150 characters max)');
+  if (username && username.length > 60) errs.push('Please shorten your username (60 characters max)');
+  const fileInput = document.getElementById('f_image');
+  const file = fileInput && fileInput.files && fileInput.files[0];
+  const fileProblem = spImageProblem(file);
+  if (fileProblem) errs.push(fileProblem);
   if (errs.length > 0) {
-    if (errEl) errEl.innerHTML = errs.map(e=>`<p class="error-text">⚠️ ${e}</p>`).join('');
+    if (errEl) errEl.innerHTML = errs.map(e=>`<p class="error-text">⚠️ ${escapeHtml(e)}</p>`).join('');
+    return;
+  }
+
+  // Bot trap: a hidden field that people never see. If it is filled in, pretend success and
+  // send nothing.
+  const trap = document.getElementById('f_website');
+  if (trap && trap.value) { submitted = true; lastSubmission = { id: null, tracked: false }; renderPage(); return; }
+
+  // Gentle client-side throttle (the server-side throttle for signed-in users is in firestore.rules).
+  const lastAt = Number(localStorage.getItem('sp_last_submit') || 0);
+  if (Date.now() - lastAt < SP_SUBMIT_COOLDOWN_MS) {
+    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ Please wait a minute before sending another location.</p>`;
     return;
   }
 
@@ -5701,82 +6741,101 @@ async function handleSubmit() {
   const btn = document.getElementById('submitBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Sending...'; }
   if (errEl) errEl.innerHTML = '';
+  const restoreButton = () => { if (btn) { btn.disabled = false; btn.innerHTML = '📍 Drop the Pin'; } };
 
-  // Handle image upload to Cloudinary if a file was selected
-  let imageUrl = '—';
-  const fileInput = document.getElementById('f_image');
-  if (fileInput && fileInput.files && fileInput.files[0]) {
+  // Optional photo → Cloudinary (unsigned preset; see docs/third-party-hardening.md).
+  let imageUrl = '';
+  let photoNote = '';
+  if (file) {
     try {
-      const file = fileInput.files[0];
-      // ── CLOUDINARY: replace YOUR_CLOUD_NAME with your Cloudinary cloud name ──
-      // Free signup at cloudinary.com → Dashboard → Cloud Name
-      // Also create an unsigned upload preset: Settings → Upload → Add upload preset → Unsigned
       const CLOUD_NAME    = 'dz9p5t4sj';
       const UPLOAD_PRESET = 'ao9q18f9';
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', UPLOAD_PRESET);
-      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-        method: 'POST', body: formData
-      });
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
       const uploadData = await uploadRes.json();
-      imageUrl = uploadData.secure_url || '—';
+      const url = uploadRes.ok && typeof uploadData.secure_url === 'string' ? uploadData.secure_url : '';
+      imageUrl = url.startsWith(SP_CLOUDINARY_PREFIX) && url.length <= 460 ? url : '';
+    } catch(e) { imageUrl = ''; }
+    if (!imageUrl) photoNote = "Your photo couldn't be uploaded, so the location was sent without it.";
+  }
+
+  const fields = {
+    name: name.slice(0, 150), country: country.slice(0, 80), city: (city || '').slice(0, 120),
+    address: (address || '').slice(0, 200), lat: Number(submitLat), lng: Number(submitLng),
+    category: submitCategory, story: story.slice(0, 5000), storyLang: String(storyLang || 'other').slice(0, 10),
+    date: (date || '').slice(0, 40), intensity: Math.min(10, Math.max(1, Math.round(Number(submitIntensity) || 5))),
+    imageUrl, username: username.slice(0, 60),
+  };
+
+  // Signed-in users: store the submission for review so they can follow its status and,
+  // if approved, receive points (awarded only by the StrangePin team).
+  let submissionId = null;
+  if (window.currentUser && window.fbCreateSubmission) {
+    try {
+      submissionId = await window.fbCreateSubmission(fields);
     } catch(e) {
-      imageUrl = '(upload failed)';
+      console.warn('submission not stored:', e && e.code);
+      if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ ${escapeHtml(spFriendlyError(e, 'send your location'))} Nothing was lost: your answers are still in the form.</p>`;
+      restoreButton();
+      return;
     }
   }
 
-  // ── EMAILJS ──────────────────────────────────────────────────────────────
+  // ── EMAILJS (notification to the StrangePin inbox) ───────────────────────
+  // The recipient should be hard-coded in the EmailJS template ("To Email" =
+  // thestrangepin@gmail.com; docs/third-party-hardening.md). We cannot yet confirm the live
+  // template does not use {{to_email}}, so the same fixed address is still sent for
+  // compatibility (the live site sends it and notifications arrive). It is a constant, never
+  // taken from user input.
+  const EMAILJS_TO_EMAIL    = 'thestrangepin@gmail.com';
   const EMAILJS_SERVICE_ID  = 'service_spyyqld';
   const EMAILJS_TEMPLATE_ID = 'template_6luvilv';
   const EMAILJS_PUBLIC_KEY  = 'Ux77rlmJMXmPUmxjC';
-
   const templateParams = {
-    location_name: name,
-    country:       country,
-    city:          city || '—',
-    address:       address || '—',
+    location_name: fields.name,
+    country:       fields.country,
+    city:          fields.city || '—',
+    address:       fields.address || '—',
     coords:        coords || '—',
-    category:      submitCategory,
-    story:         story,
-    story_lang:    storyLang,
-    date:          date || '—',
-    intensity:     String(submitIntensity),
-    username:      username,
-    image_url:     imageUrl,
-    to_email:      'thestrangepin@gmail.com',
+    category:      fields.category,
+    story:         fields.story,
+    story_lang:    fields.storyLang,
+    date:          fields.date || '—',
+    intensity:     String(fields.intensity),
+    username:      fields.username,
+    image_url:     imageUrl || '—',
+    submission_id: submissionId || '(not signed in)',
+    to_email:      EMAILJS_TO_EMAIL,
   };
 
+  let emailOk = false;
   try {
-    // Init EmailJS with public key before sending
+    // EmailJS is loaded after the first paint; wait for it (no-op if already loaded).
+    if (typeof emailjs === 'undefined' && window.spCdnReady) await window.spCdnReady;
     emailjs.init(EMAILJS_PUBLIC_KEY);
-
-    const res = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams
-    );
-    if (res.status === 200) {
-      // Award points if logged in
-      if (window.currentUser && window.fbAddPoints) {
-        await window.fbAddPoints(window.currentUser.uid, 'pin');
-        if (imageUrl && imageUrl !== '—' && imageUrl !== '(upload failed)') {
-          await window.fbAddPoints(window.currentUser.uid, 'photo');
-        }
-      }
-      submitted = true;
-      submitCategory = '';
-      submitIntensity = 5;
-      submitLat = null; submitLng = null;
-      renderPage();
-    } else {
-      throw new Error('Status: ' + res.status + ' — ' + res.text);
-    }
+    const res = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+    emailOk = res && res.status === 200;
+    if (!emailOk) console.warn('EmailJS status:', res && res.status);
   } catch(err) {
-    console.error('EmailJS error:', err);
-    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ Send failed: ${err.text || err.message || err}. Please try again.</p>`;
-    if (btn) { btn.disabled = false; btn.innerHTML = '📍 Drop the Pin'; }
+    console.warn('EmailJS error:', err && (err.status || err.text || err.message));
   }
+
+  if (!emailOk && !submissionId) {
+    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ We couldn't send your location. Please check your connection and try again. Your answers are still in the form.</p>`;
+    restoreButton();
+    return;
+  }
+  // (If only the e-mail failed, the stored submission is enough: the team reviews submissions
+  // from the database as well.)
+  try { localStorage.setItem('sp_last_submit', String(Date.now())); } catch(e) {}
+  lastSubmission = { id: submissionId, tracked: !!submissionId, photoNote };
+  submitted = true;
+  submitCategory = '';
+  submitIntensity = 5;
+  submitLat = null; submitLng = null;
+  renderPage();
 }
 
 // ── DETAIL ────────────────────────────────────────────────────────────────────
@@ -5880,6 +6939,10 @@ function renderDetail(lang) {
       <p>${loc.theMystery}</p>
     </div>` : ''}
 
+    <!-- TIMELINE + SOURCES (escaped; empty arrays render nothing) -->
+    ${SP_Timeline(loc)}
+    ${SP_Sources(loc)}
+
     <!-- LOCATION -->
     <div class="story-section">
       <div class="story-section-label" style="color:var(--text-dim);">
@@ -5926,9 +6989,9 @@ function renderDetail(lang) {
       </div>
       <div id="commentsList"><p style="color:var(--text-dim);font-size:0.85rem;">Loading...</p></div>
       <div class="comment-input-wrap" style="margin-top:16px;">
-        <div class="comment-avatar" style="margin-top:4px;">${window.currentUser ? (window.currentUser.displayName||'?')[0].toUpperCase() : '?'}</div>
+        <div class="comment-avatar" style="margin-top:4px;">${window.currentUser ? avatarInitial(window.currentUser.nickname || 'E') : '?'}</div>
         <div style="flex:1;">
-          <textarea id="commentInput" class="comment-input" rows="2"
+          <textarea id="commentInput" class="comment-input" rows="2" maxlength="1000" aria-label="Write a comment"
             placeholder="${window.currentUser ? 'Share your experience or thoughts...' : 'Sign in to comment...'}"
             ${!window.currentUser ? 'disabled' : ''}></textarea>
           <div style="display:flex;justify-content:flex-end;margin-top:8px;">
@@ -5937,6 +7000,7 @@ function renderDetail(lang) {
               Post Comment
             </button>
           </div>
+          <p id="commentStatus" role="status" aria-live="polite" style="font-size:0.8rem;margin-top:6px;min-height:1em;">${window.currentUser ? `Commenting as <strong>${escapeHtml(window.currentUser.nickname || '…')}</strong> (your public nickname)` : ''}</p>
         </div>
       </div>
     </div>
@@ -5974,23 +7038,20 @@ function renderDetail(lang) {
 function renderLeaderboard(lang) {
   const user = window.currentUser;
   const myProfile = user ? (() => {
-    const name   = getSafeName(user);
+    const name   = user.nickname || 'Explorer';   // the same public nickname others see
     const pts    = getSafePoints(user);
     const pins   = getSafePins(user);
     const level  = window.getLevelInfo ? window.getLevelInfo(pts) : { name:'Curious', icon:'🔍', color:'#8888aa', progress:0, next:{ name:'Witness', min:50 } };
     const needed = level.next ? Math.max(0, level.next.min - pts) : 0;
-    const photo  = user.photoURL || '';
+    const photo  = '';
     return `
     <div style="background:linear-gradient(135deg,rgba(232,98,26,0.1),rgba(109,40,217,0.1));border:1px solid rgba(232,98,26,0.25);border-radius:14px;padding:20px 24px;margin-bottom:28px;cursor:pointer;" onclick="showPage('profile')" title="View your profile">
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
         <div style="width:48px;height:48px;border-radius:50%;border:2px solid var(--orange);overflow:hidden;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          ${photo
-            ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=color:white;font-weight:700;font-size:1.1rem>${name[0].toUpperCase()}</span>'" />`
-            : `<span style="color:white;font-weight:700;font-size:1.1rem;">${name[0].toUpperCase()}</span>`
-          }
+          ${avatarHtml(photo, name, 'color:white;font-weight:700;font-size:1.1rem;')}
         </div>
         <div style="flex:1;min-width:0;">
-          <div style="font-weight:700;font-size:1rem;color:var(--text);">Welcome, ${name} 👋</div>
+          <div style="font-weight:700;font-size:1rem;color:var(--text);">Welcome, ${escapeHtml(name)} 👋</div>
           <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">${pins} pin${pins!==1?'s':''} · ${pts} pts</div>
         </div>
         <div style="text-align:right;">
@@ -6034,8 +7095,9 @@ function renderLeaderboard(lang) {
     ${myProfile}
 
     <!-- Points guide -->
+    <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:10px;">Points are added by the StrangePin team after a submission has been reviewed and approved.</p>
     <div class="grid-4" style="margin-bottom:28px;">
-      ${[['📍','Pin a location','+10'],['📸','Add a photo','+5'],['🎥','Add a video','+20'],['✅','Get verified','+5']]
+      ${[['📍','Approved location','+10'],['📸','Photo with an approved location','+5']]
         .map(([icon,label,pts])=>`
         <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
           <div style="font-size:1.4rem;margin-bottom:6px;">${icon}</div>
@@ -6072,12 +7134,47 @@ function renderLeaderboard(lang) {
   </div>`;
 }
 
-function startLiveLeaderboard() {
+let lbTimer = null;
+function renderLeaderboardFailure(message) {
+  const el = document.getElementById('lbRows');
+  if (!el) return;
+  el.innerHTML = `<div id="lbError" style="padding:32px;text-align:center;color:var(--text-dim);">
+    <div style="font-size:1.5rem;margin-bottom:8px;">📡</div>
+    <p style="margin-bottom:12px;">${escapeHtml(message)}</p>
+    <button class="btn-secondary btn-sm" onclick="retryLeaderboard()">Try again</button>
+  </div>`;
+}
+function retryLeaderboard() {
+  const el = document.getElementById('lbRows');
+  if (el) el.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text-dim);"><div style="font-size:1.5rem;margin-bottom:8px;">⏳</div>Loading live rankings...</div>`;
+  startLiveLeaderboard();
+}
+function stopLiveLeaderboard() {
   if (lbUnsubscribe) { lbUnsubscribe(); lbUnsubscribe = null; }
-  if (!window.fbListenLeaderboard) return;
+  if (lbTimer) { clearTimeout(lbTimer); lbTimer = null; }
+}
+
+function startLiveLeaderboard() {
+  stopLiveLeaderboard();
+  // No Firebase (SDK blocked, offline, or still loading after 10 s): show a failure state.
+  if (!window.fbListenLeaderboard) {
+    lbTimer = setTimeout(() => {
+      if (window.fbListenLeaderboard && currentPage === 'leaderboard') return startLiveLeaderboard();
+      renderLeaderboardFailure("The rankings couldn't be loaded. Please check your connection and try again.");
+    }, 10000);
+    return;
+  }
+  let received = false;
+  lbTimer = setTimeout(() => {
+    if (received) return;
+    stopLiveLeaderboard();
+    renderLeaderboardFailure('The rankings are taking too long to load. Please try again.');
+  }, 10000);
   lbUnsubscribe = window.fbListenLeaderboard(users => {
+    received = true;
+    if (lbTimer) { clearTimeout(lbTimer); lbTimer = null; }
     const el = document.getElementById('lbRows');
-    if (!el) { if (lbUnsubscribe) { lbUnsubscribe(); lbUnsubscribe = null; } return; }
+    if (!el) { stopLiveLeaderboard(); return; }
     if (users.length === 0) {
       el.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text-dim);">No pinners yet — be the first! 🌍</div>`;
       return;
@@ -6086,8 +7183,8 @@ function startLiveLeaderboard() {
     el.innerHTML = users.map((u, i) => {
       const pts   = (typeof u.points === 'number') ? u.points : 0;
       const pins  = (typeof u.pins   === 'number') ? u.pins   : 0;
-      const name  = u.displayName || u.email?.split('@')[0] || 'Anonymous';
-      const photo = u.photoURL || '';
+      // Public nickname only; never a Google name, photo or e-mail.
+      const name  = (typeof u.nickname === 'string' && u.nickname.trim()) ? u.nickname.trim() : 'Explorer';
       const level = getLvl(pts);
       const rank  = i + 1;
       const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':null;
@@ -6095,10 +7192,10 @@ function startLiveLeaderboard() {
         <div style="text-align:center;">${medal ? `<span style="font-size:1.2rem;">${medal}</span>` : `<span class="font-mono" style="font-size:0.85rem;color:var(--text-dim);">#${rank}</span>`}</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#e8621a,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:white;overflow:hidden;flex-shrink:0;">
-            ${photo ? `<img src="${photo}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.textContent='${name[0].toUpperCase()}'" />` : name[0].toUpperCase()}
+            ${avatarInitial(name)}
           </div>
           <div>
-            <div style="font-size:0.9rem;font-weight:500;color:var(--text);">${name}</div>
+            <div style="font-size:0.9rem;font-weight:500;color:var(--text);">${escapeHtml(name)}</div>
             <div style="font-size:0.72rem;color:var(--text-dim);">${pins} pins</div>
           </div>
         </div>
@@ -6107,6 +7204,10 @@ function startLiveLeaderboard() {
         <span class="font-mono" style="font-size:0.875rem;font-weight:700;color:var(--orange-glow);text-align:right;">${pts.toLocaleString()}</span>
       </div>`;
     }).join('');
+  }, err => {
+    received = true;
+    stopLiveLeaderboard();
+    renderLeaderboardFailure(spFriendlyError(err, 'load the rankings'));
   });
 }
 
@@ -6195,6 +7296,10 @@ window.initApp = function() {
     if (bar)  bar.classList.add('visible');
     if (barL) barL.textContent = `Translated to: ${savedFlag} ${savedName}`;
   }
+  if ((savedCode && savedCode !== 'en') || /(?:^|;\s*)googtrans=\/[^/;]*\/(?!en(?:;|$))[^;]+/.test(document.cookie)) {
+    // Google applies the googtrans cookie itself once the widget loads.
+    setTimeout(() => window.spLoadTranslate().catch(e => console.warn('StrangePin: translate unavailable', e)), 0);
+  }
 
   // MutationObserver: keep hiding Google's bar if it ever appears
   const observer = new MutationObserver(() => {
@@ -6212,17 +7317,46 @@ window.initApp = function() {
   });
   observer.observe(document.body, { attributes: true, childList: true, subtree: false });
 
-  // Set initial history state so back button works from the start
-  window.history.replaceState({ page:'home', detailId:null }, '', window.location.href);
+  // Service worker (see sw.js). Skipped in emulator mode and with ?nosw=1 so
+  // local tests are never served from cache.
+  if ('serviceWorker' in navigator && window.isSecureContext) {
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.get('emulator') !== '1' && qs.get('nosw') !== '1') {
+      const spRegisterSW = () => navigator.serviceWorker.register('/sw.js', { scope: '/' })
+        .catch(err => console.warn('StrangePin: service worker registration failed', err));
+      if (document.readyState === 'complete') spRegisterSW();
+      else window.addEventListener('load', spRegisterSW);
+    }
+  }
+
+  // Honour deep links (e.g. #detail/001, #map, manifest shortcuts) on first load,
+  // then set the initial history state so the back button works from the start.
+  const route = parseHashRoute(window.location.hash);
+  currentPage = route.page;
+  if (route.detail) currentDetail = route.detail;
+  if (route.query) mapSearch = route.query;
+  updateSEO(currentPage, currentDetail);
+  ['home','map','submit','nearby','leaderboard','about'].forEach(p => {
+    const btn = document.getElementById('tab_' + p);
+    if (btn) btn.classList.toggle('active', p === currentPage);
+  });
+  window.history.replaceState({ page: currentPage, detailId: route.detail ? route.detail.id : null }, '', window.location.href);
 
   renderPage();
 };
 
-// Render immediately — no waiting
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', window.initApp);
-} else {
+// perf/lcp: initApp runs from a tiny script at the end of <body> (after the bottom
+// tab bar markup), so first render no longer waits for the deferred CDN scripts.
+// DOMContentLoaded remains a fallback; spInitAppOnce guarantees a single run.
+window.spInitAppOnce = function () {
+  if (window._spAppInitDone) return;
+  window._spAppInitDone = true;
   window.initApp();
+};
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', window.spInitAppOnce);
+} else {
+  window.spInitAppOnce();
 }
 </script>
 
@@ -6252,9 +7386,21 @@ if (document.readyState === 'loading') {
   </div>
 </nav>
 
-<!-- Firebase compat — runs AFTER page renders, non-blocking -->
+<!-- Firebase compat — initialised after the SDK scripts have executed -->
 <script>
-(function initFirebase() {
+// The Firebase SDK scripts are injected by spLoadDeferredAssets (<head>) right after the
+// first paint, so they execute only after this inline script has run, i.e. the SDK does
+// NOT exist yet here. Initialising immediately caused "ReferenceError: firebase is not
+// defined" in production (Phase 1). We initialise when window.spCdnReady resolves.
+function initFirebase() {
+  if (window._spFirebaseInitialised) return;
+  const fb = window.firebase;
+  if (!fb || typeof fb.initializeApp !== 'function' || typeof fb.auth !== 'function' || typeof fb.firestore !== 'function') {
+    // e.g. a CDN outage or a content blocker removed one of the SDK scripts.
+    console.error('StrangePin: Firebase SDK not (fully) loaded; auth and community features are disabled.');
+    return;
+  }
+  window._spFirebaseInitialised = true;
   const firebaseConfig = {
     apiKey: "AIzaSyBn5qHhpLgNwsHXcIegKJF-ZzybomjVTuI",
     authDomain: "strangepin-4e538.firebaseapp.com",
@@ -6264,9 +7410,27 @@ if (document.readyState === 'loading') {
     appId: "1:254898349595:web:1a20cc9c8d4ced1796fabe"
   };
 
+  // ── DEV-ONLY: Firebase Local Emulator Suite ─────────────────────────────────
+  // Active only when BOTH: the page is served from localhost/127.0.0.1 AND the
+  // URL contains ?emulator=1. On strangepin.com this branch can never run.
+  // The "demo-" project id makes the SDK unable to reach any real project.
+  const SP_USE_EMULATOR = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+    && new URLSearchParams(window.location.search).get('emulator') === '1';
+  if (SP_USE_EMULATOR) {
+    firebaseConfig.projectId  = 'demo-strangepin';
+    firebaseConfig.apiKey     = 'demo-api-key';
+    firebaseConfig.authDomain = 'demo-strangepin.firebaseapp.com';
+  }
+
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db   = firebase.firestore();
+  if (SP_USE_EMULATOR) {
+    auth.useEmulator('http://127.0.0.1:9099');
+    db.useEmulator('127.0.0.1', 8085);
+    window._spEmulator = true;
+    console.info('StrangePin: using local Firebase emulators (demo-strangepin).');
+  }
   window._db = db; // expose for stats, reactions, comments
   const provider = new firebase.auth.GoogleAuthProvider();
 
@@ -6277,7 +7441,9 @@ if (document.readyState === 'loading') {
     { min:350, name:'Strange Keeper', icon:'📍', color:'#a78bfa' },
     { min:700, name:'Echo Master',    icon:'⚡', color:'#ff6b35' },
   ];
-  window.SP_POINTS = { pin:10, photo:5, video:20, verify:5 };
+  // Points are awarded ONLY by the owner after review (scripts/admin-review-submission.js).
+  // These values are shown to users as guidance; the browser never writes points.
+  window.SP_POINTS = { pin:10, photo:5 };
 
   window.getLevelInfo = function(pts) {
     const lvls = window.SP_LEVELS;
@@ -6290,63 +7456,109 @@ if (document.readyState === 'loading') {
 
   window.fbSignIn = async function() {
     try {
-      const r = await auth.signInWithPopup(provider);
-      const ref = db.collection('users').doc(r.user.uid);
-      const snap = await ref.get();
-      if (!snap.exists) {
-        // ── Future-ready database schema ──────────────────────────────────────
-        // Includes fields for: badges, followers, achievements, country ranking
-        await ref.set({
-          // Core identity
-          uid:         r.user.uid,
-          displayName: r.user.displayName || '',
-          email:       r.user.email       || '',
-          photoURL:    r.user.photoURL     || '',
-          // Points & progression
-          points:      0,
-          pins:        0,
-          // Prepared for future features (not yet active)
-          badges:      [],           // e.g. ['first_pin','verified_explorer']
-          achievements:[],           // e.g. ['10_pins','first_international']
-          followers:   0,            // follower count
-          following:   0,            // following count
-          verified:    false,        // verified explorer status
-          country:     '',           // user's country (for country rankings)
-          bio:         '',           // user bio
-          website:     '',           // user website
-          // Metadata
-          joinedAt:    firebase.firestore.FieldValue.serverTimestamp(),
-          lastActive:  firebase.firestore.FieldValue.serverTimestamp(),
-          // Settings
-          notifications: { newComment: true, newReaction: true, weeklyDigest: true },
-          // App version
-          _schemaVersion: 1,
-        });
-      } else {
-        // Update lastActive on every login
-        await ref.update({ lastActive: firebase.firestore.FieldValue.serverTimestamp() });
-      }
-    } catch(e) { console.error('Sign in error:', e); }
+      await auth.signInWithPopup(provider);
+      // users/{uid} + publicProfiles/{uid} are ensured in onAuthStateChanged → ensureUserDoc
+    } catch(e) {
+      console.error('Sign in error:', e && e.code);
+      if (e && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request')
+        spToast("Sign-in didn't work. Please allow pop-ups for this site and try again.", 'error');
+    }
   };
+
+  // Make sure the private doc and the public profile exist, WITHOUT ever overwriting them.
+  // Runs in a transaction: documents are only created when absent. An existing (legacy)
+  // users/{uid} keeps its points, pins, e-mail and name untouched; its public profile is
+  // created with the score copied from it (firestore.rules checks the copy) and a
+  // generated nickname, never the Google name or photo.
+  async function ensureUserDoc(user) {
+    const ref = db.collection('users').doc(user.uid);
+    const pub = db.collection('publicProfiles').doc(user.uid);
+    const ts  = firebase.firestore.FieldValue.serverTimestamp();
+    const out = await db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      const pubSnap = await tx.get(pub);
+      let priv = snap.exists ? (snap.data() || {}) : null;
+      if (!priv) {
+        priv = {
+          uid: user.uid,
+          displayName: String(user.displayName || '').slice(0, 80),   // private
+          email: String(user.email || '').slice(0, 254),              // private
+          photoURL: safeHttpsUrl(user.photoURL || ''),                // private
+          points: 0, pins: 0,                                         // server-owned
+          joinedAt: ts, lastActive: ts,
+          _schemaVersion: 3,
+        };
+        tx.set(ref, priv);
+      }
+      let profile = pubSnap.exists ? (pubSnap.data() || {}) : null;
+      if (!profile) {
+        const asCount = v => (v === undefined ? 0 : (Number.isInteger(v) ? v : null));
+        const pts = asCount(priv.points), pins = asCount(priv.pins);
+        if (pts !== null && pins !== null) {
+          profile = { nickname: spDefaultNickname(user.uid), points: pts, pins, updatedAt: ts };
+          tx.set(pub, profile);
+        }
+        // else: unusual legacy values; the owner's backfill script creates the profile.
+      }
+      return { created: !snap.exists, profile };
+    });
+    if (!out.created) await ref.update({ lastActive: ts }).catch(() => {});
+    const fresh = (await ref.get()).data() || {};
+    return { spData: fresh, profile: out.profile ? { nickname: out.profile.nickname } : null };
+  }
+  window._spEnsureUserDoc = ensureUserDoc;
 
   window.fbSignOut = () => auth.signOut();
 
-  window.fbAddPoints = async function(uid, type) {
-    const pts = window.SP_POINTS[type]||0;
-    if (!pts||!uid) return;
-    const ref = db.collection('users').doc(uid);
-    const up  = { points: firebase.firestore.FieldValue.increment(pts) };
-    if (type==='pin') up.pins = firebase.firestore.FieldValue.increment(1);
-    await ref.update(up);
-    if (window.currentUser) {
-      window.currentUser.spData = (await ref.get()).data();
-      window.updateNavAuth();
-      const el = document.createElement('div');
-      el.textContent = '+'+pts+' pts!';
-      el.style.cssText='position:fixed;bottom:24px;right:24px;background:#e8621a;color:#fff;padding:10px 20px;border-radius:10px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(232,98,26,.5)';
-      document.body.appendChild(el);
-      setTimeout(()=>el.remove(),3000);
-    }
+  // Change the public nickname (validated here and again by firestore.rules).
+  window.fbSetNickname = async function(nick) {
+    const u = window.currentUser;
+    if (!u) throw { code: 'unauthenticated' };
+    const problem = spNicknameProblem(nick);
+    if (problem) throw { code: 'invalid-nickname', message: problem };
+    await db.collection('publicProfiles').doc(u.uid).update({ nickname: nick, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    u.nickname = nick;
+  };
+
+  // Store a location submission for review (status 'pending'; the review fields and points
+  // are written only by the owner's admin script). The private doc's lastSubmissionAt is
+  // stamped in the same batch, which firestore.rules uses as a 60 s throttle.
+  window.fbCreateSubmission = async function(fields) {
+    const u = window.currentUser;
+    if (!u) throw { code: 'unauthenticated' };
+    const ts = firebase.firestore.FieldValue.serverTimestamp();
+    const ref = db.collection('submissions').doc();
+    const batch = db.batch();
+    batch.set(ref, Object.assign({}, fields, { authorUid: u.uid, status: 'pending', createdAt: ts }));
+    batch.update(db.collection('users').doc(u.uid), { lastSubmissionAt: ts });
+    await batch.commit();
+    return ref.id;
+  };
+
+  // The signed-in user's own submissions (equality filter only → no composite index needed).
+  window.fbMySubmissions = async function() {
+    const u = window.currentUser;
+    if (!u) return [];
+    const snap = await db.collection('submissions').where('authorUid', '==', u.uid).limit(50).get();
+    return snap.docs.map(d => Object.assign({ id: d.id }, d.data()))
+      .sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+  };
+
+  // "Request account deletion": creates deletionRequests/{uid}; the owner processes it
+  // by hand (docs/account-deletion.md). Nothing is deleted automatically.
+  window.fbRequestDeletion = async function(reason) {
+    const u = window.currentUser;
+    if (!u) throw { code: 'unauthenticated' };
+    await db.collection('deletionRequests').doc(u.uid).set({
+      uid: u.uid, status: 'requested', requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      reason: String(reason || '').slice(0, 500),
+    });
+  };
+  window.fbMyDeletionRequest = async function() {
+    const u = window.currentUser;
+    if (!u) return null;
+    const snap = await db.collection('deletionRequests').doc(u.uid).get();
+    return snap.exists ? snap.data() : null;
   };
 
   window.updateNavAuth = function() {
@@ -6373,34 +7585,51 @@ if (document.readyState === 'loading') {
     }
   };
 
-  window.fbListenLeaderboard = function(cb) {
-    return db.collection('users').orderBy('points','desc').limit(20)
-      .onSnapshot(s => cb(s.docs.map(d=>d.data())));
+  // Live leaderboard. onError is called on permission/network errors so the page can show
+  // a failure state with a retry button instead of loading forever.
+  window.fbListenLeaderboard = function(cb, onError) {
+    // publicProfiles holds only nickname + score (no e-mail, no Google name/photo)
+    return db.collection('publicProfiles').orderBy('points','desc').limit(20)
+      .onSnapshot(s => cb(s.docs.map(d=>d.data())), e => { console.warn('leaderboard unavailable:', e && e.code); if (onError) onError(e); });
   };
 
   auth.onAuthStateChanged(async u => {
     if (u) {
       try {
-        const snap = await db.collection('users').doc(u.uid).get();
-        const spData = snap.exists ? (snap.data() || {}) : {};
+        const r = await ensureUserDoc(u);
         window.currentUser = {
           uid:         u.uid,
-          displayName: u.displayName || spData.displayName || '',
-          email:       u.email       || spData.email       || '',
-          photoURL:    u.photoURL    || spData.photoURL     || '',
-          spData,
+          displayName: u.displayName || r.spData.displayName || '',   // private, shown only to the user
+          email:       u.email       || r.spData.email       || '',
+          photoURL:    u.photoURL    || r.spData.photoURL     || '',
+          nickname:    r.profile ? r.profile.nickname : '',
+          spData:      r.spData,
         };
+        window._spProfileError = null;
       } catch(e) {
-        window.currentUser = { uid:u.uid, displayName:u.displayName||'', email:u.email||'', photoURL:u.photoURL||'', spData:{} };
+        console.warn('profile not loaded:', e && e.code);
+        window._spProfileError = e && e.code || 'error';
+        window.currentUser = { uid:u.uid, displayName:u.displayName||'', email:u.email||'', photoURL:u.photoURL||'', nickname:'', spData:{} };
+        spToast("You're signed in, but your profile couldn't be loaded. Comments and saving may not work right now.", 'error');
       }
     } else {
       window.currentUser = null;
     }
     window.updateNavAuth();
-    if (window.currentPage === 'leaderboard') window.renderPage();
-    if (window.currentPage === 'profile')     window.renderPage();
+    if (['leaderboard', 'profile', 'detail'].includes(window.currentPage)) window.renderPage();
   });
-})();
+}
+
+// perf: the SDK scripts are injected after the first paint (see spLoadDeferredAssets in
+// <head>); initialise once they have loaded (or failed: initFirebase then logs and returns).
+if (window.spCdnReady) {
+  window.spCdnReady.then(initFirebase);
+} else if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFirebase);
+} else {
+  initFirebase();
+}
 </script>
+<script>window.spInitAppOnce && window.spInitAppOnce();</script>
 </body>
 </html>

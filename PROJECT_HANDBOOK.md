@@ -81,7 +81,6 @@ Browser requests strangepin.com
 ```
 /
 ├── index.html          ← Entire application
-├── locations.js        ← Reference copy of LOCATIONS[] array (not loaded by app)
 ├── manifest.json       ← PWA manifest
 ├── og-image.html       ← Open Graph image source (rendered externally to og-image.png)
 ├── README.md           ← Repository documentation
@@ -798,7 +797,7 @@ These rules are in force for all development on this project. They were establis
 | Short Pins receive empty stubs, not null objects | Forward-compatibility: rendering code can safely access `loc.timeline` without null checks |
 | Reading time computed at 200 wpm | Industry standard estimate; labelled as `~N min` to signal approximation |
 | Section labels text-only (no emoji) | Doc 011 spec: "simple, thin, minimal, universal — avoid playful iconography" |
-| `locations.js` is a reference copy, not loaded by app | Architecture decision deferred to Sprint 5 (data infrastructure migration) |
+| `locations.js` (stale reference copy, never loaded) was removed on 2026-10-21; the inline `LOCATIONS` array in `index.html` is the single source of pin data | Recover it from git history if Sprint 5 needs a separate data file |
 
 ---
 
@@ -938,7 +937,7 @@ Only items that have been explicitly approved by Product are listed here.
 - Migrate `LOCATIONS[]` to Firestore
 - Give community-submitted pins a public detail page
 - Remove the split data source architecture
-- `locations.js` reference file becomes the actual loaded file
+- A separate data file (the removed `locations.js` can be recovered from git history) becomes the loaded source
 
 ---
 
@@ -949,8 +948,6 @@ Only items that have been explicitly approved by Product are listed here.
 ```
 strangepin/
 ├── index.html          ← Entire application (6,040 lines, ~320 KB uncompressed)
-├── locations.js        ← Reference copy of LOCATIONS[] (2,280 lines, ~125 KB)
-│                         Not loaded by the app. For version control visibility.
 ├── manifest.json       ← PWA manifest
 ├── og-image.html       ← Open Graph image source (1,200×630 static HTML)
 │                         Rendered externally to og-image.png by a screenshot tool

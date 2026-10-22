@@ -1,0 +1,107 @@
+# CI for StrangePin. Runs only the headless local test suites.
+# - No secrets are used or needed; nothing talks to production Firebase/EmailJS/Cloudinary
+#   (browser tests abort those requests; Firestore/Auth tests use the local emulators with
+#   the demo project "demo-strangepin").
+# - Read-only token. Required status check name: "tests" (job id/name below).
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CHROME_PATH: /usr/bin/google-chrome
+      HTMLVALIDATE: ${{ github.workspace }}/tests/node_modules/.bin/html-validate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install test dependencies (tests/package-lock.json)
+        run: npm ci --prefix tests --no-audit --no-fund
+      - name: Chrome version
+        run: "$CHROME_PATH --version"
+
+      - name: Unit - helpers
+        run: node tests/helpers.test.js
+      - name: Static hero is in sync with renderHomeHero()
+        run: node scripts/sync-static-hero.js --check
+      - name: SEO pages build + sitemap check + html-validate
+        run: |
+          node scripts/build-pins.js --out dist --site https://strangepin.com
+          node tests/sitemap-check.js dist https://strangepin.com
+          node tests/seo-pages.test.js
+
+      - name: Start static server (:8080)
+        run: |
+          python3 -m http.server 8080 --bind 127.0.0.1 > /tmp/http8080.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8080/ > /dev/null && break; sleep 1; done
+      - name: Browser - smoke
+        run: node tests/browser-smoke.js
+      - name: Browser - detail sections
+        run: node tests/detail-sections.js
+      - name: Browser - PWA installability
+        run: node tests/pwa-installability.js
+      - name: Browser - map fallback chain
+        run: node tests/map-fallback.js
+      - name: Browser - PWA offline
+        run: node tests/pwa-offline.js
+
+      - name: Firestore rules v3, admin scripts, compatibility matrix, emulator e2e, site regression
+        run: >
+          ./tests/node_modules/.bin/firebase emulators:exec --only auth,firestore --project demo-strangepin
+          "node tests/rules.test.js && node tests/admin-scripts.test.js && node tests/compat-matrix.test.js && node tests/e2e-emulator.js && node tests/regression.js"
+
+      - name: Error handling under denial (owner-reported expired production rules, emulator only)
+        run: >
+          ./tests/node_modules/.bin/firebase emulators:exec --config firebase.audit-expired.json --only auth,firestore --project demo-strangepin
+          "node tests/expired-rules.test.js && node tests/e2e-expired-rules.js"
+
+  # Suites that reach public third-party hosts (Google Translate, OpenFreeMap). Useful signal,
+  # but they depend on networks outside our control, so they are NOT a required check.
+  network-tests:
+    name: network-tests (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    env:
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - run: npm ci --prefix tests --no-audit --no-fund
+      - name: Start servers (:8080 static, :8093 with _headers)
+        run: |
+          python3 -m http.server 8080 --bind 127.0.0.1 > /tmp/http8080.log 2>&1 &
+          node scripts/dev-headers-server.js . 8093 > /tmp/h8093.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8080/ > /dev/null && curl -sf http://localhost:8093/ > /dev/null && break; sleep 1; done
+      - name: Performance / lazy loading (includes Google Translate checks)
+        run: node tests/perf-lazy.js
+      - name: CSP Report-Only violations
+        run: node tests/csp-report-only.js
