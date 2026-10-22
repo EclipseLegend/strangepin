@@ -85,38 +85,38 @@ TESTED: `tests/compat-matrix.test.js`, 42 cells, 0 unexpected, run via
    data stays protected. **Therefore: if the client must be rolled back, roll back the rules
    first (or together).**
 
-## 3. Backfill (`scripts/backfill-public-profiles.js`) — NOT RUN against production
+## 3. v3 update (local branch `pr/technical-v2`, 2026-10-22)
 
-- Purpose: create `publicProfiles/{uid}` from `users/{uid}` for existing users.
-- Safety: dry run by default; writing needs `--write --confirm-project=<projectId>` matching the
-  project of the credentials (TESTED on the emulator: missing or wrong `--confirm-project`
-  → exit 2, nothing written). Uses Admin SDK default credentials (service account, owner only).
-- Idempotency (TESTED on the emulator: two consecutive `--write` runs → identical documents,
-  only `updatedAt` differs): `set(..., {merge:true})`, each profile rebuilt from the
-  *current* `users/{uid}` inside a transaction, so a concurrent point award cannot be
-  overwritten with stale data.
-- Sanitising (TESTED): non-https `photoURL` → `''`; non-integer points/pins → 0; displayName
-  cut to 80 chars.
-- Caveats (EXPECTED): (a) `users` documents with non-integer `points` get a mirror of 0, and the
-  new rules require the mirror to equal `users.points` on later awards, so those users cannot
-  earn points until fixed; (b) points inflated under the permissive rules are copied to the
-  public leaderboard — review the dry-run output for outliers first; (c) reads every user
-  document once (Firestore read cost ≈ number of users).
+- Rules v3 (`firestore.rules`) replace v2: points/pins are owner-only (Admin SDK script,
+  manual review), public profiles hold a nickname + score only, comment author names are the
+  nickname. The matrix test now runs the v3 client shapes against v3 ("new"); 0 unexpected
+  cells (TESTED).
+- New compatibility consequence (TESTED): the **old client (main 728e8f5) can no longer create
+  accounts or post comments under v3** (it writes the old shapes). It cannot do so today either:
+  the owner-reported live rules are expired test-mode rules that deny everything (TESTED
+  against `fixtures/rules-prod-expired.rules`), and main never initialises Firebase.
+- Legacy users (existing `users/{uid}` with points/pins): v3 lets the owner read the legacy
+  doc, update only `lastActive`, and create the public profile only with the *same* points and
+  pins (TESTED; e2e with an owner-shaped doc: points 25 / pins 2 preserved).
 
-## 4. Safe, reversible migration plan (NOT EXECUTED; owner action)
+## 4. Backfill (`scripts/backfill-public-profiles.js`) — NOT RUN against production
 
-1. **Capture the live rules**: console → Firestore → Rules, copy into
-   `tests/fixtures/rules-live.rules`, rerun the matrix against it. Note the current rules
-   version in the console history (that is the rollback target).
-2. **Deploy the new client** (technical PR → Netlify). It works with both rule sets
-   (scenario 2). Rollback: Netlify → Deploys → previous deploy → "Publish deploy".
-3. **Backfill**: dry run, review, then `--write --confirm-project=strangepin-4e538`. Rollback:
-   not normally needed (the new collection is additive; old rules ignore it); if necessary,
-   delete `publicProfiles` with admin tooling.
-4. **Deploy the new rules** (`firebase deploy --only firestore:rules`, owner only), then smoke
-   test: sign in, react, comment, like, save, leaderboard. Rollback: console → Firestore →
-   Rules → history → select the previous version → publish (takes effect within ~1 minute,
-   EXPECTED per Firebase docs).
-5. **Backfill again** (idempotent) to cover users who signed in between steps 3 and 4.
-6. Rollback ordering rule: **rules first, then client**; never run an older client against
-   the new rules longer than necessary (scenario 4).
+Rewritten for v3; see `docs/backfill-dry-run.md`. Create-if-absent only (never modifies an
+existing profile or any `users` doc), generated nickname, no e-mail/name/photo copied,
+counts-only output, dry run by default, guarded target (TESTED on the emulator).
+
+## 5. Safe, reversible migration plan (NOT EXECUTED; owner action, each step needs approval)
+
+1. **Capture the live rules** (console → Firestore → Rules → copy; note the version in the
+   history = rollback target). Owner-reported today: expired test mode (deny all).
+2. **EmailJS template**: fixed recipient instead of `{{to_email}}` (docs/third-party-hardening.md)
+   — before the client is deployed, or notifications stop arriving.
+3. **Deploy the v3 client** (merge the technical PR → Netlify). With the expired rules every
+   Firestore feature still fails, but now visibly and without losing typed text (TESTED,
+   `tests/e2e-expired-rules.js`). Rollback: Netlify → Deploys → previous deploy → Publish.
+4. **Deploy rules v3** (`firebase deploy --only firestore:rules` from a trusted machine, owner
+   only; Spark-compatible). Smoke test: sign in, nickname, comment, like, react, save,
+   leaderboard, submit. Rollback: console → Rules → history → previous version → Publish.
+5. **Backfill** (optional; dry run first, separate approval for each run).
+6. Review submissions with `scripts/admin-review-submission.js` (docs/admin-review.md).
+7. Rollback ordering: rules first, then client.

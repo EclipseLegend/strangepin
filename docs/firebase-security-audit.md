@@ -1,5 +1,10 @@
 # StrangePin — Firebase production security audit
 
+> **Update (pr/technical-v2):** the findings below are addressed by rules v3 and the v3 client;
+> `tests/rules-v2-audit.test.js` was merged into `tests/rules.test.js` (all cases kept, adapted to v3).
+> See `FIREBASE-SECURITY-FIX-REPORT.md` (delivered outside the repo), `docs/admin-review.md`,
+> `docs/backfill-dry-run.md`, `docs/account-deletion.md`, `docs/third-party-hardening.md`.
+
 - Date: 2026-10-22, 01:05–02:45 WEST (Europe/Lisbon, UTC+1)
 - Scope: audit only. **Nothing was deployed, merged, pushed or changed in production.** No request
   was sent to any production Firebase service (Firestore, Identity Toolkit, Secure Token,
