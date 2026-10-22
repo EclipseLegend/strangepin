@@ -15,6 +15,7 @@ const admin = require('firebase-admin');
 admin.initializeApp({ projectId: 'demo-strangepin' });
 const adb = admin.firestore();
 const { review } = require('../scripts/admin-review-submission.js');
+const { emuSignIn, emuPopupSignIn, watchAuthEmulator } = require('./lib/emulator-auth.js');
 
 const BASE = process.env.BASE_URL || 'http://localhost:8080/';
 const BLOCK_HOSTS = ['firestore.googleapis.com', 'identitytoolkit.googleapis.com', 'securetoken.googleapis.com',
@@ -37,15 +38,13 @@ async function openPage(browser, hash) {
   page.on('dialog', d => (page._acceptDialogs ? d.accept() : d.dismiss()));
   await page.setRequestInterception(true);
   page.on('request', r => { if (BLOCK_RE.test(r.url())) { blockedHits.push(r.url()); r.abort(); } else r.continue(); });
+  watchAuthEmulator(page);
   await page.goto(BASE + '?emulator=1' + hash, { waitUntil: 'load' });
   await page.waitForFunction(() => window._db && window._spEmulator, { timeout: 15000 });
   return page;
 }
 async function signIn(page, sub, name, email, picture) {
-  await page.evaluate(async (sub, name, email, picture) => {
-    const token = JSON.stringify({ sub, email, email_verified: true, name, picture });
-    await firebase.auth().signInWithCredential(firebase.auth.GoogleAuthProvider.credential(token));
-  }, sub, name, email, picture || '');
+  await emuSignIn(page, { sub, email, email_verified: true, name, picture: picture || '' });
   await page.waitForFunction(() => window.currentUser && window.currentUser.nickname, { timeout: 15000 });
   return page.evaluate(() => window.currentUser.uid);
 }
@@ -229,16 +228,7 @@ const text = (page, sel) => page.evaluate(s => { const el = document.querySelect
   // ── Real UI sign-in via the emulator's Google popup ─────────────────────
   const dctx = await browser.createBrowserContext();
   const d = await openPage(dctx, '');
-  const popupTarget = dctx.waitForTarget(t => t.type() === 'page' && /127\.0\.0\.1:9099\/emulator\/auth\/handler/.test(t.url()), { timeout: 15000 });
-  await d.click('#authBtn');
-  const pop = await (await popupTarget).page();
-  await pop.waitForFunction(() => [...document.querySelectorAll('button')].some(x => /Add new account/.test(x.textContent)), { timeout: 15000, polling: 200 });
-  await pop.evaluate(() => [...document.querySelectorAll('button')].find(x => /Add new account/.test(x.textContent)).click());
-  await sleep(1000);
-  await pop.evaluate(() => document.getElementById('autogen-button').click());
-  await sleep(500);
-  await pop.evaluate(() => document.getElementById('sign-in').click());
-  await d.waitForFunction(() => window.currentUser && window.currentUser.nickname, { timeout: 15000 });
+  await emuPopupSignIn(dctx, d);
   check('UI sign-in via the Google popup (Auth emulator) creates the profile and updates the nav', (await text(d, '#authBtn')) === 'Sign Out');
 
   // ── Global ──────────────────────────────────────────────────────────────

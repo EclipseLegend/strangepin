@@ -9,6 +9,7 @@
 //     --project demo-strangepin "node tests/e2e-expired-rules.js"   (static server on :8080)
 'use strict';
 const puppeteer = require('puppeteer-core');
+const { emuSignIn, watchAuthEmulator } = require('./lib/emulator-auth.js');
 const BASE = process.env.BASE_URL || 'http://localhost:8080/';
 const BLOCK_HOSTS = ['firestore.googleapis.com', 'identitytoolkit.googleapis.com', 'securetoken.googleapis.com',
   'firebaseinstallations.googleapis.com', 'firebase.googleapis.com', 'firebasestorage.googleapis.com', 'firebaselogging.googleapis.com',
@@ -19,7 +20,6 @@ const ALLOWED_GOOGLE = /^https:\/\/(translate|translate-pa)\.googleapis\.com\//;
 const results = [];
 const check = (name, ok, detail) => { results.push(ok); console.log((ok ? 'PASS' : 'FAIL') + ' - ' + name + (detail ? ' :: ' + detail : '')); };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const AUTH_EMU = 'http://127.0.0.1:9099/'; // must match firebase*.json and index.html (auth.useEmulator)
 const EMU = 'http://127.0.0.1:8085/v1/projects/demo-strangepin/databases/(default)/documents';
 async function emuCount(pathSuffix) {
   const r = await fetch(`${EMU}/${pathSuffix}`, { headers: { Authorization: 'Bearer owner' } });
@@ -33,31 +33,8 @@ async function newPage(browser) {
   p.on('dialog', d => d.accept());
   await p.setRequestInterception(true);
   p.on('request', r => { const u = r.url(); if (BLOCK_RE.test(u) && !ALLOWED_GOOGLE.test(u)) { blockedHits.push(u); r.abort(); } else r.continue(); });
-  // Diagnostics: name the network error if a request to the local Auth emulator fails.
-  p.on('requestfailed', r => { if (r.url().startsWith(AUTH_EMU)) console.log('  (auth emulator request failed: ' + r.method() + ' ' + r.url().replace(/\?.*$/, '') + ' :: ' + ((r.failure() || {}).errorText || '?') + ')'); });
+  watchAuthEmulator(p);
   return p;
-}
-// Sign in on the Auth emulator from the page. Waits for Auth to finish initialising first, and
-// retries (max 3 attempts) ONLY on auth/network-request-failed: a transient browser -> local
-// emulator transport error (seen once in CI run 39760014182, not reproducible locally). Any other
-// error fails the test. This is test plumbing; the behaviour under test (Firestore denial) is
-// unaffected because Auth is not restricted by Firestore rules.
-async function emuSignIn(page, claims) {
-  for (let attempt = 1; ; attempt++) {
-    const r = await page.evaluate(async c => {
-      await new Promise(res => { const off = firebase.auth().onAuthStateChanged(() => { off(); res(); }); });
-      try {
-        await firebase.auth().signInWithCredential(firebase.auth.GoogleAuthProvider.credential(JSON.stringify(c)));
-        return { ok: true };
-      } catch (e) {
-        return { ok: false, code: e && e.code, detail: String((e && e.customData && e.customData.message) || (e && e.message) || e) };
-      }
-    }, claims);
-    if (r.ok) return attempt;
-    console.log(`  (emulator sign-in attempt ${attempt} failed: ${r.code} :: ${r.detail})`);
-    if (r.code !== 'auth/network-request-failed' || attempt >= 3) throw new Error(`emulator sign-in failed after ${attempt} attempt(s): ${r.code} :: ${r.detail}`);
-    await sleep(1000 * attempt);
-  }
 }
 const text = (page, sel) => page.evaluate(s => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : null; }, sel);
 const toasts = page => page.evaluate(() => [...document.querySelectorAll('.sp-toast')].map(t => t.textContent));
@@ -72,8 +49,7 @@ const toasts = page => page.evaluate(() => [...document.querySelectorAll('.sp-to
   check('emulator mode active (project demo-strangepin)', await p.evaluate(() => firebase.app().options.projectId === 'demo-strangepin'));
 
   // 1. Sign-in works (Auth), profile load is denied → visible notice, nothing written.
-  const attempts = await emuSignIn(p, { sub: 'alice', email: 'alice@example.com', email_verified: true, name: 'Alice' });
-  if (attempts > 1) console.log(`  (emulator sign-in needed ${attempts} attempts)`);
+  await emuSignIn(p, { sub: 'alice', email: 'alice@example.com', email_verified: true, name: 'Alice' });
   await p.waitForFunction(() => window.currentUser && window.currentUser.uid && window._spProfileError, { timeout: 15000 });
   check('sign-in succeeds; denied profile load is reported to the user', (await text(p, '#authBtn')) === 'Sign Out' && (await toasts(p)).some(t => /profile couldn't be loaded/.test(t)), JSON.stringify(await toasts(p)));
   check('no users / publicProfiles documents were created', (await emuCount('users')) === 0 && (await emuCount('publicProfiles')) === 0);

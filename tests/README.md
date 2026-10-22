@@ -13,6 +13,13 @@ to them is counted, and the test asserts the count is 0. Pages run with `?emulat
 (localhost only → project `demo-strangepin`); the PWA tests, where the service worker is
 disabled in emulator mode, stub the Firebase SDK script instead.
 
+Tests that sign in to the Auth emulator (`e2e-emulator.js`, `e2e-expired-rules.js`) use
+`tests/lib/emulator-auth.js`: `emuSignIn()` (fake Google credential) and `emuPopupSignIn()`
+(the emulator's real popup) wait for the page load and Auth initialisation, retry ONLY on
+`auth/network-request-failed` (max 3 attempts, 1 s / 2 s backoff; any other error fails), and
+log every failed request to the Auth emulator with Chrome's error text plus any main-frame
+navigation during a sign-in. This covers a rare browser → emulator transport error seen in CI.
+
 ## Phase 2 tests
 
 | File | What it checks | How to run |
