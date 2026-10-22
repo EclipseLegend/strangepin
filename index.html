@@ -1759,6 +1759,80 @@ function spAvatarFallback(img) {
   parent.replaceChildren(span);
 }
 
+// ── NICKNAME HELPERS ─────────────────────────────────────────────────────────
+// Public names are nicknames chosen by the user (never the Google name). The same
+// rules are enforced server-side in firestore.rules (validNickname) and in
+// scripts/lib/nickname.js; keep the three in sync.
+
+const SP_NICK_RESERVED_PART  = /(strangepin|admin|moderator|official|support|staff|firebase)/;
+const SP_NICK_RESERVED_EXACT = /^(mod|mods|team|system|root|owner|help|security|google|anonymous|null|undefined)$/;
+
+/** Normalised comparison key: lower case, only a-z0-9, digit look-alikes mapped. */
+function spNicknameKey(nick, one) {
+  return String(nick || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    .replace(/0/g, 'o').replace(/3/g, 'e').replace(/4/g, 'a')
+    .replace(/5/g, 's').replace(/7/g, 't').replace(/1/g, one || 'i');
+}
+
+/** '' if the nickname is acceptable, otherwise a short user-facing reason. */
+function spNicknameProblem(nick) {
+  if (typeof nick !== 'string') return 'Please enter a nickname.';
+  if (nick.length < 3 || nick.length > 24) return 'Nicknames must be 3 to 24 characters long.';
+  if (!/^[A-Za-z0-9]([A-Za-z0-9]|[ ._-][A-Za-z0-9])*$/.test(nick))
+    return 'Use letters and numbers, with single spaces, dots, dashes or underscores between them.';
+  for (const one of ['i', 'l']) {
+    const k = spNicknameKey(nick, one);
+    if (SP_NICK_RESERVED_PART.test(k) || SP_NICK_RESERVED_EXACT.test(k))
+      return 'That nickname is reserved. Please choose another one.';
+  }
+  return '';
+}
+
+/** Default nickname derived from the uid (FNV-1a), e.g. "Explorer-K3F9". Not personal data. */
+function spDefaultNickname(uid) {
+  let h = 0x811c9dc5;
+  for (const ch of String(uid || '')) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
+  return 'Explorer-' + h.toString(36).toUpperCase().padStart(4, '0').slice(-4);
+}
+
+// Uploads go to Cloudinary only if they are a JPG, PNG or WEBP image of at most 10 MB.
+const SP_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const SP_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+const SP_CLOUDINARY_PREFIX = 'https://res.cloudinary.com/dz9p5t4sj/image/upload/';
+/** '' if the (optional) photo may be uploaded, otherwise a user-facing reason. */
+function spImageProblem(file) {
+  if (!file) return '';
+  if (!SP_IMAGE_TYPES.includes(file.type)) return 'Photos must be JPG, PNG or WEBP images.';
+  if (!(file.size > 0) || file.size > SP_IMAGE_MAX_BYTES) return 'Photos must be smaller than 10 MB.';
+  return '';
+}
+
+/** Map a Firebase error to a calm, user-facing sentence. */
+function spFriendlyError(e, action) {
+  const code = (e && e.code) || '';
+  if (code === 'permission-denied') return `We couldn't ${action} right now. Please sign in again or try later.`;
+  if (code === 'unavailable' || code === 'deadline-exceeded' || code === 'timeout') return `We couldn't ${action}: the connection seems to be offline. Please try again.`;
+  return `We couldn't ${action}. Please try again in a moment.`;
+}
+
+/** Small non-blocking notice at the bottom of the screen (text only, never HTML). */
+function spToast(message, kind) {
+  if (typeof document === 'undefined') return;
+  const el = document.createElement('div');
+  el.className = 'sp-toast';
+  el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+  el.textContent = String(message || '');
+  el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:90vw;z-index:9999;padding:10px 18px;border-radius:10px;font-size:.85rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);'
+    + (kind === 'error' ? 'background:#3b1219;color:#fecaca;border:1px solid #7f1d1d;' : 'background:#0f2a1f;color:#bbf7d0;border:1px solid #166534;');
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
+/** Reject if the promise does not settle within ms (used for UI fallbacks). */
+function spWithTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), ms))]);
+}
+
 // ── TEXT HELPERS ─────────────────────────────────────────────────────────────
 
 /** Shorten text to at most `max` characters, cutting on a word boundary, adding "…". */
@@ -4239,6 +4313,8 @@ let mapSearch = '';
 let submitCategory = '';
 let submitIntensity = 5;
 let submitted = false;
+let lastSubmission = null; // { id, tracked, photoNote } after a successful submission
+const SP_SUBMIT_COOLDOWN_MS = 60 * 1000;
 let showTranslations = {};
 let lbUnsubscribe = null;
 let savedPins = JSON.parse(localStorage.getItem('sp_saved') || '[]');
@@ -4509,7 +4585,7 @@ async function loadHomeStats() {
     if (usersSnap.size > 0) {
       const liveUsers = usersSnap.docs
         .map(d => d.data())
-        .filter(u => u.displayName)
+        .filter(u => typeof u.nickname === 'string' && u.nickname)
         .sort((a,b) => (b.points||0) - (a.points||0))
         .slice(0,4);
       const getLvl = window.getLevelInfo || (pts => ({ name:'Curious', icon:'🔍', color:'#8888aa' }));
@@ -4517,11 +4593,11 @@ async function loadHomeStats() {
       if (listEl && liveUsers.length > 0) {
         listEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;">
           ${liveUsers.map(u => {
-            const name  = getSafeName(u) || 'Explorer';
+            const name  = u.nickname;   // public nickname only (never the Google name)
             const pts   = (typeof u.points === 'number') ? u.points : 0;
             const pins  = (typeof u.pins   === 'number') ? u.pins   : 0;
             const lv    = getLvl(pts);
-            const photo = u.photoURL || '';
+            const photo = '';           // no profile photos are published
             return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;">
               <div style="width:40px;height:40px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--orange),var(--purple));display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:1rem;margin:0 auto 8px;">
                 ${avatarHtml(photo, name)}
@@ -4577,24 +4653,32 @@ function getMyReaction(pinId) {
 }
 
 async function toggleReaction(pinId, reactionId) {
-  const current = getMyReaction(pinId);
-  const isSame  = current === reactionId;
-  if (isSame) {
-    delete pinReactions[pinId];
-  } else {
-    pinReactions[pinId] = reactionId;
-  }
-  localStorage.setItem('sp_reactions', JSON.stringify(pinReactions));
-  // Save to Firestore if logged in
+  const previous = getMyReaction(pinId);
+  const isSame   = previous === reactionId;
+  const setLocal = value => {
+    if (value) pinReactions[pinId] = value; else delete pinReactions[pinId];
+    try { localStorage.setItem('sp_reactions', JSON.stringify(pinReactions)); } catch(e) {}
+  };
+  setLocal(isSame ? null : reactionId);            // optimistic
+  updateReactionsUI(pinId, reactionCountsCache[pinId] || {});
+  // Signed-in users: store it; roll back and explain if the write fails.
   if (window.currentUser && window._db) {
     const ref = window._db.collection('pins').doc(pinId).collection('reactions').doc(window.currentUser.uid);
-    if (isSame) { await ref.delete().catch(()=>{}); }
-    else { await ref.set({ type: reactionId, uid: window.currentUser.uid, at: firebase.firestore.FieldValue.serverTimestamp() }).catch(e => console.warn('reaction not saved:', e && e.code)); }
+    try {
+      if (isSame) await ref.delete();
+      else await ref.set({ type: reactionId, uid: window.currentUser.uid, at: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch(e) {
+      console.warn('reaction not saved:', e && e.code);
+      setLocal(previous);
+      updateReactionsUI(pinId, reactionCountsCache[pinId] || {});
+      spToast(spFriendlyError(e, 'save your reaction'), 'error');
+      return;
+    }
   }
-  // Update UI without full re-render
   loadPinData(pinId);
 }
 
+const reactionCountsCache = {};
 async function loadPinData(pinId) {
   if (!pinId) return;
   // Load reactions
@@ -4608,6 +4692,7 @@ async function loadPinData(pinId) {
       });
     }
   } catch(e) {}
+  reactionCountsCache[pinId] = reactionCounts;
   updateReactionsUI(pinId, reactionCounts);
   loadComments(pinId);
   loadSavedCount(pinId);
@@ -4618,7 +4703,7 @@ function updateReactionsUI(pinId, counts) {
   if (!bar) return;
   const myR = getMyReaction(pinId);
   bar.innerHTML = REACTION_TYPES.map(r => `
-    <button class="reaction-btn ${myR===r.id?'active':''}" onclick="toggleReaction('${pinId}','${r.id}')">
+    <button class="reaction-btn ${myR===r.id?'active':''}" onclick="toggleReaction('${safeDocId(pinId)}','${r.id}')">
       <span>${r.icon}</span>
       <span>${r.label}</span>
       ${(counts[r.id]||0) > 0 ? `<span class="reaction-count">${counts[r.id]}</span>` : ''}
@@ -4628,14 +4713,22 @@ function updateReactionsUI(pinId, counts) {
 // ── COMMENTS ─────────────────────────────────────────────────────────────────
 async function loadComments(pinId) {
   const el = document.getElementById('commentsList');
-  if (!el || !window._db) return;
+  if (!el) return;
+  if (!window._db) {
+    el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;padding:12px 0;">Comments are unavailable right now.</p>`;
+    return;
+  }
   try {
-    const snap = await window._db.collection('pins').doc(pinId)
-      .collection('comments').orderBy('at','desc').limit(20).get();
+    const snap = await spWithTimeout(window._db.collection('pins').doc(pinId)
+      .collection('comments').orderBy('at','desc').limit(20).get(), 10000);
     const comments = snap.docs.map(d => ({ id:d.id, ...d.data() }));
     pinComments[pinId] = comments;
     renderCommentsList(pinId);
-  } catch(e) {}
+  } catch(e) {
+    console.warn('comments unavailable:', e && e.code);
+    el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;padding:12px 0;">Comments are unavailable right now.
+      <button class="btn-secondary btn-sm" style="margin-left:8px;" onclick="loadComments('${safeDocId(pinId)}')">Try again</button></p>`;
+  }
 }
 
 function renderCommentsList(pinId) {
@@ -4646,13 +4739,17 @@ function renderCommentsList(pinId) {
     el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;padding:12px 0;">No comments yet. Be the first!</p>`;
     return;
   }
-  el.innerHTML = comments.map(c => `
+  el.innerHTML = comments.map(c => {
+    // Public nickname only. Older comments without one are shown as "Explorer" so that no
+    // Google account name is displayed publicly.
+    const author = (typeof c.authorName === 'string' && c.authorName.trim()) ? c.authorName.trim() : 'Explorer';
+    return `
     <div class="comment-card">
       <div style="display:flex;align-items:flex-start;gap:10px;">
-        <div class="comment-avatar">${avatarInitial(c.displayName)}</div>
+        <div class="comment-avatar">${avatarInitial(author)}</div>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-            <span style="font-size:0.85rem;font-weight:600;color:var(--text);">${escapeHtml(c.displayName||'Anonymous')}</span>
+            <span style="font-size:0.85rem;font-weight:600;color:var(--text);">${escapeHtml(author)}</span>
             <span style="font-size:0.72rem;color:var(--text-dim);">${c.at?.toDate ? c.at.toDate().toLocaleDateString() : 'Just now'}</span>
           </div>
           <p style="font-size:0.875rem;color:var(--text-muted);line-height:1.6;margin:0;">${escapeHtml(c.text)}</p>
@@ -4663,36 +4760,56 @@ function renderCommentsList(pinId) {
           </div>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 const SP_COMMENT_MAX = 1000; // keep in sync with firestore.rules
 
+function setCommentStatus(message, kind) {
+  const el = document.getElementById('commentStatus');
+  if (!el) { if (message) spToast(message, kind); return; }
+  el.textContent = message || '';
+  el.style.color = kind === 'error' ? '#fca5a5' : 'var(--text-dim)';
+}
+
 async function submitComment(pinId) {
-  if (!window.currentUser) { alert('Please sign in to comment.'); return; }
   const input = document.getElementById('commentInput');
-  const text  = input?.value?.trim();
+  if (!window.currentUser) { setCommentStatus('Please sign in to comment.', 'error'); return; }
+  if (!window._db) { setCommentStatus("Comments are unavailable right now. Your text is still in the box.", 'error'); return; }
+  if (!window.currentUser.nickname) {
+    setCommentStatus('Please choose a public nickname in your profile before commenting. Your text is still in the box.', 'error');
+    return;
+  }
+  const text = input?.value?.trim();
   if (!text) return;
-  input.value = '';
+  if (text.length > SP_COMMENT_MAX) { setCommentStatus(`Comments can be at most ${SP_COMMENT_MAX} characters.`, 'error'); return; }
   input.disabled = true;
+  setCommentStatus('Posting…');
   try {
-    await window._db.collection('pins').doc(pinId).collection('comments').add({
-      uid:         window.currentUser.uid,
-      displayName: String(window.currentUser.displayName || 'Anonymous').slice(0, 80),
-      photoURL:    safeHttpsUrl(window.currentUser.photoURL),
-      text:        text.slice(0, SP_COMMENT_MAX),
-      likes: 0,
-      at:   firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    // One batch: the comment (author name = public nickname) and the author's lastCommentAt
+    // stamp, which firestore.rules uses to allow at most one comment every 15 seconds.
+    const ts = firebase.firestore.FieldValue.serverTimestamp();
+    const ref = window._db.collection('pins').doc(pinId).collection('comments').doc();
+    const batch = window._db.batch();
+    batch.set(ref, { uid: window.currentUser.uid, authorName: window.currentUser.nickname, text, likes: 0, at: ts });
+    batch.update(window._db.collection('users').doc(window.currentUser.uid), { lastCommentAt: ts });
+    await batch.commit();
+    input.value = '';                    // cleared only after the comment was saved
+    setCommentStatus('Your comment was posted.');
     await loadComments(pinId);
-  } catch(e) { console.error(e); }
+  } catch(e) {
+    console.warn('comment not posted:', e && e.code);
+    const hint = (e && e.code === 'permission-denied') ? ' If you just posted, please wait a few seconds.' : '';
+    setCommentStatus(spFriendlyError(e, 'post your comment') + hint + ' Your text is still in the box.', 'error');
+  }
   input.disabled = false;
   input.focus();
 }
 
 async function likeComment(pinId, commentId) {
   if (!window._db || !commentId) return;
-  if (!window.currentUser) { alert('Please sign in to like comments.'); return; }
+  if (!window.currentUser) { spToast('Please sign in to like comments.', 'error'); return; }
   try {
     // One like per user: create likes/{uid} marker and increment in a single batch.
     const commentRef = window._db.collection('pins').doc(pinId).collection('comments').doc(commentId);
@@ -4702,8 +4819,10 @@ async function likeComment(pinId, commentId) {
     batch.update(commentRef, { likes: firebase.firestore.FieldValue.increment(1) });
     await batch.commit();
   } catch(e) {
-    // permission-denied here usually means "already liked"
     console.warn('like not saved:', e && e.code);
+    spToast(e && e.code === 'permission-denied'
+      ? "Your like wasn't added. You may have liked this comment already."
+      : spFriendlyError(e, 'add your like'), 'error');
   }
   await loadComments(pinId);
 }
@@ -4711,22 +4830,32 @@ async function likeComment(pinId, commentId) {
 // ── SAVE / FAVOURITE ──────────────────────────────────────────────────────────
 function isSaved(pinId) { return savedPins.includes(String(pinId)); }
 
+function spSetSavedLocal(id, saved) {
+  savedPins = savedPins.filter(p => p !== id);
+  if (saved) savedPins.push(id);
+  try { localStorage.setItem('sp_saved', JSON.stringify(savedPins)); } catch(e) {}
+  const btn = document.getElementById('saveBtn_'+id);
+  if (btn) {
+    btn.className = `save-btn ${saved?'saved':''}`;
+    btn.innerHTML = saved ? '⭐ Saved' : '☆ Save Pin';
+  }
+}
+
 async function toggleSave(pinId) {
   const id = String(pinId);
   const wasSaved = isSaved(id);
-  if (wasSaved) { savedPins = savedPins.filter(p => p !== id); }
-  else          { savedPins.push(id); }
-  localStorage.setItem('sp_saved', JSON.stringify(savedPins));
+  spSetSavedLocal(id, !wasSaved);                 // optimistic
   if (window.currentUser && window._db) {
-    const ref = window._db.collection('users').doc(window.currentUser.uid)
-                  .collection('saved').doc(id);
-    if (wasSaved) { await ref.delete().catch(()=>{}); }
-    else          { await ref.set({ pinId: id, at: firebase.firestore.FieldValue.serverTimestamp() }).catch(e => console.warn('save not stored:', e && e.code)); }
-  }
-  const btn = document.getElementById('saveBtn_'+id);
-  if (btn) {
-    btn.className = `save-btn ${isSaved(id)?'saved':''}`;
-    btn.innerHTML = isSaved(id) ? '⭐ Saved' : '☆ Save Pin';
+    const ref = window._db.collection('users').doc(window.currentUser.uid).collection('saved').doc(id);
+    try {
+      if (wasSaved) await ref.delete();
+      else await ref.set({ pinId: id, at: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch(e) {
+      console.warn('save not stored:', e && e.code);
+      spSetSavedLocal(id, wasSaved);              // roll back
+      spToast(spFriendlyError(e, wasSaved ? 'remove this pin from your saved list' : 'save this pin'), 'error');
+      return;
+    }
   }
   loadSavedCount(id);
 }
@@ -5266,21 +5395,19 @@ function renderProfile() {
     <button class="btn-primary" onclick="window.fbSignIn&&window.fbSignIn()">🔑 Sign In with Google</button>
   </div>`;
 
-  const name  = getSafeName(user);
+  const name  = user.nickname || 'Explorer';   // public nickname (what others see)
   const pts   = getSafePoints(user);
   const pins  = getSafePins(user);
   const level = window.getLevelInfo ? window.getLevelInfo(pts) : { name:'Curious', icon:'🔍', color:'#8888aa', progress:0, next:{ name:'Witness', min:50 } };
   const nextPts = level.next ? level.next.min : pts;
   const needed  = level.next ? Math.max(0, nextPts - pts) : 0;
   const mySaved = LOCATIONS.filter(l => isSaved(l.id));
-  const photo   = user.photoURL || '';
+  const photo   = '';   // no Google photo, so the profile looks the way others see it
 
   // Points breakdown card
   const pointsActions = [
-    { icon:'📍', label:'Pin a location',  pts:10, done: pins > 0 },
-    { icon:'📸', label:'Add a photo',     pts:5,  done: pts >= 5 },
-    { icon:'🎥', label:'Add a video',     pts:20, done: pts >= 20 },
-    { icon:'✅', label:'Get verified',    pts:5,  done: false },
+    { icon:'📍', label:'Have a location approved',          pts:10, done: pins > 0 },
+    { icon:'📸', label:'Include a photo with an approved location', pts:5, done: false },
   ];
 
   return `<div class="profile-wrap">
@@ -5350,13 +5477,14 @@ function renderProfile() {
     <div style="background:linear-gradient(135deg,rgba(232,98,26,0.08),rgba(109,40,217,0.08));border:1px dashed rgba(232,98,26,0.3);border-radius:14px;padding:28px;text-align:center;margin-bottom:24px;">
       <div style="font-size:2.5rem;margin-bottom:12px;">🚀</div>
       <h3 class="font-display" style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">Start Your Journey</h3>
-      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:16px;line-height:1.6;">Pin your first mysterious location and begin earning points.<br>Your first pin earns you <strong style="color:var(--orange-glow);">+10 pts</strong> towards Witness rank.</p>
+      <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:16px;line-height:1.6;">Submit your first mysterious location.<br>If the StrangePin team approves it, you earn <strong style="color:var(--orange-glow);">+10 pts</strong> towards Witness rank.</p>
       <button class="btn-primary" onclick="showPage('submit')">📍 Pin a Location</button>
     </div>` : ''}
 
     <!-- How to earn more points -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:24px;">
-      <p style="font-size:0.78rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:14px;">Ways to Earn Points</p>
+      <p style="font-size:0.78rem;color:var(--text-dim);font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;">Ways to Earn Points</p>
+      <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:14px;">Points are added by the StrangePin team after your submission has been reviewed.</p>
       <div style="display:flex;flex-direction:column;gap:10px;">
         ${pointsActions.map(a=>`
           <div style="display:flex;align-items:center;gap:12px;opacity:${a.done?'0.5':'1'};">
@@ -5366,6 +5494,21 @@ function renderProfile() {
           </div>`).join('')}
       </div>
     </div>
+
+    <!-- Public nickname -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:24px;">
+      <h2 class="font-display" style="font-size:1.05rem;font-weight:700;margin-bottom:6px;">Your public nickname</h2>
+      <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px;">This is the only name other people see, on comments and in the rankings. Your Google name, e-mail and photo are never shown publicly.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input id="profileNickname" maxlength="24" value="${escapeHtml(user.nickname || '')}" aria-label="Public nickname" style="flex:1;min-width:180px;" />
+        <button class="btn-primary btn-sm" onclick="saveNickname()">Save nickname</button>
+      </div>
+      <p id="nicknameStatus" role="status" aria-live="polite" style="font-size:0.8rem;margin-top:8px;min-height:1em;color:var(--text-dim);">3–24 characters: letters, numbers, and single spaces, dots, dashes or underscores.</p>
+    </div>
+
+    <!-- My submissions -->
+    <h2 class="font-display" style="font-size:1.1rem;font-weight:700;margin-bottom:14px;">📨 My submissions</h2>
+    <div id="mySubmissions" style="margin-bottom:24px;"><p style="color:var(--text-dim);font-size:0.85rem;">Loading…</p></div>
 
     <!-- Saved pins -->
     <h2 class="font-display" style="font-size:1.1rem;font-weight:700;margin-bottom:14px;">⭐ Saved Pins (${mySaved.length})</h2>
@@ -5377,7 +5520,80 @@ function renderProfile() {
          </div>`
       : `<div class="grid-3" style="margin-bottom:24px;">${mySaved.map(l=>locationCard(l,true)).join('')}</div>`
     }
+
+    <!-- Privacy & account -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:24px;">
+      <h2 class="font-display" style="font-size:1.05rem;font-weight:700;margin-bottom:6px;">Privacy &amp; account</h2>
+      <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px;">You can ask us to delete your StrangePin account and data (your profile, nickname, points, saved pins and submissions). We handle requests by hand, usually within 30 days, and confirm by e-mail. You can also write to <a href="mailto:thestrangepin@gmail.com?subject=Account%20deletion%20request" style="color:var(--orange-glow);">thestrangepin@gmail.com</a>.</p>
+      <div id="deletionArea"><button class="btn-secondary btn-sm" onclick="requestAccountDeletion()">Request account deletion</button></div>
+    </div>
   </div>`;
+}
+
+const SP_SUBMISSION_STATUS = { pending: 'Pending review', approved: 'Approved', rejected: 'Not approved' };
+
+async function loadMySubmissions() {
+  const el = document.getElementById('mySubmissions');
+  if (!el) return;
+  if (!window.fbMySubmissions) { el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;">Your submissions can't be shown right now.</p>`; return; }
+  try {
+    const list = await spWithTimeout(window.fbMySubmissions(), 10000);
+    if (!list.length) {
+      el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;">No submissions yet. <a href="#submit" onclick="showPage('submit');return false;" style="color:var(--orange-glow);">Pin a location</a> while signed in to follow its review here.</p>`;
+      return;
+    }
+    el.innerHTML = list.map(x => {
+      const status = SP_SUBMISSION_STATUS[x.status] || 'Pending review';
+      const color = x.status === 'approved' ? '#4ade80' : x.status === 'rejected' ? '#f87171' : '#fbbf24';
+      const pts = x.status === 'approved' && Number.isInteger(x.pointsAwarded) && x.pointsAwarded > 0 ? ` · +${x.pointsAwarded} pts` : '';
+      return `<div class="sp-submission" style="display:flex;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;">
+        <div style="min-width:0;"><div style="font-weight:600;font-size:0.875rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(x.name || 'Untitled')}</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);">${escapeHtml(x.country || '')} · ${timeAgo(x.createdAt)}</div></div>
+        <div class="sp-submission-status" style="font-size:0.78rem;font-weight:700;color:${color};white-space:nowrap;">${status}${pts}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    console.warn('submissions unavailable:', e && e.code);
+    el.innerHTML = `<p style="color:var(--text-dim);font-size:0.85rem;">Your submissions can't be shown right now. <button class="btn-secondary btn-sm" onclick="loadMySubmissions()">Try again</button></p>`;
+  }
+}
+
+async function saveNickname() {
+  const input = document.getElementById('profileNickname');
+  const status = document.getElementById('nicknameStatus');
+  const nick = (input && input.value || '').trim();
+  const say = (msg, err) => { if (status) { status.textContent = msg; status.style.color = err ? '#fca5a5' : '#86efac'; } };
+  const problem = spNicknameProblem(nick);
+  if (problem) { say(problem, true); return; }
+  try {
+    await window.fbSetNickname(nick);
+    say('Saved. Your new nickname is shown on new comments and in the rankings.');
+    window.updateNavAuth && window.updateNavAuth();
+  } catch(e) {
+    console.warn('nickname not saved:', e && e.code);
+    say(e && e.code === 'invalid-nickname' ? e.message : spFriendlyError(e, 'save your nickname'), true);
+  }
+}
+
+async function loadDeletionStatus() {
+  const area = document.getElementById('deletionArea');
+  if (!area || !window.fbMyDeletionRequest) return;
+  try {
+    const req = await window.fbMyDeletionRequest();
+    if (req) area.innerHTML = `<p style="font-size:0.85rem;color:#fbbf24;">Your deletion request was received. We'll confirm by e-mail once it has been processed.</p>`;
+  } catch(e) { /* keep the button */ }
+}
+
+async function requestAccountDeletion() {
+  if (!window.fbRequestDeletion) { spToast("This isn't available right now. Please e-mail thestrangepin@gmail.com instead.", 'error'); return; }
+  if (!confirm('Ask the StrangePin team to delete your account and data? This cannot be undone once processed.')) return;
+  try {
+    await window.fbRequestDeletion('');
+    await loadDeletionStatus();
+  } catch(e) {
+    console.warn('deletion request not stored:', e && e.code);
+    spToast(spFriendlyError(e, 'send your request') + ' You can also e-mail thestrangepin@gmail.com.', 'error');
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -5742,7 +5958,7 @@ function renderPage() {
   const _spWasRendered = !!window._spFirstRenderDone;
   el.className = _spWasRendered ? 'main page' : 'main';
   window._spFirstRenderDone = true;
-  if (currentPage !== 'leaderboard' && lbUnsubscribe) { lbUnsubscribe(); lbUnsubscribe = null; }
+  if (currentPage !== 'leaderboard') stopLiveLeaderboard();
   if (currentPage !== 'map'    && leafletMap)  { leafletMap.remove();  leafletMap  = null; }
   if (currentPage !== 'submit' && submitMap)   { submitMap.remove();   submitMap   = null; }
   // perf: on the first render of #home, keep the static hero node that was painted
@@ -5765,6 +5981,7 @@ function renderPage() {
   if (currentPage === 'leaderboard') setTimeout(startLiveLeaderboard, 100);
   if (currentPage === 'home')        setTimeout(loadHomeStats, 500);
   if (currentPage === 'detail')      setTimeout(() => loadPinData(currentDetail?.id), 200);
+  if (currentPage === 'profile' && window.currentUser) setTimeout(() => { loadMySubmissions(); loadDeletionStatus(); }, 100);
   window.currentPage = currentPage;
   // Update nav active states
   document.querySelectorAll('.nav-link,.mobile-nav-link').forEach(b => {
@@ -6216,12 +6433,19 @@ function refreshMapPins() {
 
 // ── SUBMIT ────────────────────────────────────────────────────────────────────
 function renderSubmit(lang) {
-  if (submitted) return `<div class="success-wrap">
+  if (submitted) {
+    const tracked = lastSubmission && lastSubmission.tracked;
+    return `<div class="success-wrap" id="submitSuccess">
     <div class="success-icon">📍</div>
-    <h2 class="font-display" style="font-size:2rem;font-weight:800;margin-bottom:12px;">${lang.success||'Pin Dropped!'}</h2>
-    <p style="color:var(--text-muted);margin-bottom:32px;">Thank you for contributing to StrangePin. Your report will be reviewed and added to the map.</p>
-    <button class="btn-primary" onclick="submitted=false;submitCategory='';submitIntensity=5;submitLat=null;submitLng=null;renderPage()">Pin Another</button>
+    <h2 class="font-display" style="font-size:2rem;font-weight:800;margin-bottom:12px;">Thanks! Your location is pending review</h2>
+    <p style="color:var(--text-muted);margin-bottom:12px;">Every submission is checked by the StrangePin team before it appears on the map. This can take a few days.</p>
+    ${tracked
+      ? `<p style="color:var(--text-muted);margin-bottom:24px;">You can follow its status under <a href="#profile" onclick="showPage('profile');return false;" style="color:var(--orange-glow);">My submissions</a> in your profile.</p>`
+      : `<p style="color:var(--text-muted);margin-bottom:24px;">Tip: sign in before you submit next time, so you can follow the review status in your profile.</p>`}
+    ${lastSubmission && lastSubmission.photoNote ? `<p style="color:#fbbf24;font-size:0.85rem;margin-bottom:24px;">${escapeHtml(lastSubmission.photoNote)}</p>` : ''}
+    <button class="btn-primary" onclick="submitted=false;lastSubmission=null;submitCategory='';submitIntensity=5;submitLat=null;submitLng=null;renderPage()">Pin Another</button>
   </div>`;
+  }
 
   const catBtns = CATEGORIES.map(c => `
     <button class="cat-btn ${submitCategory===c.id?'selected':''}" id="cat_${c.id}" onclick="selectCategory('${c.id}')">
@@ -6305,7 +6529,7 @@ function renderSubmit(lang) {
              onmouseover="this.style.borderColor='rgba(232,98,26,0.4)'"
              onmouseout="this.style.borderColor='var(--border)'"
              onclick="document.getElementById('f_image').click()">
-          <input type="file" id="f_image" accept="image/*" style="display:none;" onchange="previewImage(this)" />
+          <input type="file" id="f_image" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="previewImage(this)" />
           <div id="imagePreview" style="display:none;margin-bottom:12px;">
             <img id="previewImg" style="max-width:100%;max-height:200px;border-radius:6px;object-fit:cover;" />
           </div>
@@ -6319,7 +6543,12 @@ function renderSubmit(lang) {
       </div>
 
       <!-- ⑦ USERNAME -->
-      <div class="form-group"><label for="f_username">Your Username <span style="color:#f87171;">*</span></label><input id="f_username" placeholder="Your Pinner name" /></div>
+      <div class="form-group"><label for="f_username">Your Username <span style="color:#f87171;">*</span></label><input id="f_username" maxlength="60" placeholder="Your Pinner name" value="${escapeHtml((window.currentUser && window.currentUser.nickname) || '')}" /></div>
+      <!-- Bot trap: hidden from people and screen readers; bots that fill every field are ignored. -->
+      <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden;">
+        <label for="f_website">Leave this field empty</label><input id="f_website" name="website" tabindex="-1" autocomplete="off" />
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-dim);margin-bottom:12px;">Submissions are reviewed by the StrangePin team before they appear on the map.${window.currentUser ? '' : ' Sign in first if you want to follow the review status.'}</p>
 
       <button id="submitBtn" class="btn-primary" style="width:100%;justify-content:center;font-size:1rem;padding:14px;" onclick="handleSubmit()">
         📍 Drop the Pin
@@ -6445,6 +6674,13 @@ function selectCategory(id) {
 function previewImage(input) {
   const file = input.files[0];
   if (!file) return;
+  const problem = spImageProblem(file);
+  if (problem) {
+    input.value = '';
+    const errEl = document.getElementById('submitErrors');
+    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ ${escapeHtml(problem)}</p>`;
+    return;
+  }
   const reader = new FileReader();
   reader.onload = function(e) {
     const preview = document.getElementById('imagePreview');
@@ -6477,8 +6713,27 @@ async function handleSubmit() {
   if (!submitCategory) errs.push('Please select a Category');
   if (!story)          errs.push('Your Story is required');
   if (!username)       errs.push('Username is required');
+  if (story && story.length > 5000)  errs.push('Please keep your story under 5,000 characters');
+  if (name && name.length > 150)     errs.push('Please shorten the location name (150 characters max)');
+  if (username && username.length > 60) errs.push('Please shorten your username (60 characters max)');
+  const fileInput = document.getElementById('f_image');
+  const file = fileInput && fileInput.files && fileInput.files[0];
+  const fileProblem = spImageProblem(file);
+  if (fileProblem) errs.push(fileProblem);
   if (errs.length > 0) {
-    if (errEl) errEl.innerHTML = errs.map(e=>`<p class="error-text">⚠️ ${e}</p>`).join('');
+    if (errEl) errEl.innerHTML = errs.map(e=>`<p class="error-text">⚠️ ${escapeHtml(e)}</p>`).join('');
+    return;
+  }
+
+  // Bot trap: a hidden field that people never see. If it is filled in, pretend success and
+  // send nothing.
+  const trap = document.getElementById('f_website');
+  if (trap && trap.value) { submitted = true; lastSubmission = { id: null, tracked: false }; renderPage(); return; }
+
+  // Gentle client-side throttle (the server-side throttle for signed-in users is in firestore.rules).
+  const lastAt = Number(localStorage.getItem('sp_last_submit') || 0);
+  if (Date.now() - lastAt < SP_SUBMIT_COOLDOWN_MS) {
+    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ Please wait a minute before sending another location.</p>`;
     return;
   }
 
@@ -6486,83 +6741,96 @@ async function handleSubmit() {
   const btn = document.getElementById('submitBtn');
   if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Sending...'; }
   if (errEl) errEl.innerHTML = '';
+  const restoreButton = () => { if (btn) { btn.disabled = false; btn.innerHTML = '📍 Drop the Pin'; } };
 
-  // Handle image upload to Cloudinary if a file was selected
-  let imageUrl = '—';
-  const fileInput = document.getElementById('f_image');
-  if (fileInput && fileInput.files && fileInput.files[0]) {
+  // Optional photo → Cloudinary (unsigned preset; see docs/third-party-hardening.md).
+  let imageUrl = '';
+  let photoNote = '';
+  if (file) {
     try {
-      const file = fileInput.files[0];
-      // ── CLOUDINARY: replace YOUR_CLOUD_NAME with your Cloudinary cloud name ──
-      // Free signup at cloudinary.com → Dashboard → Cloud Name
-      // Also create an unsigned upload preset: Settings → Upload → Add upload preset → Unsigned
       const CLOUD_NAME    = 'dz9p5t4sj';
       const UPLOAD_PRESET = 'ao9q18f9';
       const formData = new FormData();
       formData.append('file', file);
       formData.append('upload_preset', UPLOAD_PRESET);
-      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-        method: 'POST', body: formData
-      });
+      const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
       const uploadData = await uploadRes.json();
-      imageUrl = uploadData.secure_url || '—';
+      const url = uploadRes.ok && typeof uploadData.secure_url === 'string' ? uploadData.secure_url : '';
+      imageUrl = url.startsWith(SP_CLOUDINARY_PREFIX) && url.length <= 460 ? url : '';
+    } catch(e) { imageUrl = ''; }
+    if (!imageUrl) photoNote = "Your photo couldn't be uploaded, so the location was sent without it.";
+  }
+
+  const fields = {
+    name: name.slice(0, 150), country: country.slice(0, 80), city: (city || '').slice(0, 120),
+    address: (address || '').slice(0, 200), lat: Number(submitLat), lng: Number(submitLng),
+    category: submitCategory, story: story.slice(0, 5000), storyLang: String(storyLang || 'other').slice(0, 10),
+    date: (date || '').slice(0, 40), intensity: Math.min(10, Math.max(1, Math.round(Number(submitIntensity) || 5))),
+    imageUrl, username: username.slice(0, 60),
+  };
+
+  // Signed-in users: store the submission for review so they can follow its status and,
+  // if approved, receive points (awarded only by the StrangePin team).
+  let submissionId = null;
+  if (window.currentUser && window.fbCreateSubmission) {
+    try {
+      submissionId = await window.fbCreateSubmission(fields);
     } catch(e) {
-      imageUrl = '(upload failed)';
+      console.warn('submission not stored:', e && e.code);
+      if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ ${escapeHtml(spFriendlyError(e, 'send your location'))} Nothing was lost: your answers are still in the form.</p>`;
+      restoreButton();
+      return;
     }
   }
 
-  // ── EMAILJS ──────────────────────────────────────────────────────────────
+  // ── EMAILJS (notification to the StrangePin inbox) ───────────────────────
+  // The recipient is NOT sent from the page: it must be fixed in the EmailJS template
+  // (docs/third-party-hardening.md), so this form cannot be used to e-mail anyone else.
   const EMAILJS_SERVICE_ID  = 'service_spyyqld';
   const EMAILJS_TEMPLATE_ID = 'template_6luvilv';
   const EMAILJS_PUBLIC_KEY  = 'Ux77rlmJMXmPUmxjC';
-
   const templateParams = {
-    location_name: name,
-    country:       country,
-    city:          city || '—',
-    address:       address || '—',
+    location_name: fields.name,
+    country:       fields.country,
+    city:          fields.city || '—',
+    address:       fields.address || '—',
     coords:        coords || '—',
-    category:      submitCategory,
-    story:         story,
-    story_lang:    storyLang,
-    date:          date || '—',
-    intensity:     String(submitIntensity),
-    username:      username,
-    image_url:     imageUrl,
-    to_email:      'thestrangepin@gmail.com',
+    category:      fields.category,
+    story:         fields.story,
+    story_lang:    fields.storyLang,
+    date:          fields.date || '—',
+    intensity:     String(fields.intensity),
+    username:      fields.username,
+    image_url:     imageUrl || '—',
+    submission_id: submissionId || '(not signed in)',
   };
 
+  let emailOk = false;
   try {
     // EmailJS is loaded after the first paint; wait for it (no-op if already loaded).
     if (typeof emailjs === 'undefined' && window.spCdnReady) await window.spCdnReady;
-    // Init EmailJS with public key before sending
     emailjs.init(EMAILJS_PUBLIC_KEY);
-
-    const res = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams
-    );
-    if (res.status === 200) {
-      // Award points if logged in
-      if (window.currentUser && window.fbAddPoints) {
-        const awards = ['pin'];
-        if (imageUrl && imageUrl !== '—' && imageUrl !== '(upload failed)') awards.push('photo');
-        await window.fbAddPoints(window.currentUser.uid, awards).catch(e => console.warn('points not awarded:', e && e.code));
-      }
-      submitted = true;
-      submitCategory = '';
-      submitIntensity = 5;
-      submitLat = null; submitLng = null;
-      renderPage();
-    } else {
-      throw new Error('Status: ' + res.status + ' — ' + res.text);
-    }
+    const res = await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+    emailOk = res && res.status === 200;
+    if (!emailOk) console.warn('EmailJS status:', res && res.status);
   } catch(err) {
-    console.error('EmailJS error:', err);
-    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ Send failed: ${escapeHtml(err && (err.text || err.message) || err)}. Please try again.</p>`;
-    if (btn) { btn.disabled = false; btn.innerHTML = '📍 Drop the Pin'; }
+    console.warn('EmailJS error:', err && (err.status || err.text || err.message));
   }
+
+  if (!emailOk && !submissionId) {
+    if (errEl) errEl.innerHTML = `<p class="error-text">⚠️ We couldn't send your location. Please check your connection and try again. Your answers are still in the form.</p>`;
+    restoreButton();
+    return;
+  }
+  // (If only the e-mail failed, the stored submission is enough: the team reviews submissions
+  // from the database as well.)
+  try { localStorage.setItem('sp_last_submit', String(Date.now())); } catch(e) {}
+  lastSubmission = { id: submissionId, tracked: !!submissionId, photoNote };
+  submitted = true;
+  submitCategory = '';
+  submitIntensity = 5;
+  submitLat = null; submitLng = null;
+  renderPage();
 }
 
 // ── DETAIL ────────────────────────────────────────────────────────────────────
@@ -6716,7 +6984,7 @@ function renderDetail(lang) {
       </div>
       <div id="commentsList"><p style="color:var(--text-dim);font-size:0.85rem;">Loading...</p></div>
       <div class="comment-input-wrap" style="margin-top:16px;">
-        <div class="comment-avatar" style="margin-top:4px;">${window.currentUser ? avatarInitial(window.currentUser.displayName) : '?'}</div>
+        <div class="comment-avatar" style="margin-top:4px;">${window.currentUser ? avatarInitial(window.currentUser.nickname || 'E') : '?'}</div>
         <div style="flex:1;">
           <textarea id="commentInput" class="comment-input" rows="2" maxlength="1000" aria-label="Write a comment"
             placeholder="${window.currentUser ? 'Share your experience or thoughts...' : 'Sign in to comment...'}"
@@ -6727,6 +6995,7 @@ function renderDetail(lang) {
               Post Comment
             </button>
           </div>
+          <p id="commentStatus" role="status" aria-live="polite" style="font-size:0.8rem;margin-top:6px;min-height:1em;">${window.currentUser ? `Commenting as <strong>${escapeHtml(window.currentUser.nickname || '…')}</strong> (your public nickname)` : ''}</p>
         </div>
       </div>
     </div>
@@ -6764,12 +7033,12 @@ function renderDetail(lang) {
 function renderLeaderboard(lang) {
   const user = window.currentUser;
   const myProfile = user ? (() => {
-    const name   = getSafeName(user);
+    const name   = user.nickname || 'Explorer';   // the same public nickname others see
     const pts    = getSafePoints(user);
     const pins   = getSafePins(user);
     const level  = window.getLevelInfo ? window.getLevelInfo(pts) : { name:'Curious', icon:'🔍', color:'#8888aa', progress:0, next:{ name:'Witness', min:50 } };
     const needed = level.next ? Math.max(0, level.next.min - pts) : 0;
-    const photo  = user.photoURL || '';
+    const photo  = '';
     return `
     <div style="background:linear-gradient(135deg,rgba(232,98,26,0.1),rgba(109,40,217,0.1));border:1px solid rgba(232,98,26,0.25);border-radius:14px;padding:20px 24px;margin-bottom:28px;cursor:pointer;" onclick="showPage('profile')" title="View your profile">
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
@@ -6821,8 +7090,9 @@ function renderLeaderboard(lang) {
     ${myProfile}
 
     <!-- Points guide -->
+    <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:10px;">Points are added by the StrangePin team after a submission has been reviewed and approved.</p>
     <div class="grid-4" style="margin-bottom:28px;">
-      ${[['📍','Pin a location','+10'],['📸','Add a photo','+5'],['🎥','Add a video','+20'],['✅','Get verified','+5']]
+      ${[['📍','Approved location','+10'],['📸','Photo with an approved location','+5']]
         .map(([icon,label,pts])=>`
         <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center;">
           <div style="font-size:1.4rem;margin-bottom:6px;">${icon}</div>
@@ -6859,12 +7129,47 @@ function renderLeaderboard(lang) {
   </div>`;
 }
 
-function startLiveLeaderboard() {
+let lbTimer = null;
+function renderLeaderboardFailure(message) {
+  const el = document.getElementById('lbRows');
+  if (!el) return;
+  el.innerHTML = `<div id="lbError" style="padding:32px;text-align:center;color:var(--text-dim);">
+    <div style="font-size:1.5rem;margin-bottom:8px;">📡</div>
+    <p style="margin-bottom:12px;">${escapeHtml(message)}</p>
+    <button class="btn-secondary btn-sm" onclick="retryLeaderboard()">Try again</button>
+  </div>`;
+}
+function retryLeaderboard() {
+  const el = document.getElementById('lbRows');
+  if (el) el.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text-dim);"><div style="font-size:1.5rem;margin-bottom:8px;">⏳</div>Loading live rankings...</div>`;
+  startLiveLeaderboard();
+}
+function stopLiveLeaderboard() {
   if (lbUnsubscribe) { lbUnsubscribe(); lbUnsubscribe = null; }
-  if (!window.fbListenLeaderboard) return;
+  if (lbTimer) { clearTimeout(lbTimer); lbTimer = null; }
+}
+
+function startLiveLeaderboard() {
+  stopLiveLeaderboard();
+  // No Firebase (SDK blocked, offline, or still loading after 10 s): show a failure state.
+  if (!window.fbListenLeaderboard) {
+    lbTimer = setTimeout(() => {
+      if (window.fbListenLeaderboard && currentPage === 'leaderboard') return startLiveLeaderboard();
+      renderLeaderboardFailure("The rankings couldn't be loaded. Please check your connection and try again.");
+    }, 10000);
+    return;
+  }
+  let received = false;
+  lbTimer = setTimeout(() => {
+    if (received) return;
+    stopLiveLeaderboard();
+    renderLeaderboardFailure('The rankings are taking too long to load. Please try again.');
+  }, 10000);
   lbUnsubscribe = window.fbListenLeaderboard(users => {
+    received = true;
+    if (lbTimer) { clearTimeout(lbTimer); lbTimer = null; }
     const el = document.getElementById('lbRows');
-    if (!el) { if (lbUnsubscribe) { lbUnsubscribe(); lbUnsubscribe = null; } return; }
+    if (!el) { stopLiveLeaderboard(); return; }
     if (users.length === 0) {
       el.innerHTML = `<div style="padding:32px;text-align:center;color:var(--text-dim);">No pinners yet — be the first! 🌍</div>`;
       return;
@@ -6873,9 +7178,8 @@ function startLiveLeaderboard() {
     el.innerHTML = users.map((u, i) => {
       const pts   = (typeof u.points === 'number') ? u.points : 0;
       const pins  = (typeof u.pins   === 'number') ? u.pins   : 0;
-      // Never derive a public name from another user's email address.
-      const name  = (typeof u.displayName === 'string' && u.displayName.trim()) ? u.displayName.trim() : 'Anonymous';
-      const photo = u.photoURL || '';
+      // Public nickname only; never a Google name, photo or e-mail.
+      const name  = (typeof u.nickname === 'string' && u.nickname.trim()) ? u.nickname.trim() : 'Explorer';
       const level = getLvl(pts);
       const rank  = i + 1;
       const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':null;
@@ -6883,7 +7187,7 @@ function startLiveLeaderboard() {
         <div style="text-align:center;">${medal ? `<span style="font-size:1.2rem;">${medal}</span>` : `<span class="font-mono" style="font-size:0.85rem;color:var(--text-dim);">#${rank}</span>`}</div>
         <div style="display:flex;align-items:center;gap:10px;">
           <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#e8621a,#6d28d9);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:white;overflow:hidden;flex-shrink:0;">
-            ${avatarHtml(photo, name)}
+            ${avatarInitial(name)}
           </div>
           <div>
             <div style="font-size:0.9rem;font-weight:500;color:var(--text);">${escapeHtml(name)}</div>
@@ -6895,6 +7199,10 @@ function startLiveLeaderboard() {
         <span class="font-mono" style="font-size:0.875rem;font-weight:700;color:var(--orange-glow);text-align:right;">${pts.toLocaleString()}</span>
       </div>`;
     }).join('');
+  }, err => {
+    received = true;
+    stopLiveLeaderboard();
+    renderLeaderboardFailure(spFriendlyError(err, 'load the rankings'));
   });
 }
 
@@ -7128,7 +7436,9 @@ function initFirebase() {
     { min:350, name:'Strange Keeper', icon:'📍', color:'#a78bfa' },
     { min:700, name:'Echo Master',    icon:'⚡', color:'#ff6b35' },
   ];
-  window.SP_POINTS = { pin:10, photo:5, video:20, verify:5 };
+  // Points are awarded ONLY by the owner after review (scripts/admin-review-submission.js).
+  // These values are shown to users as guidance; the browser never writes points.
+  window.SP_POINTS = { pin:10, photo:5 };
 
   window.getLevelInfo = function(pts) {
     const lvls = window.SP_LEVELS;
@@ -7142,69 +7452,108 @@ function initFirebase() {
   window.fbSignIn = async function() {
     try {
       await auth.signInWithPopup(provider);
-      // users/{uid} + publicProfiles/{uid} are created in onAuthStateChanged → ensureUserDoc
-    } catch(e) { console.error('Sign in error:', e); }
+      // users/{uid} + publicProfiles/{uid} are ensured in onAuthStateChanged → ensureUserDoc
+    } catch(e) {
+      console.error('Sign in error:', e && e.code);
+      if (e && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request')
+        spToast("Sign-in didn't work. Please allow pop-ups for this site and try again.", 'error');
+    }
   };
 
-  // Create the private user doc and its public mirror on first sign-in (one batch,
-  // as required by firestore.rules), or refresh lastActive on later sign-ins.
+  // Make sure the private doc and the public profile exist, WITHOUT ever overwriting them.
+  // Runs in a transaction: documents are only created when absent. An existing (legacy)
+  // users/{uid} keeps its points, pins, e-mail and name untouched; its public profile is
+  // created with the score copied from it (firestore.rules checks the copy) and a
+  // generated nickname, never the Google name or photo.
   async function ensureUserDoc(user) {
-    const ref  = db.collection('users').doc(user.uid);
-    const pub  = db.collection('publicProfiles').doc(user.uid);
-    const snap = await ref.get();
-    const displayName = String(user.displayName || '').slice(0, 80);
-    const photoURL    = safeHttpsUrl(user.photoURL || '');
-    if (!snap.exists) {
-      const ts = firebase.firestore.FieldValue.serverTimestamp();
-      const batch = db.batch();
-      batch.set(ref, {
-        // Core identity (private: readable only by the owner)
-        uid: user.uid, displayName, email: user.email || '', photoURL,
-        // Points & progression (changed only via fbAddPoints, rules-limited)
-        points: 0, pins: 0,
-        // Prepared for future features (not yet active; server-owned)
-        badges: [], achievements: [], followers: 0, following: 0, verified: false,
-        country: '', bio: '', website: '',
-        joinedAt: ts, lastActive: ts,
-        notifications: { newComment: true, newReaction: true, weeklyDigest: true },
-        _schemaVersion: 2,
-      });
-      batch.set(pub, { displayName, photoURL, points: 0, pins: 0, updatedAt: ts });
-      await batch.commit();
-      return (await ref.get()).data();
-    }
-    await ref.update({ lastActive: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
-    return snap.data();
+    const ref = db.collection('users').doc(user.uid);
+    const pub = db.collection('publicProfiles').doc(user.uid);
+    const ts  = firebase.firestore.FieldValue.serverTimestamp();
+    const out = await db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      const pubSnap = await tx.get(pub);
+      let priv = snap.exists ? (snap.data() || {}) : null;
+      if (!priv) {
+        priv = {
+          uid: user.uid,
+          displayName: String(user.displayName || '').slice(0, 80),   // private
+          email: String(user.email || '').slice(0, 254),              // private
+          photoURL: safeHttpsUrl(user.photoURL || ''),                // private
+          points: 0, pins: 0,                                         // server-owned
+          joinedAt: ts, lastActive: ts,
+          _schemaVersion: 3,
+        };
+        tx.set(ref, priv);
+      }
+      let profile = pubSnap.exists ? (pubSnap.data() || {}) : null;
+      if (!profile) {
+        const asCount = v => (v === undefined ? 0 : (Number.isInteger(v) ? v : null));
+        const pts = asCount(priv.points), pins = asCount(priv.pins);
+        if (pts !== null && pins !== null) {
+          profile = { nickname: spDefaultNickname(user.uid), points: pts, pins, updatedAt: ts };
+          tx.set(pub, profile);
+        }
+        // else: unusual legacy values; the owner's backfill script creates the profile.
+      }
+      return { created: !snap.exists, profile };
+    });
+    if (!out.created) await ref.update({ lastActive: ts }).catch(() => {});
+    const fresh = (await ref.get()).data() || {};
+    return { spData: fresh, profile: out.profile ? { nickname: out.profile.nickname } : null };
   }
   window._spEnsureUserDoc = ensureUserDoc;
 
   window.fbSignOut = () => auth.signOut();
 
-  // Award points for one or more actions at once, e.g. fbAddPoints(uid, ['pin','photo']).
-  // firestore.rules: +1..35 points and +0/1 pin per award, 30 s cooldown, and
-  // users/{uid} and publicProfiles/{uid} must change together in one batch.
-  window.fbAddPoints = async function(uid, types) {
-    const list = Array.isArray(types) ? types : [types];
-    const pts  = list.reduce((sum, t) => sum + (window.SP_POINTS[t] || 0), 0);
-    if (!pts || !uid) return;
-    const ref  = db.collection('users').doc(uid);
-    const pub  = db.collection('publicProfiles').doc(uid);
-    const inc  = firebase.firestore.FieldValue.increment;
-    const ts   = firebase.firestore.FieldValue.serverTimestamp();
-    const pinInc = list.includes('pin') ? 1 : 0;
+  // Change the public nickname (validated here and again by firestore.rules).
+  window.fbSetNickname = async function(nick) {
+    const u = window.currentUser;
+    if (!u) throw { code: 'unauthenticated' };
+    const problem = spNicknameProblem(nick);
+    if (problem) throw { code: 'invalid-nickname', message: problem };
+    await db.collection('publicProfiles').doc(u.uid).update({ nickname: nick, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    u.nickname = nick;
+  };
+
+  // Store a location submission for review (status 'pending'; the review fields and points
+  // are written only by the owner's admin script). The private doc's lastSubmissionAt is
+  // stamped in the same batch, which firestore.rules uses as a 60 s throttle.
+  window.fbCreateSubmission = async function(fields) {
+    const u = window.currentUser;
+    if (!u) throw { code: 'unauthenticated' };
+    const ts = firebase.firestore.FieldValue.serverTimestamp();
+    const ref = db.collection('submissions').doc();
     const batch = db.batch();
-    batch.update(ref, { points: inc(pts), pins: inc(pinInc), lastPointsAt: ts });
-    batch.update(pub, { points: inc(pts), pins: inc(pinInc), updatedAt: ts });
+    batch.set(ref, Object.assign({}, fields, { authorUid: u.uid, status: 'pending', createdAt: ts }));
+    batch.update(db.collection('users').doc(u.uid), { lastSubmissionAt: ts });
     await batch.commit();
-    if (window.currentUser) {
-      window.currentUser.spData = (await ref.get()).data();
-      window.updateNavAuth();
-      const el = document.createElement('div');
-      el.textContent = '+'+pts+' pts!';
-      el.style.cssText='position:fixed;bottom:24px;right:24px;background:#e8621a;color:#fff;padding:10px 20px;border-radius:10px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(232,98,26,.5)';
-      document.body.appendChild(el);
-      setTimeout(()=>el.remove(),3000);
-    }
+    return ref.id;
+  };
+
+  // The signed-in user's own submissions (equality filter only → no composite index needed).
+  window.fbMySubmissions = async function() {
+    const u = window.currentUser;
+    if (!u) return [];
+    const snap = await db.collection('submissions').where('authorUid', '==', u.uid).limit(50).get();
+    return snap.docs.map(d => Object.assign({ id: d.id }, d.data()))
+      .sort((a, b) => ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0));
+  };
+
+  // "Request account deletion": creates deletionRequests/{uid}; the owner processes it
+  // by hand (docs/account-deletion.md). Nothing is deleted automatically.
+  window.fbRequestDeletion = async function(reason) {
+    const u = window.currentUser;
+    if (!u) throw { code: 'unauthenticated' };
+    await db.collection('deletionRequests').doc(u.uid).set({
+      uid: u.uid, status: 'requested', requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      reason: String(reason || '').slice(0, 500),
+    });
+  };
+  window.fbMyDeletionRequest = async function() {
+    const u = window.currentUser;
+    if (!u) return null;
+    const snap = await db.collection('deletionRequests').doc(u.uid).get();
+    return snap.exists ? snap.data() : null;
   };
 
   window.updateNavAuth = function() {
@@ -7231,32 +7580,38 @@ function initFirebase() {
     }
   };
 
-  window.fbListenLeaderboard = function(cb) {
-    // publicProfiles holds only public fields (no email); see firestore.rules
+  // Live leaderboard. onError is called on permission/network errors so the page can show
+  // a failure state with a retry button instead of loading forever.
+  window.fbListenLeaderboard = function(cb, onError) {
+    // publicProfiles holds only nickname + score (no e-mail, no Google name/photo)
     return db.collection('publicProfiles').orderBy('points','desc').limit(20)
-      .onSnapshot(s => cb(s.docs.map(d=>d.data())), e => console.warn('leaderboard unavailable:', e && e.code));
+      .onSnapshot(s => cb(s.docs.map(d=>d.data())), e => { console.warn('leaderboard unavailable:', e && e.code); if (onError) onError(e); });
   };
 
   auth.onAuthStateChanged(async u => {
     if (u) {
       try {
-        const spData = (await ensureUserDoc(u)) || {};
+        const r = await ensureUserDoc(u);
         window.currentUser = {
           uid:         u.uid,
-          displayName: u.displayName || spData.displayName || '',
-          email:       u.email       || spData.email       || '',
-          photoURL:    u.photoURL    || spData.photoURL     || '',
-          spData,
+          displayName: u.displayName || r.spData.displayName || '',   // private, shown only to the user
+          email:       u.email       || r.spData.email       || '',
+          photoURL:    u.photoURL    || r.spData.photoURL     || '',
+          nickname:    r.profile ? r.profile.nickname : '',
+          spData:      r.spData,
         };
+        window._spProfileError = null;
       } catch(e) {
-        window.currentUser = { uid:u.uid, displayName:u.displayName||'', email:u.email||'', photoURL:u.photoURL||'', spData:{} };
+        console.warn('profile not loaded:', e && e.code);
+        window._spProfileError = e && e.code || 'error';
+        window.currentUser = { uid:u.uid, displayName:u.displayName||'', email:u.email||'', photoURL:u.photoURL||'', nickname:'', spData:{} };
+        spToast("You're signed in, but your profile couldn't be loaded. Comments and saving may not work right now.", 'error');
       }
     } else {
       window.currentUser = null;
     }
     window.updateNavAuth();
-    if (window.currentPage === 'leaderboard') window.renderPage();
-    if (window.currentPage === 'profile')     window.renderPage();
+    if (['leaderboard', 'profile', 'detail'].includes(window.currentPage)) window.renderPage();
   });
 }
 
