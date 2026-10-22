@@ -19,6 +19,8 @@ Tests that sign in to the Auth emulator (`e2e-emulator.js`, `e2e-expired-rules.j
 `auth/network-request-failed` (max 3 attempts, 1 s / 2 s backoff; any other error fails), and
 log every failed request to the Auth emulator with Chrome's error text plus any main-frame
 navigation during a sign-in. This covers a rare browser → emulator transport error seen in CI.
+`emuPopupSignIn()` waits for the emulator popup's own script (loaded after a blocking unpkg
+CDN script) and for each popup state before clicking, instead of fixed sleeps.
 
 ## Phase 2 tests
 

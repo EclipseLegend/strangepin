@@ -13,6 +13,8 @@
 //   3. watchAuthEmulator() logs every failed request to the Auth emulator with Chrome's
 //      error text, and any main-frame navigation during a sign-in, so a recurrence in CI
 //      names its cause.
+// emuPopupSignIn() also waits for the emulator popup's own script before clicking (its handler
+// page loads a blocking CDN script first; clicking early was a real, TESTED cause of time-outs).
 // Retrying is safe: a Google-credential sign-in on the emulator is idempotent (same sub ->
 // same uid), so a sign-in whose response was lost signs in to the same account.
 'use strict';
@@ -86,11 +88,16 @@ async function emuPopupSignIn(ctx, page, { buttonSelector = '#authBtn', log = co
       const popupTarget = ctx.waitForTarget(t => t.type() === 'page' && /127\.0\.0\.1:9099\/emulator\/auth\/handler/.test(t.url()), { timeout: 15000 });
       await page.click(buttonSelector);
       const pop = await (await popupTarget).page();
-      await pop.waitForFunction(() => [...document.querySelectorAll('button')].some(x => /Add new account/.test(x.textContent)), { timeout: 15000, polling: 200 });
-      await pop.evaluate(() => [...document.querySelectorAll('button')].find(x => /Add new account/.test(x.textContent)).click());
-      await sleep(1000);
+      // The emulator's handler page loads a blocking CDN script (material-components-web from
+      // unpkg) BEFORE the inline script that attaches its click handlers, while the buttons are
+      // already in the HTML. Clicking as soon as the buttons exist is a race: with a slow CDN the
+      // clicks do nothing, the popup stays open and the sign-in times out (TESTED by delaying
+      // unpkg). So wait for the inline script (its global functions) and for each UI state.
+      await pop.waitForFunction(() => document.readyState === 'complete' && typeof runAutogen === 'function' && typeof finishWithUser === 'function' && !!document.querySelector('.js-new-account'), { timeout: 30000, polling: 200 });
+      await pop.evaluate(() => document.querySelector('.js-new-account').click());
+      await pop.waitForFunction(() => getComputedStyle(document.getElementById('add-user')).display !== 'none', { timeout: 10000, polling: 100 });
       await pop.evaluate(() => document.getElementById('autogen-button').click());
-      await sleep(500);
+      await pop.waitForFunction(() => /@/.test(document.getElementById('email-input').value) && !document.getElementById('sign-in').disabled, { timeout: 10000, polling: 100 });
       await pop.evaluate(() => document.getElementById('sign-in').click());
       const deadline = Date.now() + 15000;
       while (Date.now() < deadline) {
