@@ -57,7 +57,8 @@ const text = (page, sel) => page.evaluate(s => { const el = document.querySelect
     args: ['--no-sandbox', '--host-resolver-rules=' + BLOCK_HOSTS.map(h => `MAP ${h} ~NOTFOUND`).join(', ')] });
 
   // ── Alice: new Google user ──────────────────────────────────────────────
-  const a = await openPage(await browser.createBrowserContext(), '#detail/001');
+  // Hostile URL params (must never reach the EmailJS recipient; checked at the submission below).
+  const a = await openPage(await browser.createBrowserContext(), '&to_email=attacker%40evil.example&recipient=attacker%40evil.example#detail/001');
   check('emulator mode active on localhost?emulator=1 (project demo-strangepin)', await a.evaluate(() => firebase.app().options.projectId === 'demo-strangepin'));
   check('"firebase is not defined" fixed: SDK initialised after deferred load, no page errors so far', a._errors.length === 0, a._errors.join(' | '));
   const A = await signIn(a, 'alice-google', XSS, 'alice@example.com', 'javascript:window.__xss=1');
@@ -126,6 +127,13 @@ const text = (page, sel) => page.evaluate(s => { const el = document.querySelect
     document.getElementById('f_country').value = 'Portugal';
     document.getElementById('f_story').value = 'Lights at night near the old mill.';
   });
+  // Try to inject a recipient through the page: an extra form field, storage and globals.
+  await a.evaluate(() => {
+    const f = document.getElementById('f_name').form || document.getElementById('f_name').parentElement;
+    for (const n of ['to_email', 'recipient']) { const i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.id = 'f_' + n; i.value = 'attacker@evil.example'; f.appendChild(i); }
+    localStorage.setItem('to_email', 'attacker@evil.example'); sessionStorage.setItem('to_email', 'attacker@evil.example');
+    window.to_email = 'attacker@evil.example'; window.EMAILJS_TO_EMAIL = 'attacker@evil.example';
+  });
   await a.evaluate(() => handleSubmit());
   await a.waitForSelector('#submitSuccess', { timeout: 10000 });
   const succ = await text(a, '#submitSuccess');
@@ -135,6 +143,7 @@ const text = (page, sel) => page.evaluate(s => { const el = document.querySelect
   check('submissions/{id} stored: status pending, authorUid, no points field', subs.length === 1 && sd.status === 'pending' && !('points' in sd) && !('pointsAwarded' in sd), JSON.stringify(sd && { status: sd.status, keys: Object.keys(sd).length }));
   const mail = await a.evaluate(() => window.__mail);
   check('EmailJS notification params: to_email is the fixed StrangePin inbox, includes submission_id', mail.length === 1 && mail[0].to_email === 'thestrangepin@gmail.com' && mail[0].submission_id === subs[0].id, JSON.stringify(mail[0] && Object.keys(mail[0])));
+  check('EmailJS recipient cannot be changed from the page (URL params, form field, storage, globals ignored)', mail.length === 1 && mail[0].to_email === 'thestrangepin@gmail.com' && !JSON.stringify(mail[0]).includes('attacker@evil.example') && (await a.evaluate(() => location.search)).includes('to_email=attacker'), JSON.stringify(mail[0] && mail[0].to_email));
   check('points unchanged after submitting (0)', (await get('users/' + A)).points === 0 && (await get('publicProfiles/' + A)).points === 0);
   await a.evaluate(() => showPage('profile'));
   await a.waitForSelector('.sp-submission-status', { timeout: 8000 });

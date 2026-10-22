@@ -116,4 +116,22 @@ test('spFriendlyError never leaks raw error text', () => {
   assert.match(spFriendlyError({ code: 'timeout' }, 'load the rankings'), /offline/);
 });
 
+// EmailJS recipient: a hard-coded constant; nothing from the page (form fields, URL params,
+// storage, user input) can reach to_email. Static check of index.html; the behaviour is also
+// tested in tests/e2e-emulator.js (hostile URL params / form field / storage are ignored).
+test('EmailJS to_email is a hard-coded constant that no user input can change', () => {
+  const decl = html.match(/const EMAILJS_TO_EMAIL\s*=\s*'([^']*)';/g) || [];
+  assert.strictEqual(decl.length, 1, 'exactly one EMAILJS_TO_EMAIL declaration');
+  assert.match(decl[0], /'thestrangepin@gmail\.com'/);
+  const uses = html.match(/\bEMAILJS_TO_EMAIL\b/g) || [];
+  assert.strictEqual(uses.length, 2, 'EMAILJS_TO_EMAIL is only declared and used once (never reassigned)');
+  const keys = html.match(/\bto_email\s*:[^\n]*/g) || [];
+  assert.deepStrictEqual(keys.map(k => k.replace(/\s+/g, ' ').trim()), ['to_email: EMAILJS_TO_EMAIL,'], 'to_email is only ever set from the constant');
+  assert(!/\bto_email\s*[=\]]|\[['"]to_email['"]\]/.test(html), 'to_email is never assigned or set by key');
+  assert(!/templateParams\s*(\.\w+|\[[^\]]*\])\s*=|Object\.assign\(\s*templateParams/.test(html), 'templateParams is never modified after it is built');
+  const sends = html.match(/emailjs\.send\w*\([^)]*\)/g) || [];
+  assert.deepStrictEqual(sends, ['emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)'], 'one send call, with the fixed params object (no sendForm)');
+  assert(!/(id|name)\s*=\s*["'][^"']*(to_email|recipient)/i.test(html), 'no form field named like a recipient');
+});
+
 console.log(`\n${passed} helper tests passed`);

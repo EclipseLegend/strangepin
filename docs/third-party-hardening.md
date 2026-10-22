@@ -5,11 +5,23 @@ recommendations for the owner and have NOT been changed** (no access was used).
 
 ## EmailJS (location submission notification)
 
+> **DEFERRED until the owner returns:** EmailJS dashboard hardening (template "To Email"
+> hard-coded to `thestrangepin@gmail.com`, allowed domains/origins, rate limit) and **live
+> e-mail testing** (a real submission arriving at thestrangepin@gmail.com) have NOT been done
+> and need the owner's dashboard access. Until then the code keeps sending the fixed
+> `to_email` for compatibility with the live template. Confirming that notifications still
+> arrive is a prerequisite for merging PR #1 (see the PR's deployment notes).
+
 ### Code (pr/technical-v2)
 
-- `to_email` is **still sent, as a fixed constant** `thestrangepin@gmail.com`
-  (`EMAILJS_TO_EMAIL` in `index.html`, never taken from user input; TESTED:
-  `tests/e2e-emulator.js` asserts it equals the constant). It is kept for compatibility: the
+- `to_email` is **still sent, as a hard-coded constant** `thestrangepin@gmail.com`
+  (`EMAILJS_TO_EMAIL` in `index.html`). No form field, URL parameter, storage value or other
+  user input flows into it, so visitors cannot change the recipient through the website.
+  TESTED: `tests/helpers.test.js` checks the source (one constant, used once, never reassigned;
+  `templateParams` never modified; a single `emailjs.send` with that object, no `sendForm`; no
+  recipient-like form field), and `tests/e2e-emulator.js` submits with hostile
+  `?to_email=` / `?recipient=` URL params, injected hidden form fields, storage and globals and
+  asserts the sent `to_email` still equals the constant. It is kept for compatibility: the
   live site sends the same value and the owner confirms notifications arrive, but without
   dashboard access we cannot tell whether template `template_6luvilv` hard-codes the recipient
   or uses `{{to_email}}`. Removing the param could silently stop notifications.
