@@ -5,6 +5,7 @@
 // automated traffic to tile.openstreetmap.org (OSMF policy) or need a CARTO key.
 // OpenFreeMap is reached read-only in the scenarios that expect it to work.
 const puppeteer = require('puppeteer-core');
+const guard = require('./lib/prod-guard');
 const fs = require('fs');
 const BASE = process.env.BASE || 'http://localhost:8080';
 const PNG = fs.readFileSync(__dirname + '/../icon-192.png');
@@ -12,10 +13,10 @@ let pass = 0, fail = 0;
 const check = (ok, n, x) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAIL'} - ${n}${x ? ' :: ' + x : ''}`); };
 
 async function run({ name, webgl = true, block = [], cartoKey = '', expect, hash = '#map', container = '#leafletMap' }) {
-  const args = ['--no-sandbox'];
+  const args = [...guard.chromeArgs(), '--no-sandbox'];
   if (webgl) args.push('--use-angle=swiftshader', '--enable-unsafe-swiftshader'); else args.push('--disable-webgl', '--disable-3d-apis');
   const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args });
-  const pg = await b.newPage(); const errors = []; const hosts = new Set();
+  const pg = await b.newPage(); guard.watch(pg); const errors = []; const hosts = new Set();
   pg.on('pageerror', e => errors.push(e.message));
   await pg.setRequestInterception(true);
   pg.on('request', async q => {
@@ -31,7 +32,7 @@ async function run({ name, webgl = true, block = [], cartoKey = '', expect, hash
     }
     q.continue();
   });
-  await pg.goto(BASE + '/?nosw=1' + hash, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await pg.goto(BASE + '/?nosw=1&emulator=1' + hash, { waitUntil: 'domcontentloaded', timeout: 60000 });
   await pg.waitForFunction(c => document.querySelector(c) && document.querySelector(c).dataset.basemap, { timeout: 45000 }, container).catch(() => null);
   const r = await pg.evaluate(c => {
     const el = document.querySelector(c); const ov = el && el.querySelector('.sp-map-error');
@@ -56,6 +57,7 @@ async function run({ name, webgl = true, block = [], cartoKey = '', expect, hash
   await run({ name: 'OFM blocked + CARTO key configured', block: [/tiles\.openfreemap\.org/], cartoKey: 'TEST-KEY', expect: 'carto-key' });
   await run({ name: 'all providers blocked', block: [/tiles\.openfreemap\.org/, /tile\.openstreetmap\.org/], expect: 'none' });
   await run({ name: 'submit mini-map, all providers blocked', block: [/tiles\.openfreemap\.org/, /tile\.openstreetmap\.org/], expect: 'none', hash: '#submit', container: '#submitMap' });
+  check(guard.hits().length === 0, guard.summary());
   console.log(`\n${pass}/${pass + fail} map fallback checks passed`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

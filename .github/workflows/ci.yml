@@ -67,15 +67,15 @@ jobs:
       - name: Browser - PWA offline
         run: node tests/pwa-offline.js
 
-      - name: Firestore rules, compatibility matrix, emulator e2e
+      - name: Firestore rules v3, admin scripts, compatibility matrix, emulator e2e, site regression
         run: >
           ./tests/node_modules/.bin/firebase emulators:exec --only auth,firestore --project demo-strangepin
-          "node tests/rules.test.js && node tests/compat-matrix.test.js && node tests/e2e-emulator.js"
+          "node tests/rules.test.js && node tests/admin-scripts.test.js && node tests/compat-matrix.test.js && node tests/e2e-emulator.js && node tests/regression.js"
 
-      - name: Firestore rules security audit (v2) and owner-reported expired production rules (emulator only)
-        run: |
-          ./tests/node_modules/.bin/firebase emulators:exec --only firestore --project demo-strangepin "node tests/rules-v2-audit.test.js"
-          ./tests/node_modules/.bin/firebase emulators:exec --config firebase.audit-expired.json --only auth,firestore --project demo-strangepin "node tests/expired-rules.test.js && node tests/e2e-expired-rules.js"
+      - name: Error handling under denial (owner-reported expired production rules, emulator only)
+        run: >
+          ./tests/node_modules/.bin/firebase emulators:exec --config firebase.audit-expired.json --only auth,firestore --project demo-strangepin
+          "node tests/expired-rules.test.js && node tests/e2e-expired-rules.js"
 
   # Suites that reach public third-party hosts (Google Translate, OpenFreeMap). Useful signal,
   # but they depend on networks outside our control, so they are NOT a required check.

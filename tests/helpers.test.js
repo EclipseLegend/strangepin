@@ -10,8 +10,11 @@ const start = html.indexOf('// ── SECURITY HELPERS');
 const end = html.indexOf('// ── DATA ──');
 assert(start > 0 && end > start, 'helper block not found');
 const helpers = new Function(html.slice(start, end) +
-  '; return { escapeHtml, safeHttpsUrl, avatarInitial, safeDocId, avatarHtml, truncateAtWord, previewText };')();
-const { escapeHtml, safeHttpsUrl, avatarInitial, safeDocId, avatarHtml, truncateAtWord, previewText } = helpers;
+  '; return { escapeHtml, safeHttpsUrl, avatarInitial, safeDocId, avatarHtml, truncateAtWord, previewText,' +
+  ' spNicknameProblem, spDefaultNickname, spImageProblem, spFriendlyError };')();
+const { escapeHtml, safeHttpsUrl, avatarInitial, safeDocId, avatarHtml, truncateAtWord, previewText,
+        spNicknameProblem, spDefaultNickname, spImageProblem, spFriendlyError } = helpers;
+const serverNick = require('../scripts/lib/nickname.js');
 
 let passed = 0;
 function test(name, fn) { fn(); passed++; console.log('ok -', name); }
@@ -69,6 +72,48 @@ test('previewText re-derives truncated previews from fullStory', () => {
   const loc = { shortPreview: 'Visitors consist', fullStory: 'Visitors consistently report an uncanny silence.' };
   assert.strictEqual(previewText(loc, 200), 'Visitors consistently report an uncanny silence.');
   assert.strictEqual(previewText({ shortPreview: 'Same.', fullStory: 'Same.' }), 'Same.');
+});
+
+const RESERVED = ['StrangePin', 'strangepin team', 'Strange-Pin', 'STRANGE.PIN', 'Str4ngeP1n', 'admin', 'Administrator',
+  'Adm1n', 'moderator', 'M0derator', 'official', 'Support', 'Supp0rt', 'staff', 'Firebase', 'mod', 'Mods', 'team',
+  'system', 'root', 'owner', 'help', 'security', 'Google', 'anonymous', 'null', 'undefined', 'The Admin 1',
+  'strange pin official', 'adm.in', 'a_d_m_i_n', 'SUPPORT-desk'];
+const VALID = ['Ghost Hunter', 'night_owl', 'Mira.K', 'Explorer-4F2A', 'abc', 'Lisboa-1987', 'x'.repeat(24), 'Modern Ghost'];
+const BAD_SHAPE = ['ab', 'x'.repeat(25), ' lead', 'trail ', 'two  spaces', 'a..b', '-dash', 'émile', 'a<b>', 'tab\tname', '', null, 42];
+
+test('spNicknameProblem: reserved names are refused (case, space, punctuation, look-alike insensitive)', () => {
+  for (const n of RESERVED) assert.match(spNicknameProblem(n), /reserved/, n);
+});
+test('spNicknameProblem: shape rules', () => {
+  for (const n of VALID) assert.strictEqual(spNicknameProblem(n), '', n);
+  for (const n of BAD_SHAPE) assert.notStrictEqual(spNicknameProblem(n), '', String(n));
+});
+test('client and scripts/lib/nickname.js agree', () => {
+  for (const n of [...RESERVED, ...VALID, ...BAD_SHAPE.filter(x => typeof x === 'string')]) {
+    assert.strictEqual(serverNick.nicknameProblem(n) === '', spNicknameProblem(n) === '', n);
+  }
+  for (const uid of ['a', 'uid-legacy-owner', 'Zx9QpL0mN2', '']) assert.strictEqual(serverNick.defaultNickname(uid), spDefaultNickname(uid));
+});
+test('spDefaultNickname is stable, valid and contains no personal data', () => {
+  const a = spDefaultNickname('uid-legacy-owner');
+  assert.match(a, /^Explorer-[0-9A-Z]{4}$/);
+  assert.strictEqual(a, spDefaultNickname('uid-legacy-owner'));
+  assert.notStrictEqual(a, spDefaultNickname('uid-other'));
+  for (let i = 0; i < 2000; i++) assert.strictEqual(spNicknameProblem(spDefaultNickname('u' + i)), '', 'u' + i);
+});
+test('spImageProblem: only JPG/PNG/WEBP up to 10 MB', () => {
+  assert.strictEqual(spImageProblem(null), '');
+  assert.strictEqual(spImageProblem({ type: 'image/jpeg', size: 1000 }), '');
+  assert.strictEqual(spImageProblem({ type: 'image/webp', size: 10 * 1024 * 1024 }), '');
+  assert.notStrictEqual(spImageProblem({ type: 'image/png', size: 10 * 1024 * 1024 + 1 }), '');
+  assert.notStrictEqual(spImageProblem({ type: 'image/svg+xml', size: 100 }), '');
+  assert.notStrictEqual(spImageProblem({ type: 'image/gif', size: 100 }), '');
+  assert.notStrictEqual(spImageProblem({ type: 'image/png', size: 0 }), '');
+});
+test('spFriendlyError never leaks raw error text', () => {
+  const m = spFriendlyError({ code: 'permission-denied', message: 'Missing or insufficient permissions. secret' }, 'post your comment');
+  assert(!/secret|insufficient/.test(m), m);
+  assert.match(spFriendlyError({ code: 'timeout' }, 'load the rankings'), /offline/);
 });
 
 console.log(`\n${passed} helper tests passed`);

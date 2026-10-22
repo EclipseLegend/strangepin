@@ -1,12 +1,13 @@
 // perf/lcp behaviour: early first render, lazy Google Translate, deferred Leaflet still works.
 // Requires a static server on http://localhost:8080 serving the repo root.
 const puppeteer = require('puppeteer-core');
+const guard = require('./lib/prod-guard');
 const BASE = process.env.BASE || 'http://localhost:8080';
 let pass = 0, fail = 0, info = [];
 const check = (ok, n, x) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAIL'} - ${n}${x ? ' ' + x : ''}`); };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function open(b, hash, { delayCdnMs = 0, preset } = {}) {
-  const pg = await b.newPage();
+  const pg = await b.newPage(); guard.watch(pg);
   const reqs = []; const errors = [];
   pg.on('pageerror', e => errors.push(e.message));
   await pg.evaluateOnNewDocument((preset) => {
@@ -26,11 +27,11 @@ async function open(b, hash, { delayCdnMs = 0, preset } = {}) {
     if (delayCdnMs && /gstatic\.com\/firebasejs|unpkg\.com\/leaflet@1\.9\.4\/dist\/leaflet\.js|cdn\.jsdelivr\.net/.test(u)) await sleep(delayCdnMs);
     q.continue();
   });
-  await pg.goto(BASE + '/?nosw=1' + hash, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await pg.goto(BASE + '/?nosw=1&emulator=1' + hash, { waitUntil: 'domcontentloaded', timeout: 60000 });
   return { pg, reqs, errors };
 }
 (async () => {
-  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
+  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args: [...guard.chromeArgs(), '--no-sandbox'] });
 
   // 1. First render does not wait for the CDN scripts, which are requested only AFTER the first
   //    contentful paint (spLoadDeferredAssets) and then initialise Firebase.
@@ -95,6 +96,7 @@ async function open(b, hash, { delayCdnMs = 0, preset } = {}) {
   check(reqs.some(u => u.includes('translate.google.com/translate_a/element.js')), 'saved language preference loads Translate without interaction');
   await pg.close();
 
+  check(guard.hits().length === 0, guard.summary());
   await b.close();
   for (const i of info) console.log('INFO - ' + i);
   console.log(`\n${pass}/${pass + fail} perf/lazy-load checks passed`);

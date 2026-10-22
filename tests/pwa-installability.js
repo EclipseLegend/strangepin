@@ -2,12 +2,13 @@
 // Requires a static server on http://localhost:8080 serving the repo root.
 // Note: Lighthouse 12 removed the PWA category, so this uses the same Chrome check that DevTools shows.
 const puppeteer = require('puppeteer-core');
+const guard = require('./lib/prod-guard');
 const BASE = process.env.BASE || 'http://localhost:8080';
 (async () => {
-  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
-  const pg = await b.newPage();
+  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args: [...guard.chromeArgs(), '--no-sandbox'] });
+  const pg = await b.newPage(); guard.watch(pg);
   await pg.setRequestInterception(true);
-  pg.on('request', r => /^http:\/\/translate\.google|^https:\/\/(firestore|identitytoolkit|securetoken)\.googleapis\.com/.test(r.url()) ? r.abort() : r.continue());
+  pg.on('request', r => /gstatic\.com\/firebasejs\//.test(r.url()) ? r.respond({ status: 200, contentType: 'application/javascript', body: '/* Firebase SDK stubbed: PWA test, no Firebase traffic */' }) : /^http:\/\/translate\.google|^https:\/\/(firestore|identitytoolkit|securetoken)\.googleapis\.com/.test(r.url()) ? r.abort() : r.continue());
   await pg.goto(BASE + '/', { waitUntil: 'load' });
   await pg.evaluate(() => navigator.serviceWorker.ready);
   await pg.reload({ waitUntil: 'load' });
@@ -29,6 +30,7 @@ const BASE = process.env.BASE || 'http://localhost:8080';
     check(r.ok && r.type === 'image/png' && `${r.w}x${r.h}` === i.sizes, `icon ${i.src} is a ${i.sizes} PNG`, JSON.stringify(r));
   }
   for (const s of m.shortcuts || []) check(/^\/#(nearby|map|submit)$/.test(s.url), `shortcut ${s.url}`);
+  check(guard.hits().length === 0, guard.summary());
   await b.close();
   console.log(`\n${pass}/${pass + fail} installability checks passed`);
   process.exit(fail ? 1 : 0);

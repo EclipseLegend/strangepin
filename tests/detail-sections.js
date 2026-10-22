@@ -1,18 +1,19 @@
 // Detail page Timeline/Sources: rendering, escaping and link attributes.
 // Requires a static server on http://localhost:8080 serving the repo root.
 const puppeteer = require('puppeteer-core');
+const guard = require('./lib/prod-guard');
 const BASE = process.env.BASE || 'http://localhost:8080';
 let pass = 0, fail = 0;
 const check = (ok, n, x) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAIL'} - ${n}${x ? ' ' + x : ''}`); };
 (async () => {
-  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox'] });
-  const pg = await b.newPage();
+  const b = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new', args: [...guard.chromeArgs(), '--no-sandbox'] });
+  const pg = await b.newPage(); guard.watch(pg);
   const errors = [];
   pg.on('pageerror', e => errors.push(e.message));
   pg.on('dialog', d => { errors.push('dialog: ' + d.message()); d.dismiss(); });
   await pg.setRequestInterception(true);
   pg.on('request', r => /^http:\/\/translate\.google|^https:\/\/(firestore|identitytoolkit|securetoken)\.googleapis\.com|basemaps\.cartocdn/.test(r.url()) ? r.abort() : r.continue());
-  await pg.goto(BASE + '/?nosw=1#detail/001', { waitUntil: 'domcontentloaded' });
+  await pg.goto(BASE + '/?nosw=1&emulator=1#detail/001', { waitUntil: 'domcontentloaded' });
   await new Promise(r => setTimeout(r, 2500));
   const s1 = await pg.evaluate(() => {
     const tl = document.querySelector('[data-section="timeline"]');
@@ -63,6 +64,7 @@ const check = (ok, n, x) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' :
   check(s3.links.length === 1 && s3.links[0].attrs.sort().join() === 'href,rel,style,target', 'only the https URL became a link; no attribute breakout', JSON.stringify(s3.links));
   check(xss === 0, 'no script executed', `__xss=${xss}`);
   check(errors.length === 0, 'no page errors or dialogs', errors.join(' | '));
+  check(guard.hits().length === 0, guard.summary());
   await b.close();
   console.log(`\n${pass}/${pass + fail} detail-section checks passed`);
   process.exit(fail ? 1 : 0);

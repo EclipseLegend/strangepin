@@ -4,18 +4,21 @@ Local-only checks; nothing here talks to production Firebase, EmailJS or Cloudin
 
 | File | What it checks | How to run |
 |---|---|---|
-| `helpers.test.js` | `escapeHtml`, `safeHttpsUrl`, `avatarInitial`, `safeDocId`, `avatarHtml`, `truncateAtWord`, `previewText` | `node tests/helpers.test.js` |
+| `helpers.test.js` | `escapeHtml`, `safeHttpsUrl`, `avatarInitial`, `safeDocId`, `avatarHtml`, `truncateAtWord`, `previewText`; nickname rules (reserved names, shape), client = `scripts/lib/nickname.js`, default nickname, photo type/size checks, friendly errors | `node tests/helpers.test.js` |
 | `browser-smoke.js` | Firebase initialises (no `firebase is not defined`), deep links (`#detail/001`, `#detail/area-51`, `#map`, `#nearby`), featured timelines present, XSS payloads rendered through the real render functions (comments, leaderboard, profile, home live sections) stay inert, avatar fallback works | `python3 -m http.server 8080` in the repo root, then `npm i --no-save puppeteer-core` and `CHROME_PATH=/path/to/chrome node tests/browser-smoke.js` |
 
-The browser test aborts requests to Firestore, Firebase Auth, EmailJS, Cloudinary and
-Nominatim, and mocks Firestore/auth data in the page.
+Every browser test uses `tests/lib/prod-guard.js`: production Firebase, EmailJS and
+Cloudinary hosts are unresolvable in Chrome (`--host-resolver-rules`), every attempted request
+to them is counted, and the test asserts the count is 0. Pages run with `?emulator=1`
+(localhost only → project `demo-strangepin`); the PWA tests, where the service worker is
+disabled in emulator mode, stub the Firebase SDK script instead.
 
 ## Phase 2 tests
 
 | File | What it checks | How to run |
 |---|---|---|
-| `rules.test.js` | 46 tests of the **proposed** `firestore.rules` (users private, publicProfiles mirror, points caps/cooldown, reactions, saves, comment ownership, one like per user, default deny) | `firebase emulators:exec --only firestore --project demo-strangepin "node tests/rules.test.js"` (needs Java 11+, firebase-tools, @firebase/rules-unit-testing) |
-| `e2e-emulator.js` | 22 end-to-end checks of the real UI against the Auth + Firestore emulators (`?emulator=1`, project `demo-strangepin`), including UI popup sign-in, XSS, rule denials and **zero requests to real back ends** | `firebase emulators:start --only auth,firestore --project demo-strangepin`, `python3 -m http.server 8080 --bind 127.0.0.1`, then `node tests/e2e-emulator.js` |
+| `rules.test.js` | `firestore.rules` v3 (see the v3 section below) | `firebase emulators:exec --only firestore --project demo-strangepin "node tests/rules.test.js"` (needs Java 11+, firebase-tools, @firebase/rules-unit-testing) |
+| `e2e-emulator.js` | v3 end-to-end UI checks against the Auth + Firestore emulators (see the v3 section below) | `firebase emulators:start --only auth,firestore --project demo-strangepin`, `python3 -m http.server 8080 --bind 127.0.0.1`, then `node tests/e2e-emulator.js` |
 | `detail-sections.js` | Timeline/Sources rendering, hostile data inert, only https links, `rel="noopener nofollow"` | static server on :8080, `node tests/detail-sections.js` |
 | `pwa-offline.js` | SW registration/control, precache contents, nothing from Firebase/Google/EmailJS/Cloudinary/tiles cached, **real offline** (server killed + all hosts unresolvable) | `node tests/pwa-offline.js` (starts its own server on :8090) |
 | `pwa-installability.js` | Chrome `Page.getInstallabilityErrors` = [], manifest parse, icon sizes, shortcuts | static server on :8080, `node tests/pwa-installability.js` |
@@ -51,9 +54,19 @@ Report: `FIREBASE-SECURITY-AUDIT.md` (delivered outside the repo).
 
 | File | What it checks | How to run |
 |---|---|---|
-| `rules-v2-audit.test.js` | 97 cases against `firestore.rules` v2: legitimate flows, public/private read boundaries, unauthenticated and non-Google writes, cross-user edits, admin/server-owned fields, points and likes integrity, schema validation, invented pin ids, default deny. `RULES_FILE=tests/fixtures/rules-v1-pr1.rules` runs the same cases against PR #1's rules (failures there are the gaps v2 closes) | `firebase emulators:exec --only firestore --project demo-strangepin "node tests/rules-v2-audit.test.js"` |
 | `expired-rules.test.js` | 44 read/write shapes of the old and new client, signed-in and anonymous, against the owner-reported live rules (`fixtures/rules-prod-expired.rules`, expired test mode): all must be denied | `firebase emulators:exec --config firebase.audit-expired.json --only auth,firestore --project demo-strangepin "node tests/expired-rules.test.js"` |
-| `e2e-expired-rules.js` | 15 UI checks: what users see if PR #1 ships while the expired rules are still live (sign-in works, profile/comments/reactions/saves/points/leaderboard silently fail); zero production requests (hosts unresolvable + aborted) | same config, static server on :8080, `node tests/e2e-expired-rules.js` |
+| `e2e-expired-rules.js` | Error handling of the v3 UI when Firestore denies everything (see the v3 section below) | same config, static server on :8080, `node tests/e2e-expired-rules.js` |
 | `live-main-firebase-probe.js` | The deployed client (curl of https://strangepin.com, identical to main 728e8f5) never initialises Firebase and attempts 0 back-end requests; Sign In does nothing | serve the saved HTML on :8302, `LIVE_BASE=http://127.0.0.1:8302 node tests/live-main-firebase-probe.js` |
 
-`compat-matrix.test.js` now covers four rule sets (assumed-old, prod-expired, v1-pr1, v2) = 92 cells.
+`compat-matrix.test.js` covers four rule sets (assumed-old, prod-expired, v1-pr1, v3).
+The audit's `rules-v2-audit.test.js` was merged into `rules.test.js` (every case kept, adapted to v3).
+
+## v3: manual review, admin-owned points, nicknames (local branch `pr/technical-v2`)
+
+| File | What it checks | How to run |
+|---|---|---|
+| `rules.test.js` | `firestore.rules` v3: legitimate flows; legacy users (owner-shaped doc: points 25, pins 2, …) never reset/overwritten; private/public read boundaries; Google-only writes (unauthenticated, anonymous and email/password denied); cross-user edits; server-owned points/pins/roles; reserved and malformed nicknames; comments (author name = nickname, 15 s throttle); likes; submissions (pending only, schema, 60 s throttle, no review fields); `pointAwards` no client access; deletion requests; schema; invented pin ids; default deny | `firebase emulators:exec --only firestore --project demo-strangepin "node tests/rules.test.js"` |
+| `admin-scripts.test.js` | `scripts/lib/guard.js` refusals; `admin-review-submission.js` list, dry run, approve, reject, duplicate, concurrent (8 at once), ledger tampering, missing profile, bad legacy values, non-admin client attempts; `backfill-public-profiles.js` dry run (counts only, no PII), create-if-absent, users untouched, existing profiles untouched, idempotent re-run | inside `firebase emulators:exec --only firestore --project demo-strangepin` |
+| `e2e-emulator.js` | Real UI on the emulators: Google sign-in (credential + popup widget), profile creation, legacy user sign-in (seeded owner-shaped doc), comments/likes/reactions/saves, nickname change and reserved names, submission → pending review → admin approval → points shown, deletion request, leaderboard and home stats (nicknames only), XSS, 0 production requests | inside `firebase emulators:exec --only auth,firestore --project demo-strangepin`, static server on :8080 |
+| `e2e-expired-rules.js` | Error handling under denial: profile-load notice, comments unavailable + failed comment keeps text, reaction and save roll back with a message, failed submission keeps the form and sends no e-mail, leaderboard failure state + 10 s timeout + retry, My submissions failure state, home fallback, 0 production requests | `firebase emulators:exec --config firebase.audit-expired.json --only auth,firestore --project demo-strangepin "node tests/e2e-expired-rules.js"` |
+| `regression.js` | 99 pins, every route, map (list + markers), search and deep-link search, no page errors, **no console errors**, 0 production requests | inside `firebase emulators:exec --only auth,firestore --project demo-strangepin`, static server on :8080 |

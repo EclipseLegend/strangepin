@@ -1,7 +1,7 @@
 // AUDIT (2026-10-22): behaviour of the OWNER-REPORTED production rules (expired test mode,
 // tests/fixtures/rules-prod-expired.rules) on the LOCAL Firestore emulator only
 // (project demo-strangepin). Replays every read/write shape of the old client (main 728e8f5)
-// and the new client (PR #1) plus anonymous reads, and expects every one to be DENIED,
+// the PR #1 client and the v3 client (pr/technical-v2) plus anonymous reads, and expects every one to be DENIED,
 // because request.time (now) is after timestamp.date(2026, 7, 4).
 //   firebase emulators:exec --only firestore --project demo-strangepin "node tests/expired-rules.test.js"
 'use strict';
@@ -40,6 +40,13 @@ const OPS = {
   'new | reaction delete': (db, u) => deleteDoc(doc(db, 'pins', '001', 'reactions', u)),
   'new | comment like (marker + increment batch)': (db, u) => { const b = writeBatch(db); b.set(doc(db, 'pins', '001', 'comments', 'c1', 'likes', u), { at: serverTimestamp() }); b.update(doc(db, 'pins', '001', 'comments', 'c1'), { likes: increment(1) }); return b.commit(); },
   'new | save pin (server time)': (db, u) => setDoc(doc(db, 'users', u, 'saved', '001'), { pinId: '001', at: serverTimestamp() }),
+  // v3 client (pr/technical-v2)
+  'v3 | sign-in: create users + publicProfiles (batch)': (db, u) => { const b = writeBatch(db); b.set(doc(db, 'users', u), { uid: u, displayName: 'A', email: 'a@x', photoURL: '', points: 0, pins: 0, joinedAt: serverTimestamp(), lastActive: serverTimestamp(), _schemaVersion: 3 }); b.set(doc(db, 'publicProfiles', u), { nickname: 'Explorer-ABCD', points: 0, pins: 0, updatedAt: serverTimestamp() }); return b.commit(); },
+  'v3 | comment add (nickname + stamp batch)': (db, u) => { const b = writeBatch(db); b.set(doc(collection(db, 'pins', '001', 'comments')), { uid: u, authorName: 'A', text: 'hi', likes: 0, at: serverTimestamp() }); b.update(doc(db, 'users', u), { lastCommentAt: serverTimestamp() }); return b.commit(); },
+  'v3 | change nickname': (db, u) => updateDoc(doc(db, 'publicProfiles', u), { nickname: 'Alice B', updatedAt: serverTimestamp() }),
+  'v3 | submit a location': (db, u) => { const b = writeBatch(db); b.set(doc(collection(db, 'submissions')), { authorUid: u, status: 'pending', createdAt: serverTimestamp(), name: 'M', country: 'PT', city: '', address: '', lat: 1.5, lng: 2.5, category: 'Haunted', story: 'x', storyLang: 'en', date: '', intensity: 5, imageUrl: '', username: 'A' }); b.update(doc(db, 'users', u), { lastSubmissionAt: serverTimestamp() }); return b.commit(); },
+  'v3 | my submissions query': (db, u) => getDocs(query(collection(db, 'submissions'), where('authorUid', '==', u))),
+  'v3 | request account deletion': (db, u) => setDoc(doc(db, 'deletionRequests', u), { uid: u, status: 'requested', requestedAt: serverTimestamp(), reason: '' }),
 };
 
 (async () => {
