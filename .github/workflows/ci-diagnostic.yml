@@ -1,0 +1,13 @@
+name: CI diagnostic
+on:
+  push:
+    branches:
+      - ci/diagnostic
+permissions:
+  contents: read
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print test message
+        run: echo "StrangePin CI diagnostic - GitHub Actions is running"
