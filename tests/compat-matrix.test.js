@@ -14,7 +14,9 @@ setLogLevel('silent');
 
 const RULES = {
   'assumed-old': fs.readFileSync(path.join(__dirname, 'fixtures/rules-assumed-old.rules'), 'utf8'),
-  'new': fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8'),
+  'prod-expired': fs.readFileSync(path.join(__dirname, 'fixtures/rules-prod-expired.rules'), 'utf8'), // OWNER-REPORTED live rules
+  'v1-pr1': fs.readFileSync(path.join(__dirname, 'fixtures/rules-v1-pr1.rules'), 'utf8'),
+  'new': fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8'), // v2
 };
 const ok = p => p.then(() => true, () => false);
 
@@ -47,6 +49,8 @@ const ABUSE = {
   'read another user\'s private doc (email)': (db, u) => getDocs(collection(db, 'users')),
   'edit another user\'s comment': (db) => updateDoc(doc(db, 'pins', '001', 'comments', 'c1'), { text: 'defaced' }),
   'write a pin document': (db) => setDoc(doc(db, 'pins', '001'), { name: 'spam' }),
+  'self-award +35 via mirrored batch (v1 loophole)': (db, u) => { const b = writeBatch(db); b.update(doc(db, 'users', u), { points: increment(35), pins: increment(1), lastPointsAt: serverTimestamp() }); b.update(doc(db, 'publicProfiles', u), { points: increment(35), pins: increment(1), updatedAt: serverTimestamp() }); return b.commit(); },
+  'comment on an invented pin id': (db, u) => addDoc(collection(db, 'pins', 'spam-page', 'comments'), { uid: u, displayName: 'A', photoURL: '', text: 'buy now', likes: 0, at: serverTimestamp() }),
   'unauthenticated comment': null, // handled below
 };
 
@@ -68,7 +72,7 @@ const ABUSE = {
             await setDoc(doc(a, 'publicProfiles', 'alice'), { displayName: 'A', photoURL: '', points: 0, pins: 0 });
           }
         });
-        const db = env.authenticatedContext('alice').firestore();
+        const db = env.authenticatedContext('alice', { firebase: { sign_in_provider: 'google.com' } }).firestore();
         out[`${label} | ${name} | ${rname}`] = await ok(fn(db, 'alice'));
       }
     };
@@ -96,14 +100,23 @@ const ABUSE = {
     'abuse | write a pin document | new': false,
     'abuse | unauthenticated comment | new': false,
     'abuse | unauthenticated comment | assumed-old': false,
+    // audit 2026-10-22: v2 makes points server-owned; v1 (PR #1) allows a capped self-award
+    'new client | award points (mirrored batch, lastPointsAt) | new': false,
+    'new client | award points (mirrored batch, lastPointsAt) | v1-pr1': true,
+    'abuse | self-award +35 via mirrored batch (v1 loophole) | v1-pr1': true,
+    'abuse | self-award +35 via mirrored batch (v1 loophole) | new': false,
+    'abuse | comment on an invented pin id | v1-pr1': true,
+    'abuse | comment on an invented pin id | new': false,
   };
+  // Owner-reported live rules (expired test mode): every cell must be DENY.
+  for (const k of Object.keys(out).filter(k => k.endsWith('| prod-expired'))) expect[k] = false;
   let bad = 0;
   for (const [k, v] of Object.entries(out)) {
     const e = k in expect ? (expect[k] === v ? ' (as expected)' : ` (EXPECTED ${expect[k] ? 'ALLOW' : 'DENY'})`) : '';
     if (k in expect && expect[k] !== v) bad++;
     console.log(`${v ? 'ALLOW' : 'DENY '}  ${k}${e}`);
   }
-  for (const k of Object.keys(out).filter(k => k.startsWith('new client') && k.endsWith('| new'))) if (!out[k]) { bad++; console.log('UNEXPECTED DENY for new client under new rules:', k); }
+  for (const k of Object.keys(out).filter(k => k.startsWith('new client') && k.endsWith('| new') && !(k in expect))) if (!out[k]) { bad++; console.log('UNEXPECTED DENY for new client under new rules:', k); }
   console.log(`\n${Object.keys(out).length} matrix cells; ${bad} unexpected`);
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

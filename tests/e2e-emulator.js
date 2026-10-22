@@ -10,7 +10,11 @@
 const puppeteer = require('puppeteer-core');
 const BASE = process.env.BASE_URL || 'http://localhost:8080/';
 // Anchored on the host: emulator URLs embed these host names in their *path*.
-const REAL_BACKEND = /^https:\/\/(firestore|identitytoolkit|securetoken|firebaseinstallations)\.googleapis\.com|^https:\/\/api\.emailjs\.com|^https:\/\/api\.cloudinary\.com|^https:\/\/nominatim\.openstreetmap\.org|^http:\/\/translate\.google\.com/;
+// audit 2026-10-22: also every *.firebaseapp.com / *.web.app host (incl. strangepin-4e538) and the
+// Google account host, so the auth handler of the real project can never be loaded either.
+// (apis.google.com/js/api.js, the public gapi loader, stays allowed: the SDK needs it to open
+// the popup even in emulator mode; it is a static library, not a project API.)
+const REAL_BACKEND = /^https:\/\/(firestore|identitytoolkit|securetoken|firebaseinstallations|firebase|firebasestorage)\.googleapis\.com|^https?:\/\/[^/]*\.(firebaseapp\.com|web\.app|firebaseio\.com)\/|^https:\/\/accounts\.google\.com\/|^https:\/\/api\.emailjs\.com|^https:\/\/api\.cloudinary\.com|^https:\/\/nominatim\.openstreetmap\.org|^http:\/\/translate\.google\.com/;
 const XSS = '<img src=x onerror="window.__xss=(window.__xss||0)+1">';
 const results = [];
 const check = (name, ok, detail) => { results.push(ok); console.log((ok ? 'PASS' : 'FAIL') + ' - ' + name + (detail ? ' :: ' + detail : '')); };
@@ -76,11 +80,14 @@ async function signIn(page, uid, name, email) {
   check('saved pin stored under users/alice/saved/001', saved);
 
   // Points: combined award, then cooldown
-  await a.evaluate(() => window.fbAddPoints(window.currentUser.uid, ['pin', 'photo']));
+  const firstAward = await a.evaluate(() => window.fbAddPoints(window.currentUser.uid, ['pin', 'photo']).then(() => 'ok', e => e.code));
+  console.log('     first award result: ' + firstAward);
   const pts = await a.evaluate(async () => ({ priv: (await window._db.collection('users').doc(window.currentUser.uid).get()).data().points, pub: (await window._db.collection('publicProfiles').doc(window.currentUser.uid).get()).data().points }));
-  check('award pin+photo = +15 mirrored to public profile', pts.priv === 15 && pts.pub === 15, JSON.stringify(pts));
+  // v2 rules (audit 2026-10-22): points are server-owned, so the client award is denied and
+  // both documents stay at 0. PR #1's submit flow catches this error (submission still succeeds).
+  check('v2: client award pin+photo is denied, points stay 0 (server-owned)', pts.priv === 0 && pts.pub === 0, JSON.stringify(pts));
   const second = await a.evaluate(() => window.fbAddPoints(window.currentUser.uid, ['pin']).then(() => 'ok', e => e.code));
-  check('second award inside 30 s cooldown is rejected by rules', second === 'permission-denied', second);
+  check('second award is rejected by rules', second === 'permission-denied', second);
   const cheat = await a.evaluate(() => window._db.collection('users').doc(window.currentUser.uid).update({ points: 99999 }).then(() => 'ok', e => e.code));
   check('direct points write (cheat) rejected', cheat === 'permission-denied', cheat);
 
@@ -106,7 +113,8 @@ async function signIn(page, uid, name, email) {
   await b.evaluate(() => showPage('leaderboard'));
   await b.waitForFunction(() => { const el = document.getElementById('lbRows'); return el && el.querySelectorAll('.lb-row').length >= 2; }, { timeout: 10000 });
   const lb = await b.evaluate(() => { const el = document.getElementById('lbRows'); return { imgs: [...el.querySelectorAll('img')].map(i => i.getAttribute('src')), text: el.textContent.replace(/\s+/g, ' ') }; });
-  check('leaderboard shows alice first with escaped name, no injected img', lb.text.indexOf('<img src=x') > -1 && lb.text.indexOf('<img src=x') < lb.text.indexOf('Bob') && lb.imgs.length === 0, lb.text.slice(0, 120));
+  // v2: everyone has 0 points, so the order of equal scores is not asserted.
+  check('leaderboard lists alice (escaped name) and bob, no injected img', lb.text.indexOf('<img src=x') > -1 && lb.text.indexOf('Bob') > -1 && lb.imgs.length === 0, lb.text.slice(0, 120));
   check('leaderboard has no email addresses', !/@example\.com/.test(lb.text));
 
   // Home live sections for a signed-out visitor

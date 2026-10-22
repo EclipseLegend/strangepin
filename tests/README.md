@@ -43,3 +43,17 @@ Lighthouse method and results: `docs/perf-lcp.md`.
 
 Dependencies are pinned in `tests/package.json` / `tests/package-lock.json` (`npm ci --prefix tests`).
 CI: `.github/workflows/ci.yml` (required job `tests`; see `docs/branch-protection.md`).
+
+## Firebase security audit (2026-10-22, local branch `audit/firebase-rules`)
+
+All emulator-only (project `demo-strangepin`); nothing contacts `strangepin-4e538`.
+Report: `FIREBASE-SECURITY-AUDIT.md` (delivered outside the repo).
+
+| File | What it checks | How to run |
+|---|---|---|
+| `rules-v2-audit.test.js` | 97 cases against `firestore.rules` v2: legitimate flows, public/private read boundaries, unauthenticated and non-Google writes, cross-user edits, admin/server-owned fields, points and likes integrity, schema validation, invented pin ids, default deny. `RULES_FILE=tests/fixtures/rules-v1-pr1.rules` runs the same cases against PR #1's rules (failures there are the gaps v2 closes) | `firebase emulators:exec --only firestore --project demo-strangepin "node tests/rules-v2-audit.test.js"` |
+| `expired-rules.test.js` | 44 read/write shapes of the old and new client, signed-in and anonymous, against the owner-reported live rules (`fixtures/rules-prod-expired.rules`, expired test mode): all must be denied | `firebase emulators:exec --config firebase.audit-expired.json --only auth,firestore --project demo-strangepin "node tests/expired-rules.test.js"` |
+| `e2e-expired-rules.js` | 15 UI checks: what users see if PR #1 ships while the expired rules are still live (sign-in works, profile/comments/reactions/saves/points/leaderboard silently fail); zero production requests (hosts unresolvable + aborted) | same config, static server on :8080, `node tests/e2e-expired-rules.js` |
+| `live-main-firebase-probe.js` | The deployed client (curl of https://strangepin.com, identical to main 728e8f5) never initialises Firebase and attempts 0 back-end requests; Sign In does nothing | serve the saved HTML on :8302, `LIVE_BASE=http://127.0.0.1:8302 node tests/live-main-firebase-probe.js` |
+
+`compat-matrix.test.js` now covers four rule sets (assumed-old, prod-expired, v1-pr1, v2) = 92 cells.

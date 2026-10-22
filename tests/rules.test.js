@@ -1,4 +1,4 @@
-// Firestore security-rules tests for the PROPOSED firestore.rules.
+// Firestore security-rules tests for the PROPOSED firestore.rules (v2 on audit/firebase-rules).
 // Runs ONLY against the local Firestore emulator (project id "demo-strangepin";
 // the "demo-" prefix makes the SDK refuse to talk to any real project).
 //
@@ -44,8 +44,10 @@ function award(db, uid, pts, pins) {
     projectId: 'demo-strangepin',
     firestore: { rules: fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8'), host: '127.0.0.1', port: 8085 },
   });
-  const alice = env.authenticatedContext('alice').firestore();
-  const bob = env.authenticatedContext('bob').firestore();
+  // v2 rules accept writes only from Google sign-ins (sign_in_provider google.com).
+  const GOOGLE = { firebase: { sign_in_provider: 'google.com' } };
+  const alice = env.authenticatedContext('alice', GOOGLE).firestore();
+  const bob = env.authenticatedContext('bob', GOOGLE).firestore();
   const anon = env.unauthenticatedContext().firestore();
 
   // Accounts
@@ -68,7 +70,8 @@ function award(db, uid, pts, pins) {
   await t('owner cannot set badges', () => assertFails(updateDoc(doc(alice, 'users', 'alice'), { badges: ['admin'] })));
 
   // Points
-  await t('award +15 points / +1 pin in a mirrored batch', () => assertSucceeds(award(alice, 'alice', 15, 1)));
+  // v2 (audit 2026-10-22): points are server-owned; the client award path of PR #1 is denied.
+  await t('v2: client award +15 points / +1 pin (mirrored batch) is denied', () => assertFails(award(alice, 'alice', 15, 1)));
   await t('second award within 30 s cooldown is denied', () => assertFails(award(alice, 'alice', 10, 1)));
   await t('bob: award +1000 points is denied', () => assertFails(award(bob, 'bob', 1000, 0)));
   await t('bob: award +2 pins is denied', () => assertFails(award(bob, 'bob', 10, 2)));
@@ -82,7 +85,7 @@ function award(db, uid, pts, pins) {
     await env.withSecurityRulesDisabled(async c => { const f = c.firestore(); await updateDoc(doc(f, 'users', 'bob'), { points: 50, lastPointsAt: Timestamp.fromMillis(0) }); await updateDoc(doc(f, 'publicProfiles', 'bob'), { points: 50 }); });
     await assertFails(award(bob, 'bob', -10, 0));
   });
-  await t('bob: award after cooldown is allowed', () => assertSucceeds(award(bob, 'bob', 10, 1)));
+  await t('v2: award after cooldown is still denied (server-owned points)', () => assertFails(award(bob, 'bob', 10, 1)));
 
   // Saved pins
   await t('owner can save a pin', () => assertSucceeds(setDoc(doc(alice, 'users', 'alice', 'saved', '001'), { pinId: '001', at: serverTimestamp() })));
