@@ -5,13 +5,14 @@
 // nor any CDN can be reached. (DevTools offline emulation does not apply to the
 // service worker's own fetches, so it is not used.)
 const puppeteer = require('puppeteer-core');
+const guard = require('./lib/prod-guard');
 const { spawn } = require('child_process');
 const fs = require('fs'), os = require('os'), path = require('path');
 const PORT = 8090;
 const BASE = `http://localhost:${PORT}`;
 const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), 'sp-pwa-'));
 const launch = (extra = []) => puppeteer.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome', headless: 'new',
-  userDataDir: PROFILE, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', ...extra] });
+  userDataDir: PROFILE, args: [...guard.chromeArgs(), '--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', ...extra] });
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let pass = 0, fail = 0;
 const check = (ok, name, extra) => { (ok ? pass++ : fail++); console.log(`${ok ? 'PASS' : 'FAIL'} - ${name}${extra ? ' ' + extra : ''}`); };
@@ -19,12 +20,12 @@ const check = (ok, name, extra) => { (ok ? pass++ : fail++); console.log(`${ok ?
   const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], { cwd: path.join(__dirname, '..'), stdio: 'ignore' });
   await sleep(1000);
   let browser = await launch();
-  let page = await browser.newPage();
+  let page = await browser.newPage(); guard.watch(page);
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.setRequestInterception(true);
   // Never reach real Firebase back ends or the plain-http translate script.
-  page.on('request', r => /^http:\/\/translate\.google|^https:\/\/(firestore|identitytoolkit|securetoken)\.googleapis\.com/.test(r.url()) ? r.abort() : r.continue());
+  page.on('request', r => /gstatic\.com\/firebasejs\//.test(r.url()) ? r.respond({ status: 200, contentType: 'application/javascript', body: '/* Firebase SDK stubbed: PWA test, no Firebase traffic */' }) : /^http:\/\/translate\.google|^https:\/\/(firestore|identitytoolkit|securetoken)\.googleapis\.com/.test(r.url()) ? r.abort() : r.continue());
 
   await page.goto(BASE + '/', { waitUntil: 'load' });
   const reg = await page.evaluate(async () => {
@@ -57,7 +58,7 @@ const check = (ok, name, extra) => { (ok ? pass++ : fail++); console.log(`${ok ?
   server.kill();
   await sleep(500);
   browser = await launch(['--host-resolver-rules=MAP * ~NOTFOUND']);
-  page = await browser.newPage();
+  page = await browser.newPage(); guard.watch(page);
   page.on('pageerror', e => errors.push('offline: ' + e.message));
   await page.goto(BASE + '/#map', { waitUntil: 'domcontentloaded' });
   await new Promise(r => setTimeout(r, 3000));
@@ -73,6 +74,7 @@ const check = (ok, name, extra) => { (ok ? pass++ : fail++); console.log(`${ok ?
   const offlineErrors = errors.filter(e => e.startsWith('offline: '));
   console.log('INFO - offline page errors (informational):', offlineErrors.length ? offlineErrors.slice(0, 3).join(' | ') : 'none');
 
+  check(guard.hits().length === 0, guard.summary());
   await browser.close();
   fs.rmSync(PROFILE, { recursive: true, force: true });
   console.log(`\n${pass}/${pass + fail} PWA checks passed`);

@@ -1,6 +1,6 @@
 // Firebase compatibility matrix at the rules level (Firestore emulator ONLY, project
 // demo-strangepin). Replays the exact write/read shapes of the OLD client (main 728e8f5)
-// and the NEW client (technical PR) against two rule sets:
+// and the NEW client (v3, pr/technical-v2) against two rule sets:
 //   - "assumed-old": tests/fixtures/rules-assumed-old.rules (ASSUMPTION: production rules unknown)
 //   - "new":         firestore.rules (proposed)
 // Prints a matrix; exits 1 only if an EXPECTATION in the table below is not met.
@@ -14,7 +14,9 @@ setLogLevel('silent');
 
 const RULES = {
   'assumed-old': fs.readFileSync(path.join(__dirname, 'fixtures/rules-assumed-old.rules'), 'utf8'),
-  'new': fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8'),
+  'prod-expired': fs.readFileSync(path.join(__dirname, 'fixtures/rules-prod-expired.rules'), 'utf8'), // OWNER-REPORTED live rules
+  'v1-pr1': fs.readFileSync(path.join(__dirname, 'fixtures/rules-v1-pr1.rules'), 'utf8'),
+  'new': fs.readFileSync(path.join(__dirname, '..', 'firestore.rules'), 'utf8'), // v3
 };
 const ok = p => p.then(() => true, () => false);
 
@@ -30,15 +32,17 @@ const OLD = {
   'home stats: list users': (db) => getDocs(collection(db, 'users')),
   'leaderboard: users orderBy points': (db) => getDocs(query(collection(db, 'users'), orderBy('points', 'desc'), limit(20))),
 };
-// New client shapes (same as tests/rules.test.js / index.html on the technical branch).
+// New client shapes (v3: index.html on pr/technical-v2; same as tests/rules.test.js).
 const NEW = {
-  'sign-in: create users + publicProfiles (batch)': (db, u) => { const b = writeBatch(db); b.set(doc(db, 'users', u), { uid: u, displayName: 'A', email: 'a@x', photoURL: '', points: 0, pins: 0, badges: [], achievements: [], followers: 0, following: 0, verified: false, country: '', bio: '', website: '', joinedAt: serverTimestamp(), lastActive: serverTimestamp(), notifications: { newComment: true, newReaction: true, weeklyDigest: true }, _schemaVersion: 2 }); b.set(doc(db, 'publicProfiles', u), { displayName: 'A', photoURL: '', points: 0, pins: 0, updatedAt: serverTimestamp() }); return b.commit(); },
-  'award points (mirrored batch, lastPointsAt)': (db, u) => { const b = writeBatch(db); b.update(doc(db, 'users', u), { points: increment(10), pins: increment(1), lastPointsAt: serverTimestamp() }); b.update(doc(db, 'publicProfiles', u), { points: increment(10), pins: increment(1), updatedAt: serverTimestamp() }); return b.commit(); },
+  'sign-in: create users + publicProfiles (batch, v3)': (db, u) => { const b = writeBatch(db); b.set(doc(db, 'users', u), { uid: u, displayName: 'A', email: 'a@x', photoURL: '', points: 0, pins: 0, joinedAt: serverTimestamp(), lastActive: serverTimestamp(), _schemaVersion: 3 }); b.set(doc(db, 'publicProfiles', u), { nickname: 'Explorer-ABCD', points: 0, pins: 0, updatedAt: serverTimestamp() }); return b.commit(); },
   'reaction set (server time)': (db, u) => setDoc(doc(db, 'pins', '001', 'reactions', u), { type: 'creepy', uid: u, at: serverTimestamp() }),
-  'comment add': (db, u) => addDoc(collection(db, 'pins', '001', 'comments'), { uid: u, displayName: 'A', photoURL: '', text: 'hi', likes: 0, at: serverTimestamp() }),
+  'comment add (nickname + lastCommentAt batch)': (db, u) => { const b = writeBatch(db); b.set(doc(collection(db, 'pins', '001', 'comments')), { uid: u, authorName: 'Alice A', text: 'hi', likes: 0, at: serverTimestamp() }); b.update(doc(db, 'users', u), { lastCommentAt: serverTimestamp() }); return b.commit(); },
   'comment like (marker + increment batch)': (db, u) => { const b = writeBatch(db); b.set(doc(db, 'pins', '001', 'comments', 'c1', 'likes', u), { at: serverTimestamp() }); b.update(doc(db, 'pins', '001', 'comments', 'c1'), { likes: increment(1) }); return b.commit(); },
   'save pin (server time)': (db, u) => setDoc(doc(db, 'users', u, 'saved', '001'), { pinId: '001', at: serverTimestamp() }),
   'home stats / leaderboard: publicProfiles orderBy points': (db) => getDocs(query(collection(db, 'publicProfiles'), orderBy('points', 'desc'), limit(50))),
+  'change nickname': (db, u) => updateDoc(doc(db, 'publicProfiles', u), { nickname: 'Alice B', updatedAt: serverTimestamp() }),
+  'submit a location (pending + lastSubmissionAt batch)': (db, u) => { const b = writeBatch(db); b.set(doc(collection(db, 'submissions')), { authorUid: u, status: 'pending', createdAt: serverTimestamp(), name: 'Mill', country: 'PT', city: '', address: '', lat: 1.5, lng: 2.5, category: 'Haunted', story: 'x', storyLang: 'en', date: '', intensity: 5, imageUrl: '', username: 'A' }); b.update(doc(db, 'users', u), { lastSubmissionAt: serverTimestamp() }); return b.commit(); },
+  'request account deletion': (db, u) => setDoc(doc(db, 'deletionRequests', u), { uid: u, status: 'requested', requestedAt: serverTimestamp(), reason: '' }),
 };
 // Abuse probes (security exposure), same for both clients: any signed-in user can do these
 // directly with the SDK, whatever the UI does.
@@ -47,6 +51,9 @@ const ABUSE = {
   'read another user\'s private doc (email)': (db, u) => getDocs(collection(db, 'users')),
   'edit another user\'s comment': (db) => updateDoc(doc(db, 'pins', '001', 'comments', 'c1'), { text: 'defaced' }),
   'write a pin document': (db) => setDoc(doc(db, 'pins', '001'), { name: 'spam' }),
+  'approve own submission / self-award via ledger': (db, u) => { const b = writeBatch(db); b.set(doc(db, 'pointAwards', 's1'), { uid: u, points: 10 }); b.update(doc(db, 'users', u), { points: increment(10) }); return b.commit(); },
+  'self-award +35 via mirrored batch (v1 loophole)': (db, u) => { const b = writeBatch(db); b.update(doc(db, 'users', u), { points: increment(35), pins: increment(1), lastPointsAt: serverTimestamp() }); b.update(doc(db, 'publicProfiles', u), { points: increment(35), pins: increment(1), updatedAt: serverTimestamp() }); return b.commit(); },
+  'comment on an invented pin id': (db, u) => addDoc(collection(db, 'pins', 'spam-page', 'comments'), { uid: u, displayName: 'A', photoURL: '', text: 'buy now', likes: 0, at: serverTimestamp() }),
   'unauthenticated comment': null, // handled below
 };
 
@@ -61,14 +68,21 @@ const ABUSE = {
         await env.withSecurityRulesDisabled(async (c) => {
           const a = c.firestore();
           await setDoc(doc(a, 'users', 'victim'), { uid: 'victim', email: 'victim@example.com', points: 5, pins: 0 });
-          await setDoc(doc(a, 'publicProfiles', 'victim'), { displayName: 'V', photoURL: '', points: 5, pins: 0 });
+          await setDoc(doc(a, 'publicProfiles', 'victim'), { nickname: 'Victim V', points: 5, pins: 0 });
           await setDoc(doc(a, 'pins', '001', 'comments', 'c1'), { uid: 'victim', displayName: 'V', photoURL: '', text: 'orig', likes: 0, at: new Date() });
           if (!/create users/.test(name)) {
-            await setDoc(doc(a, 'users', 'alice'), { uid: 'alice', displayName: 'A', email: 'a@x', photoURL: '', points: 0, pins: 0, badges: [], achievements: [], followers: 0, following: 0, verified: false, country: '', bio: '', website: '', notifications: {}, _schemaVersion: 2 });
-            await setDoc(doc(a, 'publicProfiles', 'alice'), { displayName: 'A', photoURL: '', points: 0, pins: 0 });
+            // Seed data in the shape each rule set was written for (v3 nickname profile for
+            // "new", the PR #1 / old displayName profile for the others).
+            if (rname === 'new') {
+              await setDoc(doc(a, 'users', 'alice'), { uid: 'alice', displayName: 'A', email: 'a@x', photoURL: '', points: 0, pins: 0, _schemaVersion: 3 });
+              await setDoc(doc(a, 'publicProfiles', 'alice'), { nickname: 'Alice A', points: 0, pins: 0 });
+            } else {
+              await setDoc(doc(a, 'users', 'alice'), { uid: 'alice', displayName: 'A', email: 'a@x', photoURL: '', points: 0, pins: 0, badges: [], achievements: [], followers: 0, following: 0, verified: false, country: '', bio: '', website: '', notifications: {}, _schemaVersion: 2 });
+              await setDoc(doc(a, 'publicProfiles', 'alice'), { displayName: 'A', photoURL: '', points: 0, pins: 0 });
+            }
           }
         });
-        const db = env.authenticatedContext('alice').firestore();
+        const db = env.authenticatedContext('alice', { firebase: { sign_in_provider: 'google.com' } }).firestore();
         out[`${label} | ${name} | ${rname}`] = await ok(fn(db, 'alice'));
       }
     };
@@ -85,8 +99,12 @@ const ABUSE = {
     'old client | save pin (client Date) | new': false,
     'old client | home stats: list users | new': false,
     'old client | leaderboard: users orderBy points | new': false,
-    'old client | comment add | new': true,
-    'old client | sign-in: create users/{uid} | new': true,
+    // v3: the old client (main 728e8f5) can no longer create accounts or comment, because
+    // v3 requires the new shapes (nickname authorName, no legacy profile fields). Deploy the
+    // v3 client BEFORE the v3 rules (docs/firebase-compat-matrix.md).
+    'old client | comment add | new': false,
+    'old client | sign-in: create users/{uid} | new': false,
+    'old client | sign-in: update lastActive | new': true,
     'abuse | self-award 10,000 points | assumed-old': true,
     'abuse | self-award 10,000 points | new': false,
     'abuse | read another user\'s private doc (email) | assumed-old': true,
@@ -96,14 +114,22 @@ const ABUSE = {
     'abuse | write a pin document | new': false,
     'abuse | unauthenticated comment | new': false,
     'abuse | unauthenticated comment | assumed-old': false,
+    // v2/v3 make points server-owned; v1 (PR #1 as pushed) allows a capped self-award
+    'abuse | approve own submission / self-award via ledger | new': false,
+    'abuse | self-award +35 via mirrored batch (v1 loophole) | v1-pr1': true,
+    'abuse | self-award +35 via mirrored batch (v1 loophole) | new': false,
+    'abuse | comment on an invented pin id | v1-pr1': true,
+    'abuse | comment on an invented pin id | new': false,
   };
+  // Owner-reported live rules (expired test mode): every cell must be DENY.
+  for (const k of Object.keys(out).filter(k => k.endsWith('| prod-expired'))) expect[k] = false;
   let bad = 0;
   for (const [k, v] of Object.entries(out)) {
     const e = k in expect ? (expect[k] === v ? ' (as expected)' : ` (EXPECTED ${expect[k] ? 'ALLOW' : 'DENY'})`) : '';
     if (k in expect && expect[k] !== v) bad++;
     console.log(`${v ? 'ALLOW' : 'DENY '}  ${k}${e}`);
   }
-  for (const k of Object.keys(out).filter(k => k.startsWith('new client') && k.endsWith('| new'))) if (!out[k]) { bad++; console.log('UNEXPECTED DENY for new client under new rules:', k); }
+  for (const k of Object.keys(out).filter(k => k.startsWith('new client') && k.endsWith('| new') && !(k in expect))) if (!out[k]) { bad++; console.log('UNEXPECTED DENY for new client under new rules:', k); }
   console.log(`\n${Object.keys(out).length} matrix cells; ${bad} unexpected`);
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

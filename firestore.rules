@@ -1,152 +1,184 @@
 rules_version = '2';
-
-// PROPOSED Firestore security rules for StrangePin (project strangepin-4e538).
-// Status: PROPOSAL ONLY. Tested against the local Firestore emulator
-// (tests/rules.test.js). NOT deployed. Deploying replaces the live rules and
-// needs owner approval plus a review of the rules currently live in the console.
+// ^ keep rules_version as the FIRST line: a comment above it makes Firestore fall back to
+//   rules version 1 (seen on the emulator during the 2026-10-22 audit).
 //
-// Data model assumed by these rules (feat/phase2):
-//   users/{uid}                      private profile (email lives here); owner only
-//   users/{uid}/saved/{pinId}        owner only
-//   publicProfiles/{uid}             public leaderboard card: displayName, photoURL, points, pins
-//   pins/{pinId}                     curated/community pin docs: public read, no client writes
-//   pins/{pinId}/reactions/{uid}     one reaction per user per pin
-//   pins/{pinId}/comments/{cid}      public read; author-owned
+// StrangePin Firestore security rules, v3 (PROPOSAL, not deployed).
+// Target: project strangepin-4e538, database (default).
+// Tests: tests/rules.test.js (emulator, project demo-strangepin).
+//
+// Principles
+//  - Deny by default; every collection is listed explicitly.
+//  - Only Google sign-ins can write (sign_in_provider == 'google.com').
+//  - Private data (users/{uid}: e-mail, Google name/photo) is readable only by its owner.
+//    Public data (publicProfiles/{uid}) holds a chosen nickname and the score only.
+//  - Points, pins, review status and the award ledger are SERVER-OWNED: they are changed only
+//    by the owner's Admin SDK scripts (scripts/admin-review-submission.js,
+//    scripts/backfill-public-profiles.js), which bypass these rules. No client path exists.
+//  - Existing (legacy) users/{uid} documents are never overwritten: a client "create" only
+//    succeeds when the document does not exist, and updates may only touch housekeeping
+//    timestamps, so points/pins/e-mail/name of legacy users stay exactly as they are.
+//
+// Collections
+//   users/{uid}                          private; owner read; create-if-absent; timestamps only
+//   users/{uid}/saved/{pinId}            owner only
+//   publicProfiles/{uid}                 public read; nickname editable; score mirrors users/{uid}
+//   pins/{pinId}                         public read; admin-only writes
+//   pins/{pinId}/reactions/{uid}         one reaction per user per pin
+//   pins/{pinId}/comments/{cid}          public read; author name = the author's public nickname
 //   pins/{pinId}/comments/{cid}/likes/{uid}   one like per user per comment
-//
-// Points: clients may only add points in small steps with a cooldown, and the
-// public profile must mirror the private doc in the same batch. This limits but
-// does NOT eliminate abuse (a determined user can still self-award slowly).
-// The robust fix is awarding points server-side (Cloud Function) after a
-// moderated submission; see RELEASE-CANDIDATE.md.
+//   submissions/{sid}                    author creates (status 'pending'), author reads; admin reviews
+//   pointAwards/{sid}                    award ledger; NO client access
+//   deletionRequests/{uid}               owner creates/reads own request; admin processes
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() { return request.auth != null; }
+    // ── helpers ───────────────────────────────────────────────────────────────
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
     function isUser(uid) { return signedIn() && request.auth.uid == uid; }
+    function data() { return request.resource.data; }
     function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
-    function isShortString(v, max) { return v is string && v.size() <= max; }
-    function isHttpsOrEmpty(v) { return v is string && v.size() <= 1000 && (v == '' || v.matches('^https://.*')); }
+    function str(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+    function isHttpsOrEmpty(v) { return v is string && v.size() <= 1000 && (v == '' || v.matches('^https://[^\\s]*$')); }
+    function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
+    function profilePath(uid) { return /databases/$(database)/documents/publicProfiles/$(uid); }
+    function isPin(pinId) {
+      return pinId.matches('^[0-9]{3}$')
+        || exists(/databases/$(database)/documents/pins/$(pinId));
+    }
+    // "Is this field (if present in the new data) exactly the server time of this request?"
+    function stampIfChanged(k) { return !changed().hasAny([k]) || data()[k] == request.time; }
+    // Earlier stamp + cooldown has passed (or there is no earlier stamp).
+    function cooledDown(before, k, secs) {
+      return !(k in before) || request.time > before[k] + duration.value(secs, 's');
+    }
 
-    // ── Private user documents ──────────────────────────────────────────────
+    // Nicknames: 3-24 chars, ASCII letters/digits with single spaces . _ - inside.
+    // Reserved names are checked on a normalised key (lower case, punctuation and spaces
+    // removed, common digit look-alikes mapped), twice: once with 1->i and once with 1->l.
+    // Keep in sync with spNicknameProblem() in index.html and scripts/lib/nickname.js.
+    function normKey(n, one) {
+      return n.lower().replace('[^a-z0-9]', '')
+        .replace('0', 'o').replace('3', 'e').replace('4', 'a')
+        .replace('5', 's').replace('7', 't').replace('1', one);
+    }
+    function reservedKey(k) {
+      return k.matches('.*(strangepin|admin|moderator|official|support|staff|firebase).*')
+        || k.matches('(mod|mods|team|system|root|owner|help|security|google|anonymous|null|undefined)');
+    }
+    function validNickname(n) {
+      return n is string && n.size() >= 3 && n.size() <= 24
+        && n.matches('[A-Za-z0-9]([A-Za-z0-9]|[ ._-][A-Za-z0-9])*')
+        && !reservedKey(normKey(n, 'i'))
+        && !reservedKey(normKey(n, 'l'));
+    }
+
+    // ── users/{uid}: private profile ─────────────────────────────────────────
     match /users/{uid} {
       allow read: if isUser(uid);
 
+      // Create only if absent (a client set() on an existing doc is an UPDATE and is
+      // judged by the update rule below, which cannot touch points/pins/e-mail/name).
       allow create: if isUser(uid)
-        && request.resource.data.keys().hasOnly(['uid','displayName','email','photoURL','points','pins',
-             'badges','achievements','followers','following','verified','country','bio','website',
-             'joinedAt','lastActive','notifications','_schemaVersion','lastPointsAt'])
-        && request.resource.data.uid == uid
-        && request.resource.data.points == 0
-        && request.resource.data.pins == 0
-        && request.resource.data.verified == false
-        && request.resource.data.badges == []
-        && request.resource.data.achievements == []
-        && request.resource.data.followers == 0
-        && request.resource.data.following == 0
-        && isShortString(request.resource.data.displayName, 80)
-        && isHttpsOrEmpty(request.resource.data.photoURL);
+        && data().keys().hasAll(['uid','displayName','email','photoURL','points','pins','joinedAt','lastActive','_schemaVersion'])
+        && data().keys().hasOnly(['uid','displayName','email','photoURL','points','pins','joinedAt','lastActive','_schemaVersion'])
+        && data().uid == uid
+        && str(data().displayName, 0, 80)
+        && str(data().email, 0, 254)
+        && isHttpsOrEmpty(data().photoURL)
+        && data().points == 0
+        && data().pins == 0
+        && data().joinedAt == request.time
+        && data().lastActive == request.time
+        && data()._schemaVersion == 3;
 
-      // (a) profile/housekeeping updates: never touch server-owned fields
-      // (b) point awards: +1..35 points, +0/1 pins, 30 s cooldown, mirrored publicly
-      allow update: if isUser(uid) && (
-        (
-          changed().hasOnly(['lastActive','displayName','photoURL','country','bio','website','notifications'])
-          && isShortString(request.resource.data.displayName, 80)
-          && isHttpsOrEmpty(request.resource.data.photoURL)
-          && isShortString(request.resource.data.bio, 500)
-          && isShortString(request.resource.data.country, 80)
-          && isHttpsOrEmpty(request.resource.data.website)
-        ) || (
-          changed().hasOnly(['points','pins','lastPointsAt'])
-          && request.resource.data.points is int
-          && request.resource.data.points > resource.data.points
-          && request.resource.data.points <= resource.data.points + 35
-          && request.resource.data.pins is int
-          && request.resource.data.pins >= resource.data.pins
-          && request.resource.data.pins <= resource.data.pins + 1
-          && request.resource.data.lastPointsAt == request.time
-          && (!('lastPointsAt' in resource.data)
-              || request.time > resource.data.lastPointsAt + duration.value(30, 's'))
-          && getAfter(/databases/$(database)/documents/publicProfiles/$(uid)).data.points
-               == request.resource.data.points
-          && getAfter(/databases/$(database)/documents/publicProfiles/$(uid)).data.pins
-               == request.resource.data.pins
-        )
-      );
+      // Housekeeping timestamps only (works for legacy docs of any shape).
+      allow update: if isUser(uid)
+        && changed().hasOnly(['lastActive','lastSubmissionAt','lastCommentAt'])
+        && stampIfChanged('lastActive')
+        && stampIfChanged('lastSubmissionAt')
+        && stampIfChanged('lastCommentAt');
 
-      allow delete: if false;
+      allow delete: if false; // deletion is an admin process (deletionRequests)
 
       match /saved/{pinId} {
         allow read, delete: if isUser(uid);
         allow create, update: if isUser(uid)
-          && request.resource.data.keys().hasOnly(['pinId','at'])
-          && request.resource.data.pinId == pinId
-          && request.resource.data.at == request.time;
+          && isPin(pinId)
+          && data().keys().hasAll(['pinId','at'])
+          && data().keys().hasOnly(['pinId','at'])
+          && data().pinId == pinId
+          && data().at == request.time;
       }
     }
 
-    // ── Public leaderboard cards ────────────────────────────────────────────
+    // ── publicProfiles/{uid}: public leaderboard card ────────────────────────
+    // Only a nickname and the score are public. No e-mail, no Google name, no photo.
     match /publicProfiles/{uid} {
       allow read: if true;
+      // Created by the owner (e.g. at first sign-in) with the score COPIED from the private
+      // doc, so a legacy user's existing points/pins are mirrored, never reset or inflated.
       allow create: if isUser(uid)
-        && request.resource.data.keys().hasOnly(['displayName','photoURL','points','pins','updatedAt'])
-        && request.resource.data.points == 0
-        && request.resource.data.pins == 0
-        && isShortString(request.resource.data.displayName, 80)
-        && isHttpsOrEmpty(request.resource.data.photoURL)
-        && request.resource.data.updatedAt == request.time;
+        && existsAfter(userPath(uid))
+        && data().keys().hasAll(['nickname','points','pins','updatedAt'])
+        && data().keys().hasOnly(['nickname','points','pins','updatedAt'])
+        && validNickname(data().nickname)
+        && data().points is int
+        && data().pins is int
+        && data().points == getAfter(userPath(uid)).data.get('points', 0)
+        && data().pins == getAfter(userPath(uid)).data.get('pins', 0)
+        && data().updatedAt == request.time;
       allow update: if isUser(uid)
-        && changed().hasOnly(['displayName','photoURL','points','pins','updatedAt'])
-        && isShortString(request.resource.data.displayName, 80)
-        && isHttpsOrEmpty(request.resource.data.photoURL)
-        && request.resource.data.updatedAt == request.time
-        // points/pins may only move together with the private doc (same batch)
-        && request.resource.data.points == getAfter(/databases/$(database)/documents/users/$(uid)).data.points
-        && request.resource.data.pins == getAfter(/databases/$(database)/documents/users/$(uid)).data.pins;
+        && changed().hasOnly(['nickname','updatedAt'])
+        && validNickname(data().nickname)
+        && data().updatedAt == request.time;
       allow delete: if false;
     }
 
-    // ── Pins and community interaction ──────────────────────────────────────
+    // ── pins and community interaction ──────────────────────────────────────
     match /pins/{pinId} {
       allow read: if true;
-      allow write: if false; // submissions arrive by email; admin tooling only
+      allow write: if false; // publishing is admin-only
 
       match /reactions/{uid} {
         allow read: if true;
         allow create, update: if isUser(uid)
-          && request.resource.data.keys().hasOnly(['type','uid','at'])
-          && request.resource.data.uid == uid
-          && request.resource.data.type in ['interesting','creepy','ufo','unexplained','favorite']
-          && request.resource.data.at == request.time;
+          && isPin(pinId)
+          && data().keys().hasAll(['type','uid','at'])
+          && data().keys().hasOnly(['type','uid','at'])
+          && data().uid == uid
+          && data().type in ['interesting','creepy','ufo','unexplained','favorite']
+          && data().at == request.time;
         allow delete: if isUser(uid);
       }
 
       match /comments/{commentId} {
         allow read: if true;
+        // authorName must be the author's current public nickname (no free-text names),
+        // and the author's private doc must carry this request's time in lastCommentAt
+        // (same batch) with at least 15 s since the previous comment (spam throttle).
         allow create: if signedIn()
-          && request.resource.data.keys().hasOnly(['uid','displayName','photoURL','text','likes','at'])
-          && request.resource.data.uid == request.auth.uid
-          && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 1000
-          && isShortString(request.resource.data.displayName, 80)
-          && isHttpsOrEmpty(request.resource.data.photoURL)
-          && request.resource.data.likes == 0
-          && request.resource.data.at == request.time;
-        // Author may edit only the text; anyone signed in may add exactly one like,
-        // and only together with creating their like marker in the same batch.
+          && isPin(pinId)
+          && data().keys().hasAll(['uid','authorName','text','likes','at'])
+          && data().keys().hasOnly(['uid','authorName','text','likes','at'])
+          && data().uid == request.auth.uid
+          && data().authorName == get(profilePath(request.auth.uid)).data.nickname
+          && str(data().text, 1, 1000)
+          && data().likes == 0
+          && data().at == request.time
+          && getAfter(userPath(request.auth.uid)).data.get('lastCommentAt', null) == request.time
+          && cooledDown(get(userPath(request.auth.uid)).data, 'lastCommentAt', 15);
         allow update: if signedIn() && (
           (
             resource.data.uid == request.auth.uid
             && changed().hasOnly(['text'])
-            && request.resource.data.text is string
-            && request.resource.data.text.size() > 0
-            && request.resource.data.text.size() <= 1000
+            && str(data().text, 1, 1000)
           ) || (
             changed().hasOnly(['likes'])
-            && request.resource.data.likes == resource.data.likes + 1
+            && data().likes == resource.data.likes + 1
             && !exists(/databases/$(database)/documents/pins/$(pinId)/comments/$(commentId)/likes/$(request.auth.uid))
             && existsAfter(/databases/$(database)/documents/pins/$(pinId)/comments/$(commentId)/likes/$(request.auth.uid))
           )
@@ -156,11 +188,65 @@ service cloud.firestore {
         match /likes/{uid} {
           allow read: if true;
           allow create: if isUser(uid)
-            && request.resource.data.keys().hasOnly(['at'])
-            && request.resource.data.at == request.time;
+            && exists(/databases/$(database)/documents/pins/$(pinId)/comments/$(commentId))
+            && getAfter(/databases/$(database)/documents/pins/$(pinId)/comments/$(commentId)).data.likes
+                 == get(/databases/$(database)/documents/pins/$(pinId)/comments/$(commentId)).data.likes + 1
+            && data().keys().hasAll(['at'])
+            && data().keys().hasOnly(['at'])
+            && data().at == request.time;
           allow update, delete: if false;
         }
       }
+    }
+
+    // ── submissions/{sid}: user-submitted locations awaiting review ──────────
+    // Created as 'pending' by a signed-in author; review fields (status changes, reviewedAt,
+    // reviewedBy, decision, pointsAwarded, reviewNote) can only be written by the Admin SDK.
+    // Throttle: one submission per account per 60 s (lastSubmissionAt in the same batch).
+    match /submissions/{sid} {
+      allow read: if signedIn() && resource.data.authorUid == request.auth.uid;
+      allow create: if signedIn()
+        && data().keys().hasAll(['authorUid','status','createdAt','name','country','city','address',
+             'lat','lng','category','story','storyLang','date','intensity','imageUrl','username'])
+        && data().keys().hasOnly(['authorUid','status','createdAt','name','country','city','address',
+             'lat','lng','category','story','storyLang','date','intensity','imageUrl','username'])
+        && data().authorUid == request.auth.uid
+        && data().status == 'pending'
+        && data().createdAt == request.time
+        && str(data().name, 1, 150)
+        && str(data().country, 1, 80)
+        && str(data().city, 0, 120)
+        && str(data().address, 0, 200)
+        && data().lat is number && data().lat >= -90 && data().lat <= 90
+        && data().lng is number && data().lng >= -180 && data().lng <= 180
+        && data().category in ['Haunted','UFO','Energy Spot','Urban Legend','Abandoned Place','Strange Experience','Other']
+        && str(data().story, 1, 5000)
+        && str(data().storyLang, 1, 10)
+        && str(data().date, 0, 40)
+        && data().intensity is int && data().intensity >= 1 && data().intensity <= 10
+        && (data().imageUrl == '' || data().imageUrl.matches('^https://res\\.cloudinary\\.com/dz9p5t4sj/image/upload/[^\\s]{1,400}$'))
+        && str(data().username, 1, 60)
+        && getAfter(userPath(request.auth.uid)).data.get('lastSubmissionAt', null) == request.time
+        && cooledDown(get(userPath(request.auth.uid)).data, 'lastSubmissionAt', 60);
+      allow update, delete: if false;
+    }
+
+    // ── pointAwards/{sid}: idempotency ledger, Admin SDK only ────────────────
+    match /pointAwards/{sid} {
+      allow read, write: if false;
+    }
+
+    // ── deletionRequests/{uid}: "Request account deletion" ───────────────────
+    match /deletionRequests/{uid} {
+      allow read: if isUser(uid);
+      allow create: if isUser(uid)
+        && data().keys().hasAll(['uid','requestedAt','status'])
+        && data().keys().hasOnly(['uid','requestedAt','status','reason'])
+        && data().uid == uid
+        && data().status == 'requested'
+        && data().requestedAt == request.time
+        && str(data().get('reason', ''), 0, 500);
+      allow update, delete: if false; // processed by the owner (docs/account-deletion.md)
     }
 
     // Everything else is closed.
