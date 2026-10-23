@@ -1,4 +1,4 @@
-// End-to-end test of the v3 app (pr/technical-v2) against the Firebase Local Emulator Suite
+// End-to-end test of the v3 app (live since PR #1) against the Firebase Local Emulator Suite
 // (Auth + Firestore, project demo-strangepin, rules = firestore.rules).
 // NOTHING here talks to the real project: the page runs with ?emulator=1 on localhost; every
 // production Firebase, EmailJS and Cloudinary host is made unresolvable in Chrome AND aborted

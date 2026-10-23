@@ -50,11 +50,13 @@ Lighthouse method and results: `docs/perf-lcp.md`.
 | `sitemap-check.js` | Every sitemap `<loc>` exists in the build output; every pin page is listed; one host, no `#`/`?`; robots.txt Sitemap line | `node scripts/build-pins.js --out dist && node tests/sitemap-check.js dist https://strangepin.com` (also run by `netlify.toml`) |
 | `compat-matrix.test.js` | 42 cells: old/new client request shapes × assumed-old/new rules, plus abuse cases (`docs/firebase-compat-matrix.md`) | inside `firebase emulators:exec --only auth,firestore --project demo-strangepin` |
 | `compat-old-client.js` | Runs the `main` client (served separately) with every Firebase back end aborted; records init errors and back-end attempts | serve `main` on :8301, `node tests/compat-old-client.js` |
-| `../scripts/content-diff-check.js` | The content PR changes only pin content in `index.html`, no source removed | `node scripts/content-diff-check.js pr/technical pr/content` |
+| `../scripts/content-diff-check.js` | A content-only branch changes only pin content in `index.html`, no source removed (used for PR #2) | `node scripts/content-diff-check.js <base-ref> <content-ref>` |
 | `../scripts/sync-static-hero.js --check` | The static first-paint hero matches `renderHomeHero()` | `node scripts/sync-static-hero.js --check` |
 
 Dependencies are pinned in `tests/package.json` / `tests/package-lock.json` (`npm ci --prefix tests`).
-CI: `.github/workflows/ci.yml` (required job `tests`; see `docs/branch-protection.md`).
+CI: `.github/workflows/ci.yml` is the only workflow; its job `tests` (the required check) runs
+every suite above except the informational network suites, including `rules.test.js` (197
+cases) on the emulator. See `docs/branch-protection.md`.
 
 ## Firebase security audit (2026-10-22, local branch `audit/firebase-rules`)
 
@@ -65,12 +67,12 @@ Report: `FIREBASE-SECURITY-AUDIT.md` (delivered outside the repo).
 |---|---|---|
 | `expired-rules.test.js` | 44 read/write shapes of the old and new client, signed-in and anonymous, against the owner-reported live rules (`fixtures/rules-prod-expired.rules`, expired test mode): all must be denied | `firebase emulators:exec --config firebase.audit-expired.json --only auth,firestore --project demo-strangepin "node tests/expired-rules.test.js"` |
 | `e2e-expired-rules.js` | Error handling of the v3 UI when Firestore denies everything (see the v3 section below) | same config, static server on :8080, `node tests/e2e-expired-rules.js` |
-| `live-main-firebase-probe.js` | The deployed client (curl of https://strangepin.com, identical to main 728e8f5) never initialises Firebase and attempts 0 back-end requests; Sign In does nothing | serve the saved HTML on :8302, `LIVE_BASE=http://127.0.0.1:8302 node tests/live-main-firebase-probe.js` |
+| `live-main-firebase-probe.js` | Historical: the pre-release client (curl of https://strangepin.com when it matched main 728e8f5) never initialises Firebase and attempts 0 back-end requests; Sign In does nothing | serve the saved HTML on :8302, `LIVE_BASE=http://127.0.0.1:8302 node tests/live-main-firebase-probe.js` |
 
 `compat-matrix.test.js` covers four rule sets (assumed-old, prod-expired, v1-pr1, v3).
 The audit's `rules-v2-audit.test.js` was merged into `rules.test.js` (every case kept, adapted to v3).
 
-## v3: manual review, admin-owned points, nicknames (local branch `pr/technical-v2`)
+## v3: manual review, admin-owned points, nicknames (live: rules v3 and PR #1)
 
 | File | What it checks | How to run |
 |---|---|---|

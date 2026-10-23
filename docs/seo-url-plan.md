@@ -1,6 +1,6 @@
 # SEO URL plan: crawlable `/pins/<slug>/` pages
 
-**Status:** working local implementation (`scripts/build-pins.js`, `netlify.toml`, `tests/sitemap-check.js`). Nothing has been deployed and Netlify site settings are unchanged; merging `netlify.toml` to `main` WILL change how production builds (see §6).
+**Status:** live since PR #1. Netlify builds with `netlify.toml` (`scripts/build-pins.js` + `tests/sitemap-check.js`) and publishes `dist`: 99 `/pins/<slug>/` pages, `/pins/` and a 101-URL `sitemap.xml`. Netlify site settings were not changed. Sections below are the original plan and local test record.
 
 ## 1. Why
 Every pin today lives at `/#detail/NNN`. Search engines ignore the `#fragment`, so all 99 pins collapse into a single URL (`/`). Only the homepage can be indexed, and there are no per-pin titles, descriptions, Open Graph previews or structured data.
@@ -17,7 +17,7 @@ Every pin today lives at `/#detail/NNN`. Search engines ignore the `#fragment`, 
    - trim leading and trailing `-`;
    - cap at 80 characters.
 3. If two pins get the same slug, append `-<id>` deterministically (e.g. `point-pleasant-099`).
-4. **Slugs are permanent.** A renamed pin keeps its slug; for example 073 keeps `the-lake-michigan-stonehenge` in `content/corrections`. If a slug must change, add a 301 in `_redirects`: `/pins/old/ /pins/new/ 301`.
+4. **Slugs are permanent.** A renamed pin keeps its slug; for example 073 keeps `the-lake-michigan-stonehenge` after its rename in PR #2. If a slug must change, add a 301 in `_redirects`: `/pins/old/ /pins/new/ 301`.
 5. Pin IDs never change. `pins-manifest.json` maps `id → slug`.
 
 ## 3. What each page contains

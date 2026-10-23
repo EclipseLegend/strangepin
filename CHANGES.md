@@ -1,7 +1,7 @@
 # Branch `fix/audit-critical`: change summary
 
 - **Base:** `origin/main` @ 728e8f5 (byte-identical to production on 2026-10-21).
-- **Status:** local only. Not pushed, no PR, nothing deployed, no accounts touched.
+- **Status (historical):** this branch was folded into PR #1, which is deployed. Current state: `docs/STATUS.md`.
 - **Patches:** `patches/` (`git format-patch origin/main..fix/audit-critical`).
 
 > **Ship rule:** commits 1 (escaping) and 2 (Firebase init) must go to production together.

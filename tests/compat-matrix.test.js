@@ -1,6 +1,6 @@
 // Firebase compatibility matrix at the rules level (Firestore emulator ONLY, project
 // demo-strangepin). Replays the exact write/read shapes of the OLD client (main 728e8f5)
-// and the NEW client (v3, pr/technical-v2) against two rule sets:
+// and the NEW client (v3, live since PR #1) against two rule sets:
 //   - "assumed-old": tests/fixtures/rules-assumed-old.rules (ASSUMPTION: production rules unknown)
 //   - "new":         firestore.rules (proposed)
 // Prints a matrix; exits 1 only if an EXPECTATION in the table below is not met.
@@ -32,7 +32,7 @@ const OLD = {
   'home stats: list users': (db) => getDocs(collection(db, 'users')),
   'leaderboard: users orderBy points': (db) => getDocs(query(collection(db, 'users'), orderBy('points', 'desc'), limit(20))),
 };
-// New client shapes (v3: index.html on pr/technical-v2; same as tests/rules.test.js).
+// New client shapes (v3: index.html as shipped in PR #1; same as tests/rules.test.js).
 const NEW = {
   'sign-in: create users + publicProfiles (batch, v3)': (db, u) => { const b = writeBatch(db); b.set(doc(db, 'users', u), { uid: u, displayName: 'A', email: 'a@x', photoURL: '', points: 0, pins: 0, joinedAt: serverTimestamp(), lastActive: serverTimestamp(), _schemaVersion: 3 }); b.set(doc(db, 'publicProfiles', u), { nickname: 'Explorer-ABCD', points: 0, pins: 0, updatedAt: serverTimestamp() }); return b.commit(); },
   'reaction set (server time)': (db, u) => setDoc(doc(db, 'pins', '001', 'reactions', u), { type: 'creepy', uid: u, at: serverTimestamp() }),

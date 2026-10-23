@@ -1,6 +1,9 @@
 # StrangePin — Firebase production security audit
 
-> **Update (pr/technical-v2):** the findings below are addressed by rules v3 and the v3 client;
+> **Current status:** see [`STATUS.md`](STATUS.md). Rules v3 are live in production and the v3 client
+> is deployed (PR #1). The audit below is a historical record from before that release.
+>
+> **Update (rules v3 / PR #1):** the findings below are addressed by rules v3 and the v3 client;
 > `tests/rules-v2-audit.test.js` was merged into `tests/rules.test.js` (all cases kept, adapted to v3).
 > See `FIREBASE-SECURITY-FIX-REPORT.md` (delivered outside the repo), `docs/admin-review.md`,
 > `docs/backfill-dry-run.md`, `docs/account-deletion.md`, `docs/third-party-hardening.md`.
@@ -265,6 +268,7 @@ owner-reported text was emulated); Firestore indexes in production (the queries 
    (needs approval to push), or by updating PR #1.
 5. **Deploy order** (each step needs approval; see G): backup → (backfill if users exist) → deploy rules v2 →
    smoke test → merge PR #1 → deploy site. Rules first is safe because the live client does not use Firestore.
+   **(Done with rules v3: rules published by the owner, then PR #1 and PR #2 deployed; no backfill was run.)**
 6. **Client follow-ups (separate PR):** remove client `fbAddPoints` call (v2); show an error and keep the typed comment
    when posting fails; show "community features unavailable" instead of endless "Loading..."; optional display-name
    binding for comments.
@@ -280,14 +284,14 @@ owner-reported text was emulated); Firestore indexes in production (the queries 
       formats (jpg/png/webp), max size, a dedicated folder, enable moderation, consider signed uploads.
     - EmailJS: set allowed origins to strangepin.com; enable rate limiting; **make sure the template's "To" address is
       hard-coded**, not `{{to_email}}` — a `{{to_email}}` template would let anyone send mail to arbitrary addresses
-      through your account. (Update, pr/technical-v2: the client keeps sending `to_email` as the fixed constant
+      through your account. (Update, v3 client in PR #1: the client keeps sending `to_email` as the fixed constant
       `thestrangepin@gmail.com` for compatibility; see docs/third-party-hardening.md.)
 11. Privacy: public profile opt-in/alias; account-deletion process (R3, R4); update the privacy notice.
 12. Netlify: 301 `strangepin.netlify.app` → `strangepin.com`.
 
 ---
 
-## G. Production safety plan (NOT EXECUTED — every step needs Effie's explicit approval)
+## G. Production safety plan (historical; executed with rules v3 instead of v2, see `STATUS.md`)
 
 - **Target:** project `strangepin-4e538`, Cloud Firestore database `(default)`.
 - **Impact on existing users/data:** rules changes do not modify data. Under the expired rules no client write could
