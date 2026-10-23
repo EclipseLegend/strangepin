@@ -1,18 +1,19 @@
 # EmailJS and Cloudinary: code changes and dashboard settings
 
-Status: code changes implemented and TESTED where stated; **dashboard settings are
-recommendations for the owner and have NOT been changed** (no access was used).
+Status: code changes implemented, TESTED where stated and deployed with PR #1; **dashboard
+settings are recommendations for the owner and have NOT been changed** (no access was used).
 
 ## EmailJS (location submission notification)
 
 > **DEFERRED until the owner returns:** EmailJS dashboard hardening (template "To Email"
 > hard-coded to `thestrangepin@gmail.com`, allowed domains/origins, rate limit) and **live
 > e-mail testing** (a real submission arriving at thestrangepin@gmail.com) have NOT been done
-> and need the owner's dashboard access. Until then the code keeps sending the fixed
-> `to_email` for compatibility with the live template. Confirming that notifications still
-> arrive is a prerequisite for merging PR #1 (see the PR's deployment notes).
+> and need the owner's dashboard access; they wait until the owner is back in Los Angeles.
+> Until then the code keeps sending the fixed `to_email` for compatibility with the live
+> template. The v3 client (PR #1) is live and sends the same parameters as before plus
+> `submission_id`. Status overview: `docs/STATUS.md`.
 
-### Code (pr/technical-v2)
+### Code (live since PR #1)
 
 - `to_email` is **still sent, as a hard-coded constant** `thestrangepin@gmail.com`
   (`EMAILJS_TO_EMAIL` in `index.html`). No form field, URL parameter, storage value or other
@@ -57,7 +58,7 @@ recommendations for the owner and have NOT been changed** (no access was used).
 
 ## Cloudinary (optional photo upload)
 
-### Code (pr/technical-v2)
+### Code (live since PR #1)
 
 - Client checks before upload: JPG, PNG or WEBP only, max 10 MB (TESTED in
   `tests/helpers.test.js`; the file picker also restricts types). Friendly error otherwise.

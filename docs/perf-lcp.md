@@ -1,6 +1,6 @@
 # Performance: LCP investigation and fixes (`perf/lcp`)
 
-- **Branch:** `perf/lcp`, stacked on `feat/phase2` (f1724ef). Status: LOCAL ONLY, not pushed or deployed.
+- **Branch:** `perf/lcp`, stacked on `feat/phase2` (f1724ef). Status at the time: local only. These changes shipped with PR #1 (deployed 2026-10-22).
 - **Measured:** 2026-10-21, 17:50–19:05 CEST (Europe/Madrid), on the shared Linux box.
 - `<local-tools>/` = measurement scripts and raw output kept on the dev box, deliberately not committed.
 - Labels: **TESTED** = run here (method stated); **EXPECTED** = reasoning only; **NOT TESTED**.

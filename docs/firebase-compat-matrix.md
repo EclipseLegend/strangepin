@@ -1,5 +1,8 @@
 # Firebase compatibility matrix (client × Firestore rules)
 
+> **Historical record.** Current state (rules v3 live, PR #1 and PR #2 deployed, deferred and
+> open items): see [`STATUS.md`](STATUS.md).
+
 Status: analysis + emulator tests only. **Nothing was deployed, no backfill was run, nothing
 was written to the real project `strangepin-4e538`.** All emulator runs use project
 `demo-strangepin` (auth :9099, firestore :8085).
@@ -85,7 +88,7 @@ TESTED: `tests/compat-matrix.test.js`, 42 cells, 0 unexpected, run via
    data stays protected. **Therefore: if the client must be rolled back, roll back the rules
    first (or together).**
 
-## 3. v3 update (local branch `pr/technical-v2`, 2026-10-22)
+## 3. v3 update (2026-10-22; shipped as rules v3 / PR #3 and the v3 client / PR #1)
 
 - Rules v3 (`firestore.rules`) replace v2: points/pins are owner-only (Admin SDK script,
   manual review), public profiles hold a nickname + score only, comment author names are the
@@ -105,7 +108,7 @@ Rewritten for v3; see `docs/backfill-dry-run.md`. Create-if-absent only (never m
 existing profile or any `users` doc), generated nickname, no e-mail/name/photo copied,
 counts-only output, dry run by default, guarded target (TESTED on the emulator).
 
-## 5. Safe, reversible migration plan (NOT EXECUTED; owner action, each step needs approval)
+## 5. Safe, reversible migration plan (historical; rules v3 and the v3 client are now live, no backfill was run)
 
 1. **Capture the live rules** (console → Firestore → Rules → copy; note the version in the
    history = rollback target). Owner-reported today: expired test mode (deny all).

@@ -163,12 +163,12 @@ The "Abandoned Place" and "Other" categories exist in the UI but currently have 
 
 ## 6. Timeline and Sources review (Phase 2)
 
-The detail page now renders `timeline` and `sources` (feature branch `feat/phase2`), so these fields are newly **public**.
+The detail page now renders `timeline` and `sources` (since PR #1), so these fields are **public**.
 
 - **Scope:** the 10 pins that have them: 001–010.
 - **Checked on:** 2026-10-21, against the sources listed.
 - **Status labels:**
-  - "APPLY" items are in branch `content/corrections`.
+  - "APPLY" items were applied in PR #2 (deployed; see `docs/content-corrections-applied.md`).
   - "SOURCE NEEDED" items were **not** changed.
 
 ### 6.1 Errors with a reliable source (APPLY)

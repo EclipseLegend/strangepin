@@ -1,7 +1,8 @@
 # Branch protection for `main` (settings to apply by the owner)
 
-Status: **documentation only.** Nothing was changed on GitHub (no account access from this
-environment). Apply in GitHub → repository → Settings → Branches → "Add branch protection
+Status: a ruleset (id 25582805) is active on `main` and requires the status check `tests`.
+This document was written before it existed and is kept as the reference for its settings;
+the agent does not change branch protection. Apply or review in GitHub → repository → Settings → Branches → "Add branch protection
 rule" (classic) or Settings → Rules → Rulesets → "New branch ruleset" (recommended).
 
 ## Ruleset (recommended form)
@@ -57,8 +58,11 @@ request (EXPECTED GitHub behaviour), so open the first PR, let CI run, then sele
   secrets** referenced.
 - Job `tests` (required): helpers, static-hero sync check, SEO build + sitemap check +
   html-validate, browser smoke, detail sections, PWA installability, map fallback chain, PWA
-  offline, then Firestore/Auth emulators (`demo-strangepin`) for rules (46), compat matrix (42
-  cells) and the UI e2e (22).
+  offline, then Firestore/Auth emulators (`demo-strangepin`) for rules v3 (197), admin scripts
+  (34), the compatibility matrix, the UI e2e (46) and regression (20), and finally the
+  expired-rules suites (56 denied operations, 16 UI checks).
+- `ci.yml` is the only workflow that reports `tests`. The rules-only `rules-ci.yml` (PR #3)
+  also reported a job named `tests` and was removed as a duplicate.
 - Job `network-tests (informational)`: perf-lazy (Google Translate) and CSP report-only
   (Translate, OpenFreeMap). Not required.
 - Actions are pinned to major tags (`@v4`). For stricter supply-chain hygiene, pin to full

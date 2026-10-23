@@ -4,11 +4,16 @@ A cinematic exploration platform for mysterious, haunted, and unexplained locati
 
 **Live site:** [strangepin.com](https://strangepin.com)
 
+**Current technical status:** [`docs/STATUS.md`](docs/STATUS.md) (what is live, what is deferred, what is still to do).
+
 ---
 
 ## Architecture
 
-StrangePin is a single-file vanilla JavaScript SPA. No build system. No framework. No bundler.
+StrangePin is a single-file vanilla JavaScript SPA. No framework and no bundler. Netlify runs a small
+Node build (`scripts/build-pins.js`, configured in `netlify.toml`) that copies the static site into
+`dist/` and generates the 99 crawlable `/pins/<slug>/` pages, `/pins/` and `sitemap.xml`; Netlify
+publishes `dist`.
 
 | File | Purpose |
 |---|---|
@@ -23,12 +28,13 @@ StrangePin is a single-file vanilla JavaScript SPA. No build system. No framewor
 | Frontend | Vanilla JavaScript SPA (no framework) |
 | Map | Leaflet 1.9.4 (CDN) |
 | Auth | Firebase Authentication (Google sign-in) |
-| Database | Firebase Firestore (community submissions) |
+| Database | Firebase Firestore (profiles, comments, submissions; security rules v3 in `firestore.rules`) |
 | Image uploads | Cloudinary (unsigned upload) |
 | Pin submissions | EmailJS |
 | Translation | Google Translate widget (hidden, custom UI) |
-| Hosting | Netlify (auto-deploy from GitHub) |
-| PWA | Web App Manifest + theme-color |
+| Hosting | Netlify (auto-deploy from `main`, publishes `dist`) |
+| CI | GitHub Actions `.github/workflows/ci.yml` (required check `tests`; emulator-only, no deploys) |
+| PWA | Web App Manifest, service worker (`sw.js`), offline page |
 
 ---
 
@@ -90,11 +96,24 @@ Full audit of the existing codebase. Identified technical debt, data schema gaps
 
 ---
 
+## Documentation
+
+| Document | Purpose |
+|---|---|
+| `docs/STATUS.md` | Current production state, deferred items, open security work, rollback |
+| `docs/admin-review.md` | Manual submission review and points awards (owner only) |
+| `docs/third-party-hardening.md` | EmailJS and Cloudinary code safeguards and dashboard settings |
+| `docs/branch-protection.md` | `main` ruleset and CI facts |
+| `docs/seo-url-plan.md` | `/pins/<slug>/` pages, sitemap and the Netlify build |
+| `tests/README.md` | Test suites and how to run them |
+
+---
+
 ## Known Technical Debt
 
-- Credentials (Firebase, Cloudinary, EmailJS) are hardcoded in `index.html` — rotate before scaling
+- Public client identifiers (Firebase web config, Cloudinary unsigned preset, EmailJS public key) are in `index.html` by design; protection comes from `firestore.rules` and the dashboard settings still to do (App Check, API key restrictions, Cloudinary preset limits, EmailJS hardening; see `docs/STATUS.md`)
 - `LOCATIONS[]` and Firestore community pins are separate, never-reconciled data sources
 - `pinPos` field on every location is vestigial (leftover from a pre-Leaflet map implementation)
 - `city` field on many Featured pins is set to the country name rather than an actual city
 - Homepage activity feed and Active Pinners section are hardcoded placeholder data
-- Google Translate integration uses DOM-hacking patterns that are fragile under CSP
+- Google Translate integration uses DOM-hacking patterns that are fragile under CSP (the CSP is still Report-Only)

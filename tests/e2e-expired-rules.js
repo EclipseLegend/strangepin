@@ -1,4 +1,4 @@
-// Error handling under Firestore DENIAL: the v3 UI (pr/technical-v2) against the Auth +
+// Error handling under Firestore DENIAL: the v3 UI (live since PR #1) against the Auth +
 // Firestore EMULATORS loaded with the OWNER-REPORTED expired production rules
 // (tests/fixtures/rules-prod-expired.rules: every read and write is denied). This is also what
 // users would see if the v3 client were deployed before the rules are fixed.

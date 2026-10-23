@@ -1,4 +1,4 @@
-// End-to-end test of the v3 app (pr/technical-v2) against the Firebase Local Emulator Suite
+// End-to-end test of the v3 app (live since PR #1) against the Firebase Local Emulator Suite
 // (Auth + Firestore, project demo-strangepin, rules = firestore.rules).
 // NOTHING here talks to the real project: the page runs with ?emulator=1 on localhost; every
 // production Firebase, EmailJS and Cloudinary host is made unresolvable in Chrome AND aborted
@@ -227,7 +227,16 @@ const text = (page, sel) => page.evaluate(s => { const el = document.querySelect
 
   // ── Signed-out visitor: home stats ──────────────────────────────────────
   const c = await openPage(await browser.createBrowserContext(), '');
-  await sleep(3000);
+  const bobNick = ((await get('publicProfiles/' + B)) || {}).nickname;
+  // Placeholder home stats ("—" and fujisan_hiker) stay until the publicProfiles
+  // snapshot arrives. Wait up to 20s; a timeout still falls through to the assertions.
+  await c.waitForFunction((legacyNick, bobNick) => {
+    const pinners = (document.getElementById('statPinners') || {}).textContent || '';
+    const list = (document.getElementById('activePinnersList') || {}).textContent || '';
+    return pinners !== '—' && list.includes('Night Owl') && list.includes(legacyNick) && list.includes(bobNick);
+  }, { timeout: 20000 }, lPub.nickname, bobNick).catch(err => {
+    if (!err || err.name !== 'TimeoutError') throw err;
+  });
   const home = await c.evaluate(() => ({ pinners: (document.getElementById('statPinners') || {}).textContent, list: (document.getElementById('activePinnersList') || {}).textContent || '', imgs: document.querySelectorAll('#activePinnersList img').length, pins: (document.getElementById('statPins') || {}).textContent }));
   check('home stats: 3 pinners from publicProfiles', home.pinners === '3', JSON.stringify(home.pinners));
   check('home active pinners use nicknames only', home.list.includes('Night Owl') && !/Legacy Owner Name|Bob Realname/.test(home.list) && home.imgs === 0, home.list.slice(0, 120));

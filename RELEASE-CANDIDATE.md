@@ -1,17 +1,24 @@
 # StrangePin release candidate: QC pack
 
+> **Historical record.** Current state (rules v3 live, PR #1 and PR #2 deployed, deferred and
+> open items): see [`docs/STATUS.md`](docs/STATUS.md).
+
+> Outcome: PR #3 (rules v3), PR #1 (`pr/technical`) and PR #2 (`pr/content`) were merged and
+> deployed on 2026-10-22/23; rules v3 were published by the owner. The plans in sections 0, 5
+> and 6 are complete. Section 9 and 11 items that remain open are tracked in `docs/STATUS.md`.
+
 - **Prepared:** 2026-10-21. Phase 3 update ~19:55 WEST (Europe/Lisbon, UTC+1).
   - **Time-zone note:** entries written before Phase 3 (here, `CHANGES.md`, `docs/perf-lcp.md`
     §1–6, `docs/map-providers.md` header) were labelled "CEST (Europe/Madrid)", and those
     commits carry `+0200`. The owner's zone is Europe/Lisbon (UTC+1); Phase 3 commits carry
     `+0100`. Treat the older wall-clock labels as approximate (1 h ahead of Lisbon).
-- **Status: LOCAL ONLY.** Nothing pushed, no PR opened, nothing deployed; no Firebase, Netlify,
+- **Status at the time of writing (superseded, see above): LOCAL ONLY.** Nothing pushed, no PR opened, nothing deployed; no Firebase, Netlify,
   EmailJS or Cloudinary setting changed; no Firestore rules deployed; backfill not run; no
   account created; nothing purchased. **Nothing here restores production functionality until
   the owner runs section 8.**
 - Labels: **TESTED** (run here, method stated) · **EXPECTED** (reasoning) · **NOT TESTED**.
 
-## 0. The two PR-ready branches (both descend from `main` 728e8f5)
+## 0. The two PR branches (both descend from the pre-release `main` 728e8f5; both merged)
 
 | Branch | Base for the PR | Contents |
 |---|---|---|
@@ -160,7 +167,7 @@ Production rules are **unknown** (no console access); "old rules" = an assumed p
 | New client + new rules (target) | All work (TESTED, e2e 22/22 + matrix) | All tested abuse denied |
 | Rolled-back client + new rules | `main`: nothing works anyway; a working old client: sign-in and comments only, rest denied (TESTED cells) | Protected |
 
-## 5. GitHub PR plan
+## 5. GitHub PR plan (done)
 
 1. Owner applies branch protection (`docs/branch-protection.md`: PR required, 0 approvals,
    required check `tests`, no force push, no deletion, no bypass).
@@ -171,7 +178,7 @@ Production rules are **unknown** (no console access); "old rules" = an assumed p
    deleted on merge; otherwise edit the base).
 4. Merge PR #1 (owner), production checks, then PR #2.
 
-## 6. Safe deployment order (owner-run; each step needs explicit approval)
+## 6. Safe deployment order (done: rules v3 were deployed before PR #1; no backfill was run)
 
 1. Capture the live Firestore rules (console → Rules) into the repo and rerun the matrix.
 2. Merge PR #1 → Netlify production (works with old and new rules). Check on the deploy
@@ -230,9 +237,8 @@ Production rules are **unknown** (no console access); "old rules" = an assumed p
 
 ## 9. Remaining known risks
 
-- Production Firestore rules unknown; abuse exposure today depends on them.
-- Points are client-initiated (rules cap and cool down, not prevent); a Cloud Function is the
-  real fix. Users with non-integer `points` get a 0 mirror and cannot earn points until fixed.
+- (Resolved) Production rules are v3, published by the owner; points are now awarded only by
+  the owner's admin script (manual points model, `docs/admin-review.md`), not by the client.
 - OpenFreeMap and OSM tiles have no SLA; OSM fallback is best-effort and policy-bound (no
   heavy use). CARTO key path NOT TESTED with a real key.
 - Simulated metrics ≠ field data; confirm with CrUX ~28 days after deploy. First-visit body
