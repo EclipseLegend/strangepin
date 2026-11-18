@@ -59,8 +59,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   }
 
   // 3. Featured pin timeline/sources are no longer wiped by stubs
-  const tl = await page.evaluate(() => LOCATIONS.filter(l => l.timeline && l.timeline.length).length);
-  check('10 featured pins keep authored timelines', tl === 10, 'count=' + tl);
+  const tl = await page.evaluate(() => LOCATIONS.filter(l => /^0(0[1-9]|10)$/.test(l.id) && l.timeline && l.timeline.length).length);
+  check('the 10 original featured pins (001–010) keep authored timelines', tl === 10, 'count=' + tl);
 
   // 4. XSS payloads rendered through the real render functions are inert
   await page.evaluate(() => showPage('detail', LOCATIONS[0]));

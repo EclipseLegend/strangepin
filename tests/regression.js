@@ -1,9 +1,10 @@
-// Site regression on the v3 client: 99 pins, every route, map, search, and NO console errors.
+// Site regression on the v3 client: all pins, every route, map, search, and NO console errors.
 // Runs inside the emulators (project demo-strangepin) so the Firebase SDK has a back end to
 // talk to; production Firebase / EmailJS / Cloudinary hosts are blocked and counted (must be 0).
 //   firebase emulators:exec --only auth,firestore --project demo-strangepin "node tests/regression.js"
 //   (static server on :8080 from the repo root)
 'use strict';
+const PIN_COUNT = require('../scripts/build-pins.js').loadLocations().length; // expected pins, read from index.html
 const puppeteer = require('puppeteer-core');
 const guard = require('./lib/prod-guard');
 const BASE = process.env.BASE || 'http://localhost:8080';
@@ -34,12 +35,12 @@ const ROUTES = [['#home', 'home'], ['#map', 'map'], ['#nearby', 'nearby'], ['#su
     const contentOk = hash === '#profile' ? st.signInPrompt : st.len > 200;
     check(st.page === expectPage && contentOk, `route ${hash} renders ${expectPage}`, JSON.stringify(st));
     if (hash === '#home') {
-      check(st.n === 99, '99 pins in LOCATIONS', 'n=' + st.n);
-      check((await pg.evaluate(() => (document.getElementById('statPins') || {}).textContent)) === '99', 'home shows 99 pins');
+      check(st.n === PIN_COUNT, `${PIN_COUNT} pins in LOCATIONS`, 'n=' + st.n);
+      check((await pg.evaluate(() => (document.getElementById('statPins') || {}).textContent)) === String(PIN_COUNT), `home shows ${PIN_COUNT} pins`);
     }
     if (hash === '#map') {
       const m = await pg.evaluate(() => ({ count: (document.getElementById('pinCount') || {}).textContent, cards: document.querySelectorAll('#mapList > *').length, basemap: (document.getElementById('leafletMap') || {}).dataset.basemap, markers: document.querySelectorAll('#leafletMap .leaflet-marker-icon, #leafletMap .maplibregl-marker').length }));
-      check(m.count === '99 pins found' && m.cards === 99, 'map lists all 99 pins', JSON.stringify(m));
+      check(m.count === `${PIN_COUNT} pins found` && m.cards === PIN_COUNT, `map lists all ${PIN_COUNT} pins`, JSON.stringify(m));
       check(!!m.basemap && m.markers > 0, 'map renders a basemap and markers', JSON.stringify(m));
       await pg.focus('#mapSearchInput'); await pg.keyboard.type('japan');
       await sleep(800);
