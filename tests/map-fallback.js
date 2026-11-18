@@ -5,6 +5,7 @@
 // automated traffic to tile.openstreetmap.org (OSMF policy) or need a CARTO key.
 // OpenFreeMap is reached read-only in the scenarios that expect it to work.
 const puppeteer = require('puppeteer-core');
+const PIN_COUNT = require('../scripts/build-pins.js').loadLocations().length; // expected pins, read from index.html
 const guard = require('./lib/prod-guard');
 const fs = require('fs');
 const BASE = process.env.BASE || 'http://localhost:8080';
@@ -41,7 +42,7 @@ async function run({ name, webgl = true, block = [], cartoKey = '', expect, hash
       osmDark: !!(el && el.querySelector('.sp-osm-dark')) };
   }, container);
   check(r.used === expect, `${name}: basemap = ${expect}`, JSON.stringify(r));
-  if (hash === '#map') check(r.markers === 99, `${name}: 99 markers`, r.markers);
+  if (hash === '#map') check(r.markers === PIN_COUNT, `${name}: ${PIN_COUNT} markers`, r.markers);
   if (expect === 'none') check(!!r.overlay && /Map tiles are unavailable/.test(r.overlay), `${name}: friendly English error overlay shown`, r.overlay);
   else check(!r.overlay && /OpenStreetMap/.test(r.attr), `${name}: no error overlay; OpenStreetMap attribution visible`, r.attr.slice(0, 80));
   if (expect === 'osm-dark') check(r.osmDark, `${name}: OSM raster has the dark filter class`);

@@ -1,6 +1,7 @@
 // perf/lcp behaviour: early first render, lazy Google Translate, deferred Leaflet still works.
 // Requires a static server on http://localhost:8080 serving the repo root.
 const puppeteer = require('puppeteer-core');
+const PIN_COUNT = require('../scripts/build-pins.js').loadLocations().length; // expected pins, read from index.html
 const guard = require('./lib/prod-guard');
 const BASE = process.env.BASE || 'http://localhost:8080';
 let pass = 0, fail = 0, info = [];
@@ -47,7 +48,7 @@ async function open(b, hash, { delayCdnMs = 0, preset } = {}) {
   check(t.cdnCount === 3 && t.cdnFirst >= t.fcp - 1, 'CDN scripts are requested only after the first contentful paint', `fcp=${Math.round(t.fcp)} firstCdnRequest=${Math.round(t.cdnFirst)}`);
   check(t.fb === true, 'Firebase initialises once the delayed SDK scripts arrive (spCdnReady)');
   check(t.once === true, 'initApp ran exactly once (guard set)');
-  check(t.stats === '99' && /^\d+$/.test(t.countries || ''), 'stats bar shows local pin/country counts immediately', `${t.stats} pins, ${t.countries} countries`);
+  check(t.stats === String(PIN_COUNT) && /^\d+$/.test(t.countries || ''), 'stats bar shows local pin/country counts immediately', `${t.stats} pins, ${t.countries} countries`);
   check(!reqs.some(u => u.includes('translate.google.com')), 'Google Translate NOT requested on a plain page load');
   check(errors.length === 0, 'no page errors (home, slow CDN)', errors.join(' | '));
   await pg.close();
@@ -57,7 +58,7 @@ async function open(b, hash, { delayCdnMs = 0, preset } = {}) {
   await sleep(7000);
   const map = await pg.evaluate(() => ({ markers: document.querySelectorAll('#leafletMap .leaflet-marker-icon').length,
     css: !!(document.getElementById('leafletCss') || {}).sheet, pane: !!document.querySelector('#leafletMap .leaflet-pane') }));
-  check(map.markers === 99 && map.pane && map.css === true, 'map deep link: 99 markers after slow Leaflet; Leaflet CSS applied', JSON.stringify(map));
+  check(map.markers === PIN_COUNT && map.pane && map.css === true, `map deep link: ${PIN_COUNT} markers after slow Leaflet; Leaflet CSS applied`, JSON.stringify(map));
   check(errors.length === 0, 'no page errors (map, slow CDN)', errors.join(' | '));
   await pg.close();
 

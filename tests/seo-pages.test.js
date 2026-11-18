@@ -16,7 +16,8 @@ check(dup[1].slug === 'same-002' && dup[2].slug === 'ok-name', 'collisions get -
 // 2. Every generated page
 const manifest = JSON.parse(fs.readFileSync(path.join(DIST, 'pins-manifest.json'), 'utf8'));
 const ids = Object.keys(manifest);
-check(ids.length === 99, '99 pins in pins-manifest.json', ids.length);
+const N = gen.loadLocations().length;
+check(ids.length === N, `${N} pins in pins-manifest.json (= LOCATIONS)`, ids.length);
 const titles = new Set(); let ldOk = 0, canonOk = 0, descOk = 0, ogOk = 0, geoOk = 0, noRating = 0;
 for (const id of ids) {
   const { slug } = manifest[id];
@@ -36,13 +37,13 @@ for (const id of ids) {
     if (!JSON.stringify(ld).includes('aggregateRating')) noRating++;
   } catch (e) { /* counted as failure */ }
 }
-check(titles.size === 99, 'all 99 titles unique', titles.size);
-check(canonOk === 99, 'canonical = https://strangepin.com/pins/<slug>/ on all pages', canonOk);
-check(descOk === 99, 'meta description 50–160 chars on all pages', descOk);
-check(ogOk === 99, 'og:url + https og:image on all pages', ogOk);
-check(ldOk === 99, 'JSON-LD parses with Place + Article + BreadcrumbList on all pages', ldOk);
-check(geoOk === 99, 'Place.geo present on all pages', geoOk);
-check(noRating === 99, 'no aggregateRating (placeholder metrics never exported)', noRating);
+check(titles.size === N, `all ${N} titles unique`, titles.size);
+check(canonOk === N, 'canonical = https://strangepin.com/pins/<slug>/ on all pages', canonOk);
+check(descOk === N, 'meta description 50–160 chars on all pages', descOk);
+check(ogOk === N, 'og:url + https og:image on all pages', ogOk);
+check(ldOk === N, 'JSON-LD parses with Place + Article + BreadcrumbList on all pages', ldOk);
+check(geoOk === N, 'Place.geo present on all pages', geoOk);
+check(noRating === N, 'no aggregateRating (placeholder metrics never exported)', noRating);
 
 // 3. Hostile data stays inert
 const all = gen.assignSlugs([{ id: '999', slug: 'evil', name: '</title><script>alert(1)</script>', category: 'UFO', country: 'X',
@@ -57,7 +58,7 @@ check(evil.includes('href="https://example.com/%22onclick=%22x"'), 'https link a
 
 // 4. sitemap.xml is well-formed with 101 URLs
 const sm = cp.execFileSync('python3', ['-c', 'import sys,xml.etree.ElementTree as E;r=E.parse(sys.argv[1]).getroot();print(len(r))', path.join(DIST, 'sitemap.xml')]).toString().trim();
-check(sm === '101', 'sitemap.xml parses as XML with 101 <url> entries (home, /pins/, 99 pins)', sm);
+check(sm === String(N + 2), `sitemap.xml parses as XML with ${N + 2} <url> entries (home, /pins/, ${N} pins)`, sm);
 
 // 5. Optional HTML validation (sample)
 if (process.env.HTMLVALIDATE) {

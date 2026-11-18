@@ -8,6 +8,7 @@
 //   firebase emulators:exec --config firebase.audit-expired.json --only auth,firestore \
 //     --project demo-strangepin "node tests/e2e-expired-rules.js"   (static server on :8080)
 'use strict';
+const PIN_COUNT = require('../scripts/build-pins.js').loadLocations().length; // expected pins, read from index.html
 const puppeteer = require('puppeteer-core');
 const { emuSignIn, watchAuthEmulator } = require('./lib/emulator-auth.js');
 const BASE = process.env.BASE_URL || 'http://localhost:8080/';
@@ -114,7 +115,7 @@ const toasts = page => page.evaluate(() => [...document.querySelectorAll('.sp-to
   await h.waitForFunction(() => window._db && window._spEmulator, { timeout: 15000 });
   await sleep(2500);
   const home = await h.evaluate(() => ({ pins: (document.getElementById('statPins') || {}).textContent, pinners: (document.getElementById('statPinners') || {}).textContent }));
-  check('home stats fall back to the static values (99 pins, "—" explorers)', home.pins === '99' && home.pinners === '—', JSON.stringify(home));
+  check(`home stats fall back to the static values (${PIN_COUNT} pins, "—" explorers)`, home.pins === String(PIN_COUNT) && home.pinners === '—', JSON.stringify(home));
 
   check('no uncaught page errors', pageErrors.length === 0, pageErrors.join(' | '));
   check('ZERO requests to production Firebase / Google / EmailJS / Cloudinary hosts', blockedHits.length === 0, blockedHits.slice(0, 3).join(' '));
